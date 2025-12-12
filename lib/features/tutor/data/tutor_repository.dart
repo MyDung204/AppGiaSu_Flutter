@@ -1,4 +1,5 @@
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
+import 'package:doantotnghiep/features/search/domain/models/search_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final tutorRepositoryProvider = Provider<TutorRepository>((ref) {
@@ -7,7 +8,7 @@ final tutorRepositoryProvider = Provider<TutorRepository>((ref) {
 
 abstract class TutorRepository {
   Future<List<Tutor>> getFeaturedTutors();
-  Future<List<Tutor>> searchTutors(String query);
+  Future<List<Tutor>> searchTutors(String query, {SearchFilter? filter});
 }
 
 class MockTutorRepository implements TutorRepository {
@@ -100,11 +101,44 @@ class MockTutorRepository implements TutorRepository {
   }
 
   @override
-  Future<List<Tutor>> searchTutors(String query) async {
+  Future<List<Tutor>> searchTutors(String query, {SearchFilter? filter}) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    return _tutors.where((tutor) => 
-      tutor.name.toLowerCase().contains(query.toLowerCase()) || 
-      tutor.subjects.any((s) => s.toLowerCase().contains(query.toLowerCase()))
-    ).toList();
+    return _tutors.where((tutor) {
+      // 1. Text Query
+      final matchQuery = query.isEmpty || 
+          tutor.name.toLowerCase().contains(query.toLowerCase()) || 
+          tutor.subjects.any((s) => s.toLowerCase().contains(query.toLowerCase()));
+      if (!matchQuery) return false;
+
+      // 2. Filter
+      if (filter != null) {
+        // Price
+        if (filter.minPrice != null && tutor.hourlyRate < filter.minPrice!) return false;
+        if (filter.maxPrice != null && tutor.hourlyRate > filter.maxPrice!) return false;
+        
+        // Gender
+        if (filter.gender != null && filter.gender != 'Bất kỳ' && tutor.gender != filter.gender) return false;
+        
+        // Location
+        if (filter.location != null && filter.location!.isNotEmpty && !tutor.location.contains(filter.location!)) return false;
+        
+        // Mode
+        if (filter.teachingMode != null && filter.teachingMode!.isNotEmpty) {
+           // If filter has 'Online' and tutor doesn't have 'Online', fail.
+           // Or simplified: if tutor teachingMode has ANY intersection with filter mode?
+           // Usually "Filter by Online" means "Show me tutors who teach Online".
+           // Ensure tutor.teachingMode contains at least one of the selected filter modes.
+           final hasMode = filter.teachingMode!.any((m) => tutor.teachingMode.contains(m));
+           if (!hasMode) return false;
+        }
+
+        // Subject Filter (Advanced)
+        if (filter.subjects != null && filter.subjects!.isNotEmpty) {
+           final hasSubject = filter.subjects!.any((s) => tutor.subjects.contains(s));
+           if (!hasSubject) return false;
+        }
+      }
+      return true;
+    }).toList();
   }
 }

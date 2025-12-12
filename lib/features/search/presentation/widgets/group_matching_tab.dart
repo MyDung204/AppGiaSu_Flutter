@@ -75,7 +75,30 @@ class GroupMatchingTab extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Xác nhận tham gia'),
+                                content: const Text('Bạn có chắc chắn muốn tham gia nhóm học này không?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Đã gửi yêu cầu tham gia thành công!')),
+                                      );
+                                    },
+                                    child: const Text('Tham gia'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                           child: const Text('Tham gia nhóm'),
                         ),
                       ),

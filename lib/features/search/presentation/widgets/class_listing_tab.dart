@@ -69,7 +69,30 @@ class ClassListingTab extends StatelessWidget {
                            ],
                          ),
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Đăng ký khóa học'),
+                                content: const Text('Bạn muốn đăng ký khóa học này? Học phí sẽ được trừ vào ví của bạn.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Để sau'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Đăng ký thành công! Vui lòng kiểm tra lịch học.')),
+                                      );
+                                    },
+                                    child: const Text('Đăng ký ngay'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),

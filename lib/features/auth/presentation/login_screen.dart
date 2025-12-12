@@ -20,17 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      // Mock Admin Login (Bypass Firebase)
-      if (email == 'admin@tutor.com') {
-        if (mounted) context.go('/admin');
-        return;
-      }
 
-      // Mock Tutor Login (Bypass Firebase for demo)
-      if (email == 'tutor@test.com') {
-         if (mounted) context.go('/tutor-dashboard');
-         return;
-      }
 
       await ref.read(authControllerProvider.notifier).login(email, password);
       

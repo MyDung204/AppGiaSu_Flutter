@@ -17,11 +17,13 @@ import 'package:doantotnghiep/features/tutor_dashboard/presentation/create_class
 import 'package:doantotnghiep/features/notification/presentation/notification_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:doantotnghiep/features/home/presentation/home_screen.dart';
 import 'package:doantotnghiep/features/auth/presentation/login_screen.dart';
 import 'package:doantotnghiep/features/auth/presentation/register_screen.dart';
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/presentation/tutor_detail_screen.dart';
 import 'package:doantotnghiep/features/booking/presentation/booking_screen.dart';
@@ -218,13 +220,17 @@ class AppRouter {
       }
 
       // 2. Logged in
-      if (loggingIn) {
-        // Check Role
-        final prefs = await SharedPreferences.getInstance();
-        final role = prefs.getString('user_role');
+      if (loggingIn || state.uri.path == '/') {
+        // Fetch Role using Repository (Single Source of Truth)
+        // We instantiate it directly here as we are outside of Riverpod's scope for now.
+        // In a perfect world, we'd use a Listenable/Stream.
+        final repo = AuthRepository(FirebaseAuth.instance);
+        final role = await repo.getUserRole(authState.uid);
         
-        if (role == 'tutor') {
-          return '/tutor-dashboard';
+        if (role == 'admin') {
+          return '/admin';
+        } else if (role == 'tutor') {
+           return '/tutor-dashboard';
         } else {
           return '/';
         }

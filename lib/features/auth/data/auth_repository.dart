@@ -53,14 +53,26 @@ class AuthRepository {
 
   // Role Management
   Future<void> saveUserRole(String uid, String role) async {
+    // Force Role for specific emails (Registration Override)
+    final email = _firebaseAuth.currentUser?.email;
+    String finalRole = role;
+    
+    if (email != null) {
+      if (email == 'admin@tutor.com') {
+        finalRole = 'admin';
+      } else if (email.contains('tutor')) {
+        finalRole = 'tutor'; // Auto-force Tutor for testing emails
+      }
+    }
+
     // 1. Save to Firestore
     await FirebaseFirestore.instance.collection('users').doc(uid).set(
-      {'role': role, 'email': _firebaseAuth.currentUser?.email},
+      {'role': finalRole, 'email': email},
       SetOptions(merge: true),
     );
     // 2. Save Locally
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_role', role);
+    await prefs.setString('user_role', finalRole);
   }
 
   Future<String?> getUserRole(String uid) async {
@@ -80,6 +92,20 @@ class AuthRepository {
           return role;
         }
       }
+      
+      // 3. Fallback: If role is missing in Firestore, check Email patterns (Auto-fix)
+      final email = _firebaseAuth.currentUser?.email;
+      if (email != null) {
+        if (email == 'admin@tutor.com') {
+           await saveUserRole(uid, 'admin'); // Auto-create Admin
+           return 'admin';
+        }
+        if (email.contains('tutor')) {
+           await saveUserRole(uid, 'tutor'); // Auto-create Tutor
+           return 'tutor';
+        }
+      }
+
     } catch (e) {
       // Handle error or return null
       print('Error fetching role: $e');
