@@ -48,7 +48,7 @@ class TutorScaffold extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/tutor-dashboard')) {
       if (location.endsWith('/find-students')) return 1;
-      if (location.endsWith('/manage-schedule')) return 2;
+      if (location.endsWith('/schedule')) return 2;
       if (location.endsWith('/messages')) return 3;
       if (location.endsWith('/profile')) return 4;
       return 0;
@@ -65,7 +65,7 @@ class TutorScaffold extends StatelessWidget {
         context.go('/tutor-dashboard/find-students');
         break;
       case 2:
-        context.go('/tutor-dashboard/manage-schedule');
+        context.go('/tutor-dashboard/schedule');
         break;
       case 3:
         context.go('/tutor-dashboard/messages');

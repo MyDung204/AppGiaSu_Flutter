@@ -136,6 +136,7 @@ class ScheduleScreen extends ConsumerWidget {
                     onPressed: () {
                       showModalBottomSheet(
                         context: context, 
+                        useRootNavigator: true,
                         isScrollControlled: true,
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                         builder: (context) => const ReviewModal()

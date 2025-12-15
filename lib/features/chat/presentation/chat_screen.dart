@@ -1,12 +1,14 @@
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final Tutor tutor;
+  final TutorRequest? initialRequest;
 
-  const ChatScreen({super.key, required this.tutor});
+  const ChatScreen({super.key, required this.tutor, this.initialRequest});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -16,7 +18,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
-  
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialRequest != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _sendContextMessage(widget.initialRequest!);
+      });
+    }
+  }
+
+  void _sendContextMessage(TutorRequest req) {
+    // Auto-send message about the request
+    final text = "Chào bạn, mình thấy bài đăng tìm gia sư môn ${req.subject} (${req.gradeLevel}) của bạn.\nMình rất quan tâm và muốn nhận lớp này.";
+    ref.read(chatProvider.notifier).sendMessage(widget.tutor.id, text);
+    _scrollToBottom();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {

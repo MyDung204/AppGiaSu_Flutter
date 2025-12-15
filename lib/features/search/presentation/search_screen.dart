@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:doantotnghiep/features/search/presentation/widgets/class_listing_tab.dart';
 import 'package:doantotnghiep/features/search/presentation/widgets/group_matching_tab.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
@@ -8,7 +11,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
+
 final searchQueryProvider = NotifierProvider.autoDispose<SearchQueryNotifier, String>(SearchQueryNotifier.new);
+
+// Provider for user's tutor requests (Mock Version)
+final myRequestsProvider = Provider.autoDispose<List<TutorRequest>>((ref) {
+  final allRequests = ref.watch(tutorRequestsProvider);
+  final user = FirebaseAuth.instance.currentUser;
+  // Fallback to 'test-user-id' if testing without login
+  final userId = user?.uid ?? 'test-user-id';
+  
+  return allRequests.where((req) => req.studentId == userId).toList();
+});
 
 class SearchQueryNotifier extends Notifier<String> {
   @override
@@ -88,27 +103,126 @@ class SearchScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             // Tab 1: Tutor Search (Existing)
-            searchResults.when(
-              data: (tutors) {
-                if (tutors.isEmpty) {
-                  return const Center(child: Text('Không tìm thấy kết quả nào.'));
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: tutors.length,
-                  itemBuilder: (context, index) {
-                    final tutor = tutors[index];
-                    return TutorCard(
-                      tutor: tutor,
-                      onTap: () {
-                        context.push('/tutor-detail', extra: tutor);
-                      },
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            // Tab 1: Tutor Search
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.push('/create-tutor-request');
+                          },
+                          icon: const Icon(Icons.post_add),
+                          label: const Text('Đăng tìm gia sư', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                      // My Requests Section
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final requests = ref.watch(myRequestsProvider);
+                          
+                          if (requests.isEmpty) return const SizedBox.shrink();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 20),
+                              const Text('Yêu cầu của tôi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                height: 140,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: requests.length,
+                                  itemBuilder: (context, index) {
+                                    final req = requests[index];
+                                    return GestureDetector(
+                                      onTap: () => context.push('/my-request-detail', extra: req),
+                                      child: Container(
+                                        width: 240,
+                                        margin: const EdgeInsets.only(right: 12),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                                          boxShadow: [
+                                             BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 3)),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(req.subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                Text(req.gradeLevel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                              ],
+                                            ),
+                                            Text(
+                                              '${(req.minBudget/1000).toInt()}k - ${(req.maxBudget/1000).toInt()}k',
+                                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                            ),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                const Text('Đang tìm...', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                                                const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                              ],
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const Divider(height: 30),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: searchResults.when(
+                    data: (tutors) {
+                      if (tutors.isEmpty) {
+                        return const Center(child: Text('Không tìm thấy kết quả nào.'));
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: tutors.length,
+                        itemBuilder: (context, index) {
+                          final tutor = tutors[index];
+                          return TutorCard(
+                            tutor: tutor,
+                            onTap: () {
+                              context.push('/tutor-detail', extra: tutor);
+                            },
+                          );
+                        },
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(child: Text('Lỗi: $err')),
+                  ),
+                ),
+              ],
             ),
             
             // Tab 2: Group Matching
@@ -141,6 +255,7 @@ class SearchScreen extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true, // Allow full height usage if needed
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:doantotnghiep/features/admin/presentation/admin_dashboard_screen.dart';
 import 'package:doantotnghiep/features/admin/presentation/admin_tutor_approval_screen.dart';
 import 'package:doantotnghiep/features/admin/presentation/admin_users_screen.dart';
@@ -14,6 +15,9 @@ import 'package:doantotnghiep/features/group/presentation/create_group_screen.da
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/tutor_schedule_management_screen.dart';
 import 'package:doantotnghiep/features/profile/presentation/ekyc_update_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/create_class_screen.dart';
+import 'package:doantotnghiep/features/student/presentation/create_tutor_request_screen.dart';
+import 'package:doantotnghiep/features/student/presentation/my_request_detail_screen.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:doantotnghiep/features/notification/presentation/notification_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +37,7 @@ import 'package:doantotnghiep/features/wallet/presentation/wallet_screen.dart';
 import 'package:doantotnghiep/features/home/presentation/widgets/scaffold_with_navbar.dart';
 import 'package:doantotnghiep/features/booking/presentation/schedule_screen.dart';
 import 'package:doantotnghiep/features/chat/presentation/chat_screen.dart';
+import 'package:doantotnghiep/features/chat/presentation/chat_list_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,6 +74,10 @@ class AppRouter {
              builder: (context, state) => const ScheduleScreen(),
           ),
           GoRoute(
+             path: '/messages',
+             builder: (context, state) => const ChatListScreen(),
+          ),
+          GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
           ),
@@ -84,6 +93,19 @@ class AppRouter {
              },
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+         path: '/create-tutor-request',
+         builder: (context, state) => const CreateTutorRequestScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+         path: '/my-request-detail',
+         builder: (context, state) {
+            final request = state.extra as TutorRequest;
+            return MyRequestDetailScreen(request: request);
+         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -122,8 +144,20 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/chat',
         builder: (context, state) {
-          final tutor = state.extra as Tutor;
-           return ChatScreen(tutor: tutor);
+          Tutor? tutor;
+          TutorRequest? initialRequest;
+
+          if (state.extra is Tutor) {
+            tutor = state.extra as Tutor;
+          } else if (state.extra is Map) {
+            final map = state.extra as Map;
+            tutor = map['tutor'] as Tutor;
+            initialRequest = map['request'] as TutorRequest?;
+          }
+
+          if (tutor == null) return const Scaffold(body: Center(child: Text("Lỗi: Không tìm thấy thông tin")));
+
+           return ChatScreen(tutor: tutor, initialRequest: initialRequest);
         },
       ),
       GoRoute(
@@ -221,9 +255,7 @@ class AppRouter {
 
       // 2. Logged in
       if (loggingIn || state.uri.path == '/') {
-        // Fetch Role using Repository (Single Source of Truth)
-        // We instantiate it directly here as we are outside of Riverpod's scope for now.
-        // In a perfect world, we'd use a Listenable/Stream.
+        // Fetch Role using Repository
         final repo = AuthRepository(FirebaseAuth.instance);
         final role = await repo.getUserRole(authState.uid);
         
@@ -238,6 +270,26 @@ class AppRouter {
 
       return null; // No redirect
     },
+    refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
   );
+}
+
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) { 
+        notifyListeners(); 
+      },
+    );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
 }
 
