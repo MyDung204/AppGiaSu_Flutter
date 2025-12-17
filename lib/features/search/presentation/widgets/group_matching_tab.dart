@@ -9,8 +9,9 @@ class GroupMatchingTab extends ConsumerWidget {
   const GroupMatchingTab({super.key});
 
   @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requests = ref.watch(groupRequestsProvider);
+    final requestsAsync = ref.watch(groupRequestsProvider);
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return Column(
@@ -20,9 +21,7 @@ class GroupMatchingTab extends ConsumerWidget {
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                context.push('/create-group');
-              },
+              onPressed: () => context.push('/create-group'),
               icon: const Icon(Icons.add_circle_outline),
               label: const Text('Tạo nhóm học mới'),
               style: ElevatedButton.styleFrom(
@@ -36,25 +35,29 @@ class GroupMatchingTab extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: requests.isEmpty 
-              ? Center(
+          child: requestsAsync.when(
+            data: (requests) {
+              if (requests.isEmpty) {
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.group_off_outlined, size: 60, color: Colors.grey.shade300),
                       const SizedBox(height: 16),
-                      const Text("Chưa có nhóm nào đang tìm thành viên.", style: TextStyle(color: Colors.grey)),
+                      const Text("Chưa có nhóm nào.", style: TextStyle(color: Colors.grey)),
                     ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: requests.length,
-                  itemBuilder: (context, index) {
-                    final req = requests[index];
-                    return _buildGroupCard(context, req, currencyFormat);
-                  },
-                ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: requests.length,
+                itemBuilder: (context, index) => _buildGroupCard(context, requests[index], currencyFormat),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(child: Text('Lỗi: $err')),
+          ),
         ),
       ],
     );

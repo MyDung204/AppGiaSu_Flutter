@@ -67,6 +67,25 @@ class GroupRequest {
     );
   }
 
+  factory GroupRequest.fromJson(Map<String, dynamic> json) {
+    return GroupRequest(
+      id: json['id'].toString(),
+      creatorId: json['creator_id']?.toString() ?? '',
+      creatorName: json['creator']?['name'] ?? 'Unknown',
+      subject: json['subject'] ?? '',
+      gradeLevel: json['grade_level'] ?? '',
+      pricePerSession: 0, // Not in API yet
+      location: 'Online', // Default
+      description: json['description'] ?? '',
+      currentMembers: json['current_members'] ?? 1,
+      maxMembers: json['max_members'] ?? 5,
+      minMembers: 2,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      startTime: DateTime.now().add(const Duration(days: 1)),
+      status: json['status'] ?? 'open',
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

@@ -1,10 +1,9 @@
 import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
+import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 class CreateGroupScreen extends ConsumerStatefulWidget {
   const CreateGroupScreen({super.key});
@@ -200,13 +199,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     );
   }
 
-  void _submitRequest() {
+  void _submitRequest() async {
     if (_formKey.currentState!.validate()) {
-      final user = FirebaseAuth.instance.currentUser;
       final newRequest = GroupRequest(
-        id: const Uuid().v4(),
-        creatorId: user?.uid ?? 'guest',
-        creatorName: user?.displayName ?? 'Học viên mới',
+        id: '', 
+        creatorId: '',
+        creatorName: '',
         subject: _subjectController.text,
         gradeLevel: _gradeController.text,
         pricePerSession: double.tryParse(_priceController.text) ?? 0,
@@ -218,16 +216,23 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         startTime: DateTime.now().add(const Duration(days: 3)),
       );
 
-      ref.read(groupRequestsProvider.notifier).addRequest(newRequest);
+      final success = await ref.read(sharedLearningRepositoryProvider).createStudyGroup(newRequest);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã tạo nhóm thành công!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      context.pop();
+      if (success && mounted) {
+        ref.refresh(groupRequestsProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã tạo nhóm thành công!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        context.pop();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lỗi khi tạo nhóm. Vui lòng thử lại.')),
+        );
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host ">>> API INSTALLER V10: SANCTUM TABLE FIX <<<" -ForegroundColor Cyan
+Write-Host ">>> API INSTALLER V15: CHAT DEPLOY <<<" -ForegroundColor Cyan
 
 # 1. Project Setup
 if ((Test-Path "D:\api-tutor") -and -not (Test-Path "D:\api-tutor\artisan")) {
@@ -18,7 +18,7 @@ if (-not (Test-Path "D:\api-tutor")) {
 
 cd D:\api-tutor
 
-# 2. FORCE API Registration (Safe Method)
+# 2. FORCE API Registration
 Write-Host "Registering API Routes..." -ForegroundColor Cyan
 if (-not (Test-Path "routes/api.php")) {
     Set-Content "routes/api.php" "<?php"
@@ -26,7 +26,7 @@ if (-not (Test-Path "routes/api.php")) {
 try {
     php artisan install:api --no-interaction 2>&1 | Out-Null
 } catch {
-    Write-Host "API config skipped / already set." -ForegroundColor Gray
+    Write-Host "API config skipped." -ForegroundColor Gray
 }
 
 # 3. Ensure Directories Exist
@@ -40,7 +40,7 @@ New-Item -ItemType Directory -Path "database\seeders" -Force | Out-Null
 Write-Host "Cleaning Default Migrations..." -ForegroundColor Green
 Remove-Item "database\migrations\*.php" -Force -ErrorAction SilentlyContinue
 
-# 5. Copy Files
+# 5. Copy Files (Now includes SharedLearningController)
 Write-Host "Copying Code..." -ForegroundColor Green
 $source = "C:\Users\Dung\AndroidStudioProjects\Doantotnghiep\laravel_setup"
 
@@ -50,14 +50,12 @@ Copy-Item -Path "$source\routes\api.php" -Destination "routes\api.php" -Force
 Copy-Item -Path "$source\database\migrations\*" -Destination "database\migrations" -Force
 Copy-Item -Path "$source\database\seeders\*" -Destination "database\seeders" -Force
 
-# 6. RESTORE DEFAULT MIGRATIONS (Sessions & Sanctum) - CRITICAL FIX
+# 6. RESTORE DEFAULT MIGRATIONS
 Write-Host "Restoring Sessions & Sanctum Migrations..." -ForegroundColor Cyan
-# Fix Sessions
 php artisan session:table
-# Fix Sanctum (Personal Access Tokens)
 php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider" --tag="sanctum-migrations" --force
 
-# 7. Setup Env & DB
+# 7. Setup Env
 Write-Host "Configuring Environment..." -ForegroundColor Green
 if (-not (Test-Path ".env")) { 
     Copy-Item ".env.example" ".env" 
@@ -84,4 +82,5 @@ Write-Host "Migrating Database..." -ForegroundColor Magenta
 php artisan migrate:fresh --seed
 
 Write-Host ">>> INSTALLATION SUCCESSFUL! <<<" -ForegroundColor Cyan
-Write-Host "Run server: php artisan serve --host 0.0.0.0" -ForegroundColor White
+Write-Host "Shared Learning API Deployed." -ForegroundColor White
+Write-Host "Run: php artisan serve --host 0.0.0.0" -ForegroundColor White
