@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 
+/// Thẻ hiển thị thông tin tóm tắt của một Gia sư
+/// Bao gồm: Avatar, Tên, Giá, Đánh giá, và Nhãn (Giáo viên/Sinh viên)
 class TutorCard extends StatelessWidget {
   final Tutor tutor;
   final VoidCallback? onTap;
@@ -16,12 +18,12 @@ class TutorCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6), // Glass effect base
+        color: Colors.white.withValues(alpha: 0.6), // Glass effect base
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -131,6 +133,27 @@ class TutorCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                         Row(
+                           children: [
+                             Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: tutor.tier == 'teacher' ? Colors.blue[50] : Colors.green[50],
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: tutor.tier == 'teacher' ? Colors.blue : Colors.green, width: 0.5),
+                              ),
+                              child: Text(
+                                tutor.tier == 'teacher' ? 'Giáo viên' : 'Sinh viên',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: tutor.tier == 'teacher' ? Colors.blue[800] : Colors.green[800],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                           ],
+                         ),
                         const SizedBox(height: 4),
                         Text(
                           tutor.location,

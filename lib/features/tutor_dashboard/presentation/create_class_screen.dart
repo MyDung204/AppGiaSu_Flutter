@@ -1,14 +1,19 @@
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_class_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_class.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
-class CreateClassScreen extends StatefulWidget {
+class CreateClassScreen extends ConsumerStatefulWidget {
   const CreateClassScreen({super.key});
 
   @override
-  State<CreateClassScreen> createState() => _CreateClassScreenState();
+  ConsumerState<CreateClassScreen> createState() => _CreateClassScreenState();
 }
 
-class _CreateClassScreenState extends State<CreateClassScreen> {
+class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
   final _formKey = GlobalKey<FormState>();
   // Controllers
   final _nameController = TextEditingController();
@@ -18,6 +23,15 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   
   String _selectedMode = 'Offline'; // Online/Offline
   final List<String> _modes = ['Online', 'Offline'];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _scheduleController.dispose();
+    _addressController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,14 +104,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                     if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã mở lớp thành công!')),
-                      );
-                      context.pop();
-                    }
-                  },
+                  onPressed: _submitClass,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                      backgroundColor: Colors.blue[800],
@@ -112,5 +119,27 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
         ),
       ),
     );
+  }
+
+  void _submitClass() {
+    if (_formKey.currentState!.validate()) {
+      final newClass = TutorClass(
+        id: const Uuid().v4(),
+        tutorId: FirebaseAuth.instance.currentUser?.uid ?? 'guest',
+        name: _nameController.text,
+        schedule: _scheduleController.text,
+        mode: _selectedMode,
+        address: _selectedMode == 'Offline' ? _addressController.text : null,
+        price: double.tryParse(_priceController.text) ?? 0,
+        status: 'upcoming',
+      );
+
+      ref.read(tutorClassProvider.notifier).addClass(newClass);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã mở lớp thành công!')),
+      );
+      context.pop();
+    }
   }
 }

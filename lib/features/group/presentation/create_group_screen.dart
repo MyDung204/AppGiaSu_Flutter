@@ -213,7 +213,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         location: _locationController.text,
         description: _descController.text,
         maxMembers: int.tryParse(_maxMembersController.text) ?? 3,
+        minMembers: 2,
         createdAt: DateTime.now(),
+        startTime: DateTime.now().add(const Duration(days: 3)),
       );
 
       ref.read(groupRequestsProvider.notifier).addRequest(newRequest);

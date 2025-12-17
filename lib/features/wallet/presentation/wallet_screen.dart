@@ -1,19 +1,18 @@
+import 'package:doantotnghiep/features/wallet/data/wallet_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends ConsumerWidget {
   const WalletScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Mock Data
-    const double balance = 1500000;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final walletState = ref.watch(walletProvider);
+    final balance = walletState.balance;
+    final transactions = walletState.transactions;
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    final transactions = [
-      {'id': '1', 'title': 'Nạp tiền Momo', 'amount': 500000, 'date': '10/12/2023', 'type': 'credit'},
-      {'id': '2', 'title': 'Thanh toán buổi học #123', 'amount': -200000, 'date': '09/12/2023', 'type': 'debit'},
-      {'id': '3', 'title': 'Hoàn tiền buổi học #120', 'amount': 200000, 'date': '08/12/2023', 'type': 'credit'},
-    ];
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ví của tôi')),
@@ -62,35 +61,37 @@ class WalletScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: transactions.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final tx = transactions[index];
-                final isCredit = tx['type'] == 'credit';
-                final amount = tx['amount'] as int;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isCredit ? Colors.green[100] : Colors.red[100],
-                    child: Icon(
-                      isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                      color: isCredit ? Colors.green : Colors.red,
+            if (transactions.isEmpty)
+              const Padding(padding: EdgeInsets.all(16), child: Text("Chưa có giao dịch nào."))
+            else
+              ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: transactions.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final tx = transactions[index];
+                  final isCredit = tx.type == 'credit';
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isCredit ? Colors.green[100] : Colors.red[100],
+                      child: Icon(
+                        isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                        color: isCredit ? Colors.green : Colors.red,
+                      ),
                     ),
-                  ),
-                  title: Text(tx['title'] as String),
-                  subtitle: Text(tx['date'] as String),
-                  trailing: Text(
-                    '${isCredit ? '+' : ''}${currencyFormat.format(amount)}',
-                    style: TextStyle(
-                      color: isCredit ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
+                    title: Text(tx.title),
+                    subtitle: Text(dateFormat.format(tx.date)),
+                    trailing: Text(
+                      '${isCredit ? '+' : '-'}${currencyFormat.format(tx.amount)}',
+                      style: TextStyle(
+                        color: isCredit ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
           ],
         ),
       ),

@@ -1,12 +1,19 @@
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_class_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-class TutorDashboardScreen extends StatelessWidget {
+class TutorDashboardScreen extends ConsumerWidget {
   const TutorDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classes = ref.watch(tutorClassProvider);
+    final requests = ref.watch(tutorRequestsProvider).take(3).toList();
+    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -22,7 +29,7 @@ class TutorDashboardScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.black),
-            onPressed: () {},
+            onPressed: () => context.push('/notifications'),
           ),
         ],
       ),
@@ -99,88 +106,105 @@ class TutorDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Upcoming Class
-            const Text('Lớp học sắp tới', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // Upcoming Classes
+            const Text('Lớp học đang mở', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.blue.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    height: 60, width: 60,
+            if (classes.isEmpty)
+              const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có lớp học nào.", style: TextStyle(color: Colors.grey))))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: classes.take(3).length, // Show top 3
+                itemBuilder: (context, index) {
+                  final cls = classes[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(15),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.blue.withOpacity(0.1)),
                     ),
-                    child: const Center(child: Text('14:00', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text('Toán Lớp 12 - Ôn thi ĐH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text('Học viên: Trần Văn B', style: TextStyle(color: Colors.grey)),
+                        Container(
+                          height: 50, width: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: const Center(child: Icon(Icons.class_outlined, color: Colors.blue)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(cls.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(cls.schedule, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text('${cls.enrolledStudentCount} HV', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        )
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.video_call, color: Colors.green),
-                    onPressed: () {},
-                  )
-                ],
+                  );
+                },
               ),
-            ),
             
             const SizedBox(height: 30),
              // Pending Requests
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Yêu cầu mới', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                TextButton(onPressed: (){}, child: const Text('Xem tất cả')),
+                const Text('Học viên đang tìm lớp', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () => context.go('/tutor-dashboard/find-students'), 
+                  child: const Text('Xem tất cả')
+                ),
               ],
             ),
             const SizedBox(height: 10),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(backgroundColor: Colors.orange.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.orange)),
-                            const SizedBox(width: 12),
-                            Expanded(child: Text('Học viên Mới #${index+1} muốn đặt lịch môn Lý.', style: const TextStyle(fontWeight: FontWeight.w500))),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            OutlinedButton(onPressed: (){}, child: const Text('Từ chối')),
-                            const SizedBox(width: 12),
-                            ElevatedButton(onPressed: (){}, child: const Text('Chấp nhận')),
-                          ],
-                        )
-                      ],
+            if (requests.isEmpty)
+               const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có yêu cầu nào.", style: TextStyle(color: Colors.grey))))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: requests.length,
+                itemBuilder: (context, index) {
+                  final req = requests[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(backgroundColor: Colors.orange.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.orange)),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text('Học viên muốn tìm gia sư ${req.subject} (${req.gradeLevel})', style: const TextStyle(fontWeight: FontWeight.w500))),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(req.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
           ],
         ),
       ),

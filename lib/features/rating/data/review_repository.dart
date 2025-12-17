@@ -16,6 +16,7 @@ class MockReviewRepository implements ReviewRepository {
     return [
       Review(
         id: '1',
+        bookingId: 'booking_1',
         tutorId: tutorId,
         userId: 'u1',
         userName: 'Nguyễn Thị Hoa',
@@ -26,6 +27,7 @@ class MockReviewRepository implements ReviewRepository {
       ),
       Review(
         id: '2',
+        bookingId: 'booking_2',
         tutorId: tutorId,
         userId: 'u2',
         userName: 'Trần Minh Quân',
@@ -36,6 +38,7 @@ class MockReviewRepository implements ReviewRepository {
       ),
       Review(
         id: '3',
+        bookingId: 'booking_3',
         tutorId: tutorId,
         userId: 'u3',
         userName: 'Lê Văn Tám',
@@ -46,6 +49,7 @@ class MockReviewRepository implements ReviewRepository {
       ),
        Review(
         id: '4',
+        bookingId: 'booking_4',
         tutorId: tutorId,
         userId: 'u4',
         userName: 'Phạm Hương',
@@ -56,6 +60,7 @@ class MockReviewRepository implements ReviewRepository {
       ),
        Review(
         id: '5',
+        bookingId: 'booking_5',
         tutorId: tutorId,
         userId: 'u5',
         userName: 'Hoàng Long',

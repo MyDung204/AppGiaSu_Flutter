@@ -2,10 +2,12 @@ import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/booking/presentation/booking_controller.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final Tutor tutor;
@@ -19,6 +21,7 @@ class BookingScreen extends ConsumerStatefulWidget {
 class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTimeSlot;
+  bool _isProcessing = false;
 
   // Mock time slots
   final List<String> _timeSlots = [
@@ -32,66 +35,79 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   void _onConfirmBooking() async {
     if (_selectedTimeSlot == null) return;
 
-    // 1. Add to Booking Provider (History/Schedule)
-    final newBooking = BookingItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      tutor: widget.tutor,
-      date: _selectedDate,
-      timeSlot: _selectedTimeSlot!,
-      price: widget.tutor.hourlyRate * 2,
-    );
-    ref.read(bookingProvider.notifier).addBooking(newBooking);
+    setState(() => _isProcessing = true);
 
-    // 2. Add System Notification to Chat
+    final bookingId = const Uuid().v4();
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
     final formattedDate = DateFormat('dd/MM/yyyy').format(_selectedDate);
-    ref.read(chatProvider.notifier).sendMessage(
-      widget.tutor.id,
-      'Hệ thống: Bạn đã đặt lịch học thành công vào ngày $formattedDate, khung giờ $_selectedTimeSlot!.',
-      isSystem: true,
-      isUser: true, // Show on user side
-    );
 
-    // 3. Backend Call (Mocked via controller)
-    await ref.read(bookingControllerProvider.notifier).createBooking(
-      tutorId: widget.tutor.id,
-      date: _selectedDate,
-      timeSlot: _selectedTimeSlot!,
-      amount: widget.tutor.hourlyRate * 2,
-    );
+    try {
+      // 1. Attempt Soft Lock (10 mins)
+      final lockItem = BookingItem(
+        id: bookingId,
+        userId: userId,
+        tutor: widget.tutor,
+        date: _selectedDate,
+        timeSlot: _selectedTimeSlot!,
+        price: widget.tutor.hourlyRate * 2,
+        status: 'Locked',
+        lockedUntil: DateTime.now().add(const Duration(minutes: 10)),
+      );
 
-    if (ref.read(bookingControllerProvider).hasError) {
+      ref.read(bookingProvider.notifier).lockSlot(lockItem);
+
+      // 2. Simulate Payment Process (Delay)
+      // In real app, navigate to Payment Screen or show Payment Sheet here
+      await Future.delayed(const Duration(seconds: 2));
+
+      // 3. Confirm Booking (Hard Lock - Payment Success)
+      ref.read(bookingProvider.notifier).confirmBooking(bookingId);
+
+      // 4. Notifications & Backend Sync
+      ref.read(chatProvider.notifier).sendMessage(
+        widget.tutor.id,
+        'Hệ thống: Bạn đã đặt lịch học thành công vào ngày $formattedDate, khung giờ $_selectedTimeSlot!.',
+        isSystem: true,
+        isUser: true, 
+      );
+
+      // Mock Backend Sync
+      await ref.read(bookingControllerProvider.notifier).createBooking(
+        tutorId: widget.tutor.id,
+        date: _selectedDate,
+        timeSlot: _selectedTimeSlot!,
+        amount: widget.tutor.hourlyRate * 2,
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đặt lịch thất bại. Vui lòng thử lại.')),
-        );
-      }
-    } else {
-      if (mounted) {
-        // Show success dialog
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Thành công!'),
-            content: const Text('Yêu cầu đặt lịch của bạn đã được gửi và lưu vào lịch sử.'),
+            content: const Text('Yêu cầu đặt lịch của bạn đã được gửi. Bạn vui lòng vào đúng giờ nhé!'),
             actions: [
               TextButton(
-                onPressed: () {
-                  context.go('/schedule'); // Go to Schedule to see result
-                },
+                onPressed: () => context.go('/schedule'),
                 child: const Text('Xem Lịch học'),
               ),
             ],
           ),
         );
       }
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: ${e.toString().replaceAll('Exception: ', '')}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bookingState = ref.watch(bookingControllerProvider);
-    final isLoading = bookingState.isLoading;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Đặt lịch học'),
@@ -101,7 +117,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tutor Info Summary
+            // Tutor Info
             ListTile(
               leading: CircleAvatar(
                 backgroundImage: NetworkImage(widget.tutor.avatarUrl),
@@ -125,7 +141,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               onDateChanged: (date) {
                 setState(() {
                   _selectedDate = date;
-                  _selectedTimeSlot = null; // Reset time slot when date changes
+                  _selectedTimeSlot = null; 
                 });
               },
             ),
@@ -139,17 +155,21 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             const SizedBox(height: 8),
             Consumer(
               builder: (context, ref, child) {
-                 // 1. Get Available Slots for Selected Weekday
-                 // Weekday in Dart: 1=Mon, 7=Sun. VN Schedule map keys: '2'=Mon... '8'=Sun.
-                 // So mapping: Dart(1)->'2', Dart(2)->'3'... Dart(7)->'8'.
                  final weekday = _selectedDate.weekday;
                  final scheduleKey = (weekday == 7) ? '8' : (weekday + 1).toString();
-                 
                  final availableSlots = widget.tutor.weeklySchedule[scheduleKey] ?? [];
 
-                 // 2. check for conflicts
-                 final existingBookings = ref.watch(bookingProvider);
+                 // Force cleanup of expired locks before rendering
+                 // In a real app, this might be reactive or handled better
+                 // ref.read(bookingProvider.notifier).cleanExpiredLocks(); 
+                 // Note: calling notifier write method in build is bad practice. 
+                 // The 'isSlotAvailable' check inside provider does the check.
+
+                 final existingBookings = ref.watch(bookingProvider).value ?? [];
+                 final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
                  
+                 final dateStr = DateFormat('yyyyMMdd').format(_selectedDate);
+
                  if (availableSlots.isEmpty) {
                    return const Padding(
                      padding: EdgeInsets.symmetric(vertical: 16),
@@ -161,25 +181,49 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: availableSlots.map((slot) {
-                    // Check collision: Same tutor, same date, same slot
-                    final isOccupied = existingBookings.any((b) => 
-                        b.tutor.id == widget.tutor.id && 
-                        DateFormat('yyyyMMdd').format(b.date) == DateFormat('yyyyMMdd').format(_selectedDate) &&
-                        b.timeSlot == slot &&
-                        b.status != 'Cancelled'
-                    );
+                    bool isLockedByOthers = false;
+                    bool isBooked = false;
+                    bool isMyLock = false;
 
+                    for (var b in existingBookings) {
+                      if (b.tutor.id == widget.tutor.id && 
+                          DateFormat('yyyyMMdd').format(b.date) == dateStr &&
+                          b.timeSlot == slot &&
+                          b.status != 'Cancelled') {
+                        
+                        if (b.status == 'Upcoming') {
+                          isBooked = true;
+                        } else if (b.status == 'Locked') {
+                          if (b.lockedUntil != null && b.lockedUntil!.isAfter(DateTime.now())) {
+                             // Valid lock
+                             if (b.userId == currentUserId) {
+                               isMyLock = true;
+                             } else {
+                               isLockedByOthers = true;
+                             }
+                          }
+                        }
+                      }
+                    }
+
+                    final isDisabled = isBooked || isLockedByOthers;
                     final isSelected = _selectedTimeSlot == slot;
+
+                    String label = slot;
+                    if (isBooked) label += ' (Đã kín)';
+                    else if (isLockedByOthers) label += ' (Đang giao dịch)';
+                    else if (isMyLock) label += ' (Bạn đang giữ)';
                     
                     return ChoiceChip(
-                      label: Text(isOccupied ? '$slot (Đã kín)' : slot),
+                      label: Text(label),
                       selected: isSelected,
-                      onSelected: isOccupied ? null : (selected) {
+                      onSelected: isDisabled ? null : (selected) {
                         setState(() {
                           _selectedTimeSlot = selected ? slot : null;
                         });
                       },
-                      disabledColor: Colors.red.withOpacity(0.1),
+                      disabledColor: Colors.grey[300],
+                      selectedColor: isMyLock ? Colors.orangeAccent : null, // Highlight if I'm holding it (though this logic is for future selection)
                     );
                   }).toList(),
                 );
@@ -192,14 +236,17 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
-            onPressed: (_selectedTimeSlot == null || isLoading) ? null : _onConfirmBooking,
-            child: isLoading
+            onPressed: (_selectedTimeSlot == null || _isProcessing) ? null : _onConfirmBooking,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isProcessing
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(color: Colors.white),
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
-                : const Text('Xác nhận đặt lịch'),
+                : const Text('Xác nhận đặt lịch & Thanh toán'),
           ),
         ),
       ),

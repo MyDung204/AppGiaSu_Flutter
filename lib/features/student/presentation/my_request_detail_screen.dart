@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-class MyRequestDetailScreen extends StatelessWidget {
+class MyRequestDetailScreen extends ConsumerWidget {
   final TutorRequest request;
 
   const MyRequestDetailScreen({super.key, required this.request});
 
-  Future<void> _deleteRequest(BuildContext context) async {
+  Future<void> _deleteRequest(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -27,7 +28,9 @@ class MyRequestDetailScreen extends StatelessWidget {
     );
 
     if (confirm == true) {
-      await FirebaseFirestore.instance.collection('tutor_requests').doc(request.id).delete();
+      // Mock Delete via Provider (Memory only)
+      ref.read(tutorRequestsProvider.notifier).removeRequest(request.id);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa yêu cầu.')));
         context.pop();
@@ -36,7 +39,7 @@ class MyRequestDetailScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
     
     return Scaffold(
@@ -45,7 +48,7 @@ class MyRequestDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () => _deleteRequest(context),
+            onPressed: () => _deleteRequest(context, ref),
           ),
         ],
       ),
@@ -73,7 +76,7 @@ class MyRequestDetailScreen extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => context.go('/messages'), // Assuming main tab nav
+                    onPressed: () => context.go('/messages'), 
                     child: const Text('Hộp thư'),
                   )
                 ],

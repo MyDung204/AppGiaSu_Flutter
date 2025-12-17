@@ -1,133 +1,111 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:doantotnghiep/core/network/api_client.dart';
+import 'package:doantotnghiep/core/network/api_constants.dart';
+import 'package:doantotnghiep/features/auth/domain/models/app_user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(FirebaseAuth.instance);
+  final apiClient = ref.watch(apiClientProvider);
+  return AuthRepository(apiClient);
 });
 
 // Stream provider to listen to auth state changes
-final authStateChangesProvider = StreamProvider<User?>((ref) {
+final authStateChangesProvider = StreamProvider<AppUser?>((ref) {
   return ref.watch(authRepositoryProvider).authStateChanges;
 });
 
 class AuthRepository {
-  final FirebaseAuth _firebaseAuth;
+  final ApiClient _apiClient;
+  final _authStateController = StreamController<AppUser?>.broadcast();
+  AppUser? _currentUser;
 
-  AuthRepository(this._firebaseAuth);
+  AuthRepository(this._apiClient) {
+    _restoreSession();
+  }
 
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
-  User? get currentUser => _firebaseAuth.currentUser;
+  Stream<AppUser?> get authStateChanges => _authStateController.stream;
+  AppUser? get currentUser => _currentUser;
 
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _handleFirebaseAuthError(e);
+  Future<void> _restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final userJson = prefs.getString('user_data');
+
+    if (token != null && userJson != null) {
+      try {
+        _currentUser = AppUser.fromJson(jsonDecode(userJson));
+        _authStateController.add(_currentUser);
+      } catch (e) {
+        await signOut();
+      }
+    } else {
+       _authStateController.add(null);
     }
   }
 
-  Future<User?> signUpWithEmailAndPassword(String email, String password) async {
+  Future<AppUser?> signInWithEmailAndPassword(String email, String password) async {
     try {
-      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _handleFirebaseAuthError(e);
+      final response = await _apiClient.post(ApiConstants.login, data: {
+        'email': email,
+        'password': password,
+      });
+
+      final token = response['token'];
+      final user = AppUser.fromJson(response['user']);
+
+      await _saveSession(token, user);
+      return user;
+    } catch (e) {
+      throw 'Đăng nhập thất bại: ${e.toString()}';
+    }
+  }
+
+  Future<AppUser?> signUpWithEmailAndPassword(String name, String email, String password, String role) async {
+    try {
+      final response = await _apiClient.post(ApiConstants.register, data: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+      });
+
+      final token = response['token'];
+      final user = AppUser.fromJson(response['user']);
+
+      await _saveSession(token, user);
+      return user;
+    } catch (e) {
+      throw 'Đăng ký thất bại: ${e.toString()}';
     }
   }
 
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    _currentUser = null;
+    _authStateController.add(null);
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_data');
     await prefs.remove('user_role');
   }
 
-  // Role Management
-  Future<void> saveUserRole(String uid, String role) async {
-    // Force Role for specific emails (Registration Override)
-    final email = _firebaseAuth.currentUser?.email;
-    String finalRole = role;
-    
-    if (email != null) {
-      if (email == 'admin@tutor.com') {
-        finalRole = 'admin';
-      } else if (email.contains('tutor')) {
-        finalRole = 'tutor'; // Auto-force Tutor for testing emails
-      }
-    }
-
-    // 1. Save to Firestore
-    await FirebaseFirestore.instance.collection('users').doc(uid).set(
-      {'role': finalRole, 'email': email},
-      SetOptions(merge: true),
-    );
-    // 2. Save Locally
+  Future<void> _saveSession(String token, AppUser user) async {
+    _currentUser = user;
+    _authStateController.add(user);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_role', finalRole);
+    await prefs.setString('auth_token', token);
+    await prefs.setString('user_data', jsonEncode(user.toJson()));
+    await prefs.setString('user_role', user.role);
   }
 
+  // Helper for existing code compatibility
   Future<String?> getUserRole(String uid) async {
-    // 1. Try Local First
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey('user_role')) {
-      return prefs.getString('user_role');
-    }
-    
-    // 2. Fetch from Firestore if not local
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        final role = doc.data()?['role'] as String?;
-        if (role != null) {
-          await prefs.setString('user_role', role); // Cache it
-          return role;
-        }
-      }
-      
-      // 3. Fallback: If role is missing in Firestore, check Email patterns (Auto-fix)
-      final email = _firebaseAuth.currentUser?.email;
-      if (email != null) {
-        if (email == 'admin@tutor.com') {
-           await saveUserRole(uid, 'admin'); // Auto-create Admin
-           return 'admin';
-        }
-        if (email.contains('tutor')) {
-           await saveUserRole(uid, 'tutor'); // Auto-create Tutor
-           return 'tutor';
-        }
-      }
-
-    } catch (e) {
-      // Handle error or return null
-      print('Error fetching role: $e');
-    }
-    return null;
+    return _currentUser?.role;
   }
-
-  String _handleFirebaseAuthError(FirebaseAuthException e) {
-    // Customize error messages logic here
-    switch (e.code) {
-      case 'user-not-found':
-        return 'Không tìm thấy tài khoản với email này.';
-      case 'wrong-password':
-        return 'Mật khẩu không chính xác.';
-      case 'email-already-in-use':
-        return 'Email này đã được sử dụng.';
-      case 'invalid-email':
-        return 'Email không hợp lệ.';
-      case 'weak-password':
-        return 'Mật khẩu quá yếu.';
-      default:
-        return e.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.';
-    }
+  
+  Future<void> saveUserRole(String uid, String role) async {
+     // No-op for API (handled by backend)
   }
 }

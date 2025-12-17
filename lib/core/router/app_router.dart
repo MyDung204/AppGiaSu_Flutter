@@ -19,7 +19,6 @@ import 'package:doantotnghiep/features/student/presentation/create_tutor_request
 import 'package:doantotnghiep/features/student/presentation/my_request_detail_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:doantotnghiep/features/notification/presentation/notification_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +37,9 @@ import 'package:doantotnghiep/features/home/presentation/widgets/scaffold_with_n
 import 'package:doantotnghiep/features/booking/presentation/schedule_screen.dart';
 import 'package:doantotnghiep/features/chat/presentation/chat_screen.dart';
 import 'package:doantotnghiep/features/chat/presentation/chat_list_screen.dart';
+import 'package:doantotnghiep/features/community/presentation/community_screen.dart';
+import 'package:doantotnghiep/features/community/presentation/create_question_screen.dart';
+import 'package:doantotnghiep/features/community/presentation/question_detail_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -235,30 +237,43 @@ class AppRouter {
         ],
       ),
       GoRoute(
-        path: '/forgot-password',
-        builder: (context, state) => const Scaffold(body: Center(child: Text("Forgot Password"))), // Placeholder
-      ),
-      GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/notifications',
         builder: (context, state) => const NotificationScreen(),
       ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/community',
+        builder: (context, state) => const CommunityScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/create-question',
+        builder: (context, state) => const CreateQuestionScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/question-detail/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return QuestionDetailScreen(questionId: id);
+        },
+      ),
     ],
     redirect: (context, state) async {
-      final authState = FirebaseAuth.instance.currentUser;
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final role = prefs.getString('user_role');
+      
       final loggingIn = state.uri.path == '/login' || state.uri.path == '/register';
 
       // 1. Not logged in
-      if (authState == null) {
+      if (token == null) {
         return loggingIn ? null : '/login';
       }
 
       // 2. Logged in
       if (loggingIn || state.uri.path == '/') {
-        // Fetch Role using Repository
-        final repo = AuthRepository(FirebaseAuth.instance);
-        final role = await repo.getUserRole(authState.uid);
-        
         if (role == 'admin') {
           return '/admin';
         } else if (role == 'tutor') {
@@ -268,9 +283,8 @@ class AppRouter {
         }
       }
 
-      return null; // No redirect
+      return null;
     },
-    refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
   );
 }
 

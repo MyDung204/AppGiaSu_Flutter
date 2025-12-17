@@ -1,8 +1,11 @@
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
+import 'package:doantotnghiep/features/chat/domain/models/course_offer.dart';
+import 'package:doantotnghiep/features/chat/presentation/widgets/offer_bubble.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final Tutor tutor;
@@ -30,10 +33,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _sendContextMessage(TutorRequest req) {
-    // Auto-send message about the request
+    // Check if we already sent context? For now just send.
+    // Ideally we check if chat history is empty, but mock provider resets anyway.
     final text = "Chào bạn, mình thấy bài đăng tìm gia sư môn ${req.subject} (${req.gradeLevel}) của bạn.\nMình rất quan tâm và muốn nhận lớp này.";
-    ref.read(chatProvider.notifier).sendMessage(widget.tutor.id, text);
-    _scrollToBottom();
+    ref.read(chatProvider.notifier).sendMessage(widget.tutor.id, text, isUser: true); // Tutor simulates sending this? Or User?
+    // Wait, if I am the Student viewing "Find Tutor", I start chat.
+    // If I am Tutor viewing "Find Student", "Chat Now" opens chat properly?
+    // The current flow assumes USER is Student.
+    // If TutorRequest is present, it means STUDENT posted it, and TUTOR initiates chat.
+    // BUT we are forcing the User to be the Student in this app version.
+    // So "Find Student" feature for Tutor is actually mocked as "I am a Tutor".
+    // Let's assume WE are the Tutor in this specific context (Context sending).
   }
 
   void _scrollToBottom() {
@@ -50,10 +60,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch messages from provider for this specific tutor
     final allMessages = ref.watch(chatProvider);
     final messages = allMessages[widget.tutor.id] ?? [
-        // Default greeting if empty (also handled in provider but safe here)
+        ChatMessage(
+          text: 'Chào bạn, đường truyền kết nối ổn định.',
+          isUser: false,
+          time: DateTime.now().subtract(const Duration(minutes: 5)),
+          isSystem: true,
+        ),
         ChatMessage(
           text: 'Chào bạn, mình có thể giúp gì cho bạn?',
           isUser: false,
@@ -91,6 +105,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.black87),
+        actions: [
+          IconButton(icon: const Icon(Icons.call), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -109,14 +127,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 itemCount: messages.length,
                 itemBuilder: (context, index) {
                   final msg = messages[index];
-                  // If system message, center it
+                  
+                  // System Message
                   if (msg.isSystem) {
                     return Center(
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
+                          color: Colors.black.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -128,6 +147,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     );
                   }
 
+                  // Offer Message
+                  if (msg.offer != null) {
+                    // If isUser=true, it's on the Right.
+                    return Align(
+                      alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      child: OfferBubble(offer: msg.offer!, isUser: msg.isUser),
+                    );
+                  }
+
+                  // Normal Text Message
                   return Align(
                     alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                     child: Column(
@@ -172,14 +201,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             // Input Area
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(30),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
               ),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: Colors.orange, size: 30),
+                    onPressed: _showActionSheet,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -198,6 +232,109 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showActionSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.assignment_turned_in, color: Colors.green),
+              title: const Text('Tạo đề xuất khóa học'),
+              subtitle: const Text('Gửi báo giá và lịch học'),
+              onTap: () {
+                Navigator.pop(context);
+                _showCreateOfferModal();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blue),
+              title: const Text('Gửi ảnh'),
+              onTap: () => Navigator.pop(context),
+            ),
+             ListTile(
+              leading: const Icon(Icons.location_on, color: Colors.red),
+              title: const Text('Gửi vị trí'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateOfferModal() {
+    final subjectCtrl = TextEditingController();
+    final scheduleCtrl = TextEditingController();
+    final priceCtrl = TextEditingController(); // Per session
+    final sessionsCtrl = TextEditingController(text: '2');
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true, 
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tạo đề xuất khóa học', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Môn học', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: scheduleCtrl, decoration: const InputDecoration(labelText: 'Lịch học (VD: T3, T5 19h)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Học phí/buổi (VNĐ)', border: OutlineInputBorder()))),
+                const SizedBox(width: 10),
+                Expanded(child: TextField(controller: sessionsCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số buổi/tuần', border: OutlineInputBorder()))),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (subjectCtrl.text.isEmpty || priceCtrl.text.isEmpty) return;
+                  
+                  final offer = CourseOffer(
+                    id: const Uuid().v4(),
+                    tutorId: widget.tutor.id,
+                    tutorName: widget.tutor.name,
+                    subject: subjectCtrl.text,
+                    schedule: scheduleCtrl.text,
+                    price: double.tryParse(priceCtrl.text) ?? 0,
+                    sessionsPerWeek: int.tryParse(sessionsCtrl.text) ?? 2,
+                  );
+
+                  ref.read(chatProvider.notifier).sendMessage(
+                    widget.tutor.id,
+                    'Đã gửi đề xuất: ${offer.subject}',
+                    isUser: true, // Simulating WE send it (even if we are Tutor)
+                    offer: offer,
+                  );
+                  Navigator.pop(context);
+                  _scrollToBottom();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent, 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Gửi đề xuất'),
+              ),
+            )
           ],
         ),
       ),

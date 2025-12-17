@@ -1,3 +1,4 @@
+import 'package:doantotnghiep/features/chat/domain/models/course_offer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ChatMessage {
@@ -5,12 +6,14 @@ class ChatMessage {
   final bool isUser;
   final DateTime time;
   final bool isSystem; // New field for system notifications
+  final CourseOffer? offer;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.time,
     this.isSystem = false,
+    this.offer,
   });
 }
 
@@ -21,7 +24,7 @@ class ChatState extends Notifier<Map<String, List<ChatMessage>>> {
     return {};
   }
 
-  void sendMessage(String tutorId, String text, {bool isUser = true, bool isSystem = false}) {
+  void sendMessage(String tutorId, String text, {bool isUser = true, bool isSystem = false, CourseOffer? offer}) {
     final currentMessages = state[tutorId] ?? [];
     
     // Mock initial greeting if empty
@@ -42,6 +45,7 @@ class ChatState extends Notifier<Map<String, List<ChatMessage>>> {
           isUser: isUser,
           time: DateTime.now(),
           isSystem: isSystem,
+          offer: offer,
         ),
       ],
     };
