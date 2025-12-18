@@ -18,6 +18,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Protected Routes (Require Token)
+Route::get('/debug-tutors', function () {
+    return \App\Models\Tutor::all();
+});
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);

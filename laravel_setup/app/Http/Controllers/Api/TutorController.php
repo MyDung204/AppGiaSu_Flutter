@@ -29,6 +29,9 @@ class TutorController extends Controller
             $subjects = explode(',', $request->subjects);
             $query->where(function ($q) use ($subjects) {
                 foreach ($subjects as $subject) {
+                    // Robust JSON Search: Match "Subject" inside JSON
+                    $q->orWhere('subjects', 'like', '%"' . $subject . '"%');
+                    // Fallback: standard like for non-json or partial matches
                     $q->orWhere('subjects', 'like', "%{$subject}%");
                 }
             });

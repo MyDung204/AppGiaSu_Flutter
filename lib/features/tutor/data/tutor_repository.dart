@@ -50,10 +50,12 @@ class TutorRepositoryImpl implements TutorRepository {
         if (filter.teachingMode != null && filter.teachingMode!.isNotEmpty) {
           params['mode'] = filter.teachingMode!.join(',');
         }
-        if (filter.subjects != null && filter.subjects!.isNotEmpty) {
+      if (filter.subjects != null && filter.subjects!.isNotEmpty) {
            params['subjects'] = filter.subjects!.join(',');
-        }
+      } // Corrected closing brace for filter != null (was missing in target?)
       }
+
+      print('Searching Tutors with Params: $params'); 
 
       // Call Laravel API: GET /tutors?search=...
       final response = await _apiClient.get(ApiConstants.tutors, queryParameters: params);

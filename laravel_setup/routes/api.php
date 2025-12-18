@@ -10,6 +10,10 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->get('/user', [AuthController::class, 'me']);
 
+Route::get('/debug-tutors', function () {
+    return \App\Models\Tutor::all();
+});
+
 // Shared Learning
 Route::get('/study-groups', [SharedLearningController::class, 'indexGroups']);
 Route::get('/courses', [SharedLearningController::class, 'indexCourses']);

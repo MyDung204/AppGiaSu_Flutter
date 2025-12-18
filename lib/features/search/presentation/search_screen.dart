@@ -59,14 +59,15 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   late TextEditingController _queryController;
+  bool _isFilterInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _queryController = TextEditingController();
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-       if (widget.initialSubject != null) {
+    if (widget.initialSubject != null) {
+       WidgetsBinding.instance.addPostFrameCallback((_) {
           final currentFilter = const SearchFilter(
              minPrice: 50000, maxPrice: 1000000, 
              gender: 'Bất kỳ',
@@ -77,8 +78,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ref.read(searchFilterProvider.notifier).update(
             currentFilter.copyWith(subjects: [widget.initialSubject!])
           );
-       }
-    });
+          
+          if (mounted) setState(() => _isFilterInitialized = true);
+       });
+    } else {
+       _isFilterInitialized = true;
+    }
   }
 
   @override
@@ -89,6 +94,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(searchFilterProvider);
+
+    if (!_isFilterInitialized) {
+       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
     final searchResults = ref.watch(searchResultsProvider);
 
     return DefaultTabController(
