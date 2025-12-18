@@ -5,11 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-class CommunityScreen extends ConsumerWidget {
+class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends ConsumerState<CommunityScreen> {
+  String _selectedTopic = 'Tất cả';
+  final List<String> _topics = ['Tất cả', 'Toán', 'Văn', 'Anh', 'Lý', 'Hóa'];
+
+  @override
+  Widget build(BuildContext context) {
     final questionsAsync = ref.watch(communityProvider);
 
     return Scaffold(
@@ -24,34 +32,34 @@ class CommunityScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Topic Filter
           Container(
             height: 50,
             color: Colors.white,
-            child: ListView(
+            child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                _buildChip('Tất cả', isSelected: true),
-                _buildChip('Toán'),
-                _buildChip('Văn'),
-                _buildChip('Anh'),
-                _buildChip('Lý'),
-                _buildChip('Hóa'),
-              ],
+              itemCount: _topics.length,
+              itemBuilder: (context, index) {
+                final topic = _topics[index];
+                return _buildChip(topic, isSelected: topic == _selectedTopic);
+              },
             ),
           ),
           Expanded(
             child: questionsAsync.when(
               data: (questions) {
-                if (questions.isEmpty) {
-                  return const Center(child: Text('Chưa có câu hỏi nào.'));
+                final filteredQuestions = _selectedTopic == 'Tất cả'
+                    ? questions
+                    : questions.where((q) => q.subject == _selectedTopic).toList();
+
+                if (filteredQuestions.isEmpty) {
+                  return Center(child: Text('Chưa có câu hỏi nào về "$_selectedTopic".'));
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: questions.length,
+                  itemCount: filteredQuestions.length,
                   itemBuilder: (context, index) {
-                    final q = questions[index];
+                    final q = filteredQuestions[index];
                     return InkWell(
                       onTap: () => context.push('/question-detail/${q.id}'),
                       child: Card(
@@ -129,10 +137,13 @@ class CommunityScreen extends ConsumerWidget {
   Widget _buildChip(String label, {bool isSelected = false}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: Chip(
-        label: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
-        backgroundColor: isSelected ? Colors.blueAccent : Colors.grey[200],
-        side: BorderSide.none,
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTopic = label),
+        child: Chip(
+          label: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
+          backgroundColor: isSelected ? Colors.blueAccent : Colors.grey[200],
+          side: BorderSide.none,
+        ),
       ),
     );
   }
