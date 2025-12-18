@@ -105,6 +105,18 @@ class AuthRepository {
     return _currentUser?.role;
   }
   
+  Future<void> changePassword(String currentPassword, String newPassword, String confirmPassword) async {
+    try {
+      await _apiClient.post('/change-password', data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': confirmPassword,
+      });
+    } catch (e) {
+      throw e.toString();
+    }
+  }
+
   Future<void> saveUserRole(String uid, String role) async {
      // No-op for API (handled by backend)
   }

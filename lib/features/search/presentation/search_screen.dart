@@ -49,21 +49,55 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Tutor>>((ref) asyn
   return ref.read(tutorRepositoryProvider).searchTutors(query, filter: filter);
 });
 
-class SearchScreen extends ConsumerWidget {
-  const SearchScreen({super.key});
+class SearchScreen extends ConsumerStatefulWidget {
+  final String? initialSubject;
+  const SearchScreen({super.key, this.initialSubject});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  late TextEditingController _queryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryController = TextEditingController();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+       if (widget.initialSubject != null) {
+          final currentFilter = const SearchFilter(
+             minPrice: 50000, maxPrice: 1000000, 
+             gender: 'Bất kỳ',
+             teachingMode: [],
+             subjects: []
+          );
+          
+          ref.read(searchFilterProvider.notifier).update(
+            currentFilter.copyWith(subjects: [widget.initialSubject!])
+          );
+       }
+    });
+  }
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final searchResults = ref.watch(searchResultsProvider);
-    final queryController = TextEditingController(text: ref.read(searchQueryProvider));
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
-            controller: queryController,
-            autofocus: false, // Changed to false to avoid keyboard popping on tab switch
+            controller: _queryController,
+            autofocus: false,
             decoration: InputDecoration(
               hintText: 'Tìm kiếm...',
               border: InputBorder.none,
@@ -72,7 +106,7 @@ class SearchScreen extends ConsumerWidget {
               suffixIcon: IconButton(
                 icon: const Icon(Icons.clear),
                 onPressed: () {
-                  queryController.clear();
+                  _queryController.clear();
                   ref.read(searchQueryProvider.notifier).update('');
                 },
               ),

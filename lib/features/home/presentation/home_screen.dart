@@ -307,20 +307,26 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildCategoryItem(BuildContext context, String label, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          Container(
-            width: 65,
-            height: 65,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () {
+          context.go(Uri(path: '/search', queryParameters: {'subject': label}).toString());
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          children: [
+            Container(
+              width: 65,
+              height: 65,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(icon, color: color, size: 30),
             ),
-            child: Icon(icon, color: color, size: 30),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        ],
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
+        ),
       ),
     );
   }

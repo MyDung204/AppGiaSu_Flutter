@@ -40,6 +40,8 @@ import 'package:doantotnghiep/features/chat/presentation/chat_list_screen.dart';
 import 'package:doantotnghiep/features/community/presentation/community_screen.dart';
 import 'package:doantotnghiep/features/community/presentation/create_question_screen.dart';
 import 'package:doantotnghiep/features/community/presentation/question_detail_screen.dart';
+import 'package:doantotnghiep/features/profile/presentation/settings_screen.dart';
+import 'package:doantotnghiep/features/profile/presentation/change_password_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,7 +71,10 @@ class AppRouter {
           ),
           GoRoute(
             path: '/search',
-            builder: (context, state) => const SearchScreen(),
+            builder: (context, state) {
+              final subject = state.uri.queryParameters['subject'];
+              return SearchScreen(initialSubject: subject);
+            },
           ),
           GoRoute(
              path: '/schedule',
@@ -258,6 +263,16 @@ class AppRouter {
           final id = state.pathParameters['id']!;
           return QuestionDetailScreen(questionId: id);
         },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
     ],
     redirect: (context, state) async {

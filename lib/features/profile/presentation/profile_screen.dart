@@ -65,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
               'Xác thực danh tính (eKYC)', 
               () => context.push(Uri(path: '/ekyc', queryParameters: {'isTutor': isTutor.toString()}).toString())
             ),
-            _buildMenuItem(context, Icons.settings, 'Cài đặt', () {}),
+            _buildMenuItem(context, Icons.settings, 'Cài đặt', () => context.push('/settings')),
             const Divider(),
             _buildMenuItem(
               context,
