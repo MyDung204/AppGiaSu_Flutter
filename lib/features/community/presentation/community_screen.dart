@@ -15,6 +15,26 @@ class CommunityScreen extends ConsumerStatefulWidget {
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   String _selectedTopic = 'Tất cả';
   final List<String> _topics = ['Tất cả', 'Toán', 'Văn', 'Anh', 'Lý', 'Hóa'];
+  
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchText = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +43,34 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Góc Hỏi Đáp', style: TextStyle(color: Colors.black)),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Tìm kiếm câu hỏi...',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.black),
+              )
+            : const Text('Góc Hỏi Đáp', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.search, color: Colors.black), onPressed: () {}),
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.black),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchController.clear();
+                  _searchText = '';
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
         ],
       ),
       body: Column(
@@ -48,18 +91,25 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           Expanded(
             child: questionsAsync.when(
               data: (questions) {
-                final filteredQuestions = _selectedTopic == 'Tất cả'
+                var filtered = _selectedTopic == 'Tất cả'
                     ? questions
                     : questions.where((q) => q.subject == _selectedTopic).toList();
 
-                if (filteredQuestions.isEmpty) {
-                  return Center(child: Text('Chưa có câu hỏi nào về "$_selectedTopic".'));
+                if (_searchText.isNotEmpty) {
+                  filtered = filtered.where((q) =>
+                      q.content.toLowerCase().contains(_searchText) ||
+                      q.userName.toLowerCase().contains(_searchText)
+                  ).toList();
+                }
+
+                if (filtered.isEmpty) {
+                  return const Center(child: Text('Không tìm thấy kết quả nào.'));
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: filteredQuestions.length,
+                  itemCount: filtered.length,
                   itemBuilder: (context, index) {
-                    final q = filteredQuestions[index];
+                    final q = filtered[index];
                     return InkWell(
                       onTap: () => context.push('/question-detail/${q.id}'),
                       child: Card(
