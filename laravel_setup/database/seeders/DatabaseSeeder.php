@@ -27,6 +27,13 @@ class DatabaseSeeder extends Seeder
             'role' => 'student'
         ]);
 
-        $this->call([TutorSeeder::class]);
+        $this->call([
+            TutorSeeder::class,
+            WalletSeeder::class,
+            ChatSeeder::class,
+            DataPopulationSeeder::class,
+            ReviewSeeder::class,
+            QuestionSeeder::class,
+        ]);
     }
 }

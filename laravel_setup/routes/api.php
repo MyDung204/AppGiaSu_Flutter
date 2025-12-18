@@ -29,3 +29,7 @@ Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 Route::get('/conversations', [App\Http\Controllers\Api\ChatController::class, 'index']);
 Route::get('/conversations/{id}/messages', [App\Http\Controllers\Api\ChatController::class, 'show']);
 Route::post('/messages', [App\Http\Controllers\Api\ChatController::class, 'store']);
+
+// Wallet
+Route::get('/wallet', [App\Http\Controllers\Api\WalletController::class, 'index']);
+Route::post('/wallet/deposit', [App\Http\Controllers\Api\WalletController::class, 'deposit']);

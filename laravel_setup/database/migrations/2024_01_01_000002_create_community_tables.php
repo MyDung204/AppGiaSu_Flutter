@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->string('subject');
             $table->text('content');
             $table->string('image_url')->nullable();
+            $table->json('tags')->nullable();
             $table->integer('like_count')->default(0);
             $table->integer('answer_count')->default(0);
             $table->boolean('is_solved')->default(false);

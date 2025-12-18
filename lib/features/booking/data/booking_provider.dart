@@ -11,7 +11,7 @@ class BookingItem {
   final Tutor tutor; // Can be partial object
   final DateTime date;
   final String timeSlot;
-  final double price;
+  final double totalPrice;
   final String status; 
   final DateTime? lockedUntil;
 
@@ -21,7 +21,7 @@ class BookingItem {
     required this.tutor,
     required this.date,
     required this.timeSlot,
-    required this.price,
+    required this.totalPrice,
     this.status = 'Upcoming',
     this.lockedUntil,
   });
@@ -33,7 +33,7 @@ class BookingItem {
       tutor: Tutor.fromJson(json['tutor']), // Ensure Tutor has fromJson
       date: DateTime.parse(json['date']),
       timeSlot: json['time_slot'],
-      price: double.parse(json['price'].toString()),
+      totalPrice: double.tryParse((json['total_price'] ?? json['price'] ?? 0).toString()) ?? 0.0,
       status: json['status'],
       lockedUntil: json['locked_until'] != null ? DateTime.parse(json['locked_until']) : null,
     );
@@ -49,7 +49,7 @@ class BookingItem {
       tutor: tutor,
       date: date,
       timeSlot: timeSlot,
-      price: price,
+      totalPrice: totalPrice,
       status: status ?? this.status,
       lockedUntil: lockedUntil ?? this.lockedUntil,
     );
@@ -94,7 +94,7 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
         'tutor_id': item.tutor.id,
         'date': item.date.toIso8601String(),
         'time_slot': item.timeSlot,
-        'price': item.price,
+        'price': item.totalPrice,
       });
       ref.invalidateSelf();
     } catch (e) {

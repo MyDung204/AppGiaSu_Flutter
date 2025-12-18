@@ -19,6 +19,7 @@ class DataPopulationSeeder extends Seeder
         $tutor = Tutor::first();
 
         if ($student && $tutor) {
+            // Unchanged Upcoming
             Booking::create([
                 'tutor_id' => $tutor->id,
                 'student_id' => $student->id,
@@ -27,6 +28,28 @@ class DataPopulationSeeder extends Seeder
                 'status' => 'confirmed',
                 'total_price' => 400000,
                 'notes' => 'Ôn thi cuối kỳ môn Toán'
+            ]);
+
+            // History 1
+            Booking::create([
+                'tutor_id' => $tutor->id,
+                'student_id' => $student->id,
+                'start_time' => Carbon::now()->subDays(2)->setHour(9)->setMinute(0),
+                'end_time' => Carbon::now()->subDays(2)->setHour(11)->setMinute(0),
+                'status' => 'completed',
+                'total_price' => 300000,
+                'notes' => 'Luyện giải đề Lý'
+            ]);
+
+            // History 2
+            Booking::create([
+                'tutor_id' => $tutor->id,
+                'student_id' => $student->id,
+                'start_time' => Carbon::now()->subDays(5)->setHour(18)->setMinute(0),
+                'end_time' => Carbon::now()->subDays(5)->setHour(20)->setMinute(0),
+                'status' => 'completed',
+                'total_price' => 450000,
+                'notes' => 'Học tiếng Anh giao tiếp'
             ]);
         }
 

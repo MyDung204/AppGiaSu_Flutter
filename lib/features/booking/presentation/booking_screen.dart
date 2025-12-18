@@ -49,7 +49,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         tutor: widget.tutor,
         date: _selectedDate,
         timeSlot: _selectedTimeSlot!,
-        price: widget.tutor.hourlyRate * 2,
+        totalPrice: widget.tutor.hourlyRate * 2,
         status: 'Locked',
         lockedUntil: DateTime.now().add(const Duration(minutes: 10)),
       );

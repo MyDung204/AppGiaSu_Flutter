@@ -1,3 +1,4 @@
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/presentation/widgets/tutor_card.dart';
@@ -15,65 +16,102 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tutorsAsyncValue = ref.watch(featuredTutorsProvider);
+    final userAsync = ref.watch(authStateChangesProvider);
+    final user = userAsync.value;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           // --- 1. Header Động (SliverAppBar) ---
-          // Chứa Avatar, lời chào và thanh tìm kiếm
           SliverAppBar(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: Theme.of(context).primaryColor,
             surfaceTintColor: Colors.transparent,
-            pinned: true, // Giữ lại khi cuộn
-            floating: true, // Hiện lại ngay khi cuộn lên
-            expandedHeight: 130, // Space for greeting + search
-            toolbarHeight: 80, // Height when collapsed (just search)
+            pinned: true,
+            floating: true,
+            expandedHeight: 180, // Increased height to prevent overlap
+            toolbarHeight: 80,
+            leading: const SizedBox(), // Hide default back button
+            leadingWidth: 0,
             flexibleSpace: FlexibleSpaceBar(
-              background: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 50, 16, 0),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).primaryColor, Colors.indigo],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
-                      radius: 22,
-                      backgroundImage: NetworkImage('https://i.pravatar.cc/300'), // Mock Avatar
+                      radius: 26,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: user?.avatarUrl != null 
+                            ? NetworkImage(user!.avatarUrl!) 
+                            : null,
+                        child: user?.avatarUrl == null 
+                            ? const Icon(Icons.person, color: Colors.grey, size: 30) 
+                            : null,
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Xin chào,', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        const Text('Người dùng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Xin chào,', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text(
+                            user?.name ?? 'Người dùng',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
                     Container(
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
-                      child: IconButton(icon: const Icon(Icons.notifications_none_rounded), onPressed: () => context.push('/notifications')),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2), 
+                          borderRadius: BorderRadius.circular(12)),
+                      child: IconButton(
+                          icon: const Icon(Icons.notifications_outlined, color: Colors.white), 
+                          onPressed: () => context.push('/notifications')),
                     )
                   ],
                 ),
               ),
             ),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Padding(
+              preferredSize: const Size.fromHeight(70),
+              child: Container(
+                height: 70, // Explicit height container for search bar area
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                alignment: Alignment.bottomCenter,
                 child: GestureDetector(
                   onTap: () => context.go('/search'),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-                      border: Border.all(color: Colors.grey.shade100),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                      ],
                     ),
                     child: Row(
                       children: [
-                         const Icon(Icons.search_rounded, color: Colors.blueAccent),
+                         Icon(Icons.search_rounded, color: Theme.of(context).primaryColor),
                          const SizedBox(width: 12),
-                         Text('Tìm gia sư, môn học...', style: TextStyle(color: Colors.grey[400])),
+                         Text('Tìm gia sư, môn học...', style: TextStyle(color: Colors.grey[500], fontSize: 15)),
                       ],
                     ),
                   ),
@@ -85,27 +123,27 @@ class HomeScreen extends ConsumerWidget {
           // --- 2. Banner Chính (Khuyến mãi/Intro) ---
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
               child: Container(
-                height: 160,
+                height: 200,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 8))],
                   image: const DecorationImage(
                     image: NetworkImage('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'),
                     fit: BoxFit.cover,
                   ),
                 ),
                 child: Container(
-                  // Lớp phủ Gradient để chữ dễ đọc hơn
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     gradient: LinearGradient(
-                      colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                      colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                       begin: Alignment.bottomLeft,
                       end: Alignment.topRight,
                     ),
                   ),
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -114,16 +152,19 @@ class HomeScreen extends ConsumerWidget {
                         'Nâng tầm kiến thức\ncùng gia sư chất lượng',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
+                          height: 1.2
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       FilledButton(
                         onPressed: () => context.go('/search'),
                         style: FilledButton.styleFrom(
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)
                         ),
                         child: const Text('Tìm gia sư ngay'),
                       ),
@@ -136,20 +177,30 @@ class HomeScreen extends ConsumerWidget {
 
           // --- 3. Danh mục môn học (Cuộn ngang) ---
           SliverToBoxAdapter(
-            child: SizedBox(
-              height: 100,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                   _buildCategoryItem(context, 'Toán', Icons.calculate, Colors.blue),
-                   _buildCategoryItem(context, 'Tiếng Anh', Icons.language, Colors.orange),
-                   _buildCategoryItem(context, 'Vật Lý', Icons.flash_on, Colors.purple),
-                   _buildCategoryItem(context, 'Hóa Học', Icons.science, Colors.green),
-                   _buildCategoryItem(context, 'Văn Học', Icons.book, Colors.red),
-                   _buildCategoryItem(context, 'Âm Nhạc', Icons.music_note, Colors.pink),
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('Khám phá', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 110,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                       _buildCategoryItem(context, 'Toán', Icons.calculate, Colors.blue),
+                       _buildCategoryItem(context, 'Tiếng Anh', Icons.language, Colors.orange),
+                       _buildCategoryItem(context, 'Vật Lý', Icons.flash_on, Colors.purple),
+                       _buildCategoryItem(context, 'Hóa Học', Icons.science, Colors.green),
+                       _buildCategoryItem(context, 'Văn Học', Icons.book, Colors.red),
+                       _buildCategoryItem(context, 'Âm Nhạc', Icons.music_note, Colors.pink),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           
@@ -159,28 +210,33 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.push('/community'),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFfd79a8), Color(0xFFe84393)]),
-                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(colors: [Color(0xFFfd79a8), Color(0xFFe84393)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                      BoxShadow(color: Colors.pink.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.forum_outlined, color: Colors.white, size: 40),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(16)),
+                      child: const Icon(Icons.forum_rounded, color: Colors.white, size: 32),
+                    ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                            Text('Góc Hỏi Đáp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                           Text('Cộng đồng hỗ trợ giải bài tập 24/7', style: TextStyle(color: Colors.white70)),
+                           SizedBox(height: 4),
+                           Text('Cộng đồng hỗ trợ giải bài tập 24/7', style: TextStyle(color: Colors.white.withOpacity(0.9))),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 20),
                   ],
                 ),
               ),
@@ -189,7 +245,7 @@ class HomeScreen extends ConsumerWidget {
           
           // --- 5. Tiêu đề danh sách ---
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
             sliver: SliverToBoxAdapter(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -200,9 +256,13 @@ class HomeScreen extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  TextButton(
-                    onPressed: () => context.go('/search'),
-                    child: const Text('Xem tất cả'),
+                  InkWell(
+                    onTap: () => context.go('/search'),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text('Xem tất cả', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
               ),
@@ -238,7 +298,6 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Add some bottom padding for the FAB usually, but now we have bottom nav
           const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
         ],
       ),
@@ -251,16 +310,16 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 65,
+            height: 65,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: color, size: 30),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );

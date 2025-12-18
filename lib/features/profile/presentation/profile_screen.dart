@@ -1,3 +1,4 @@
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/auth/presentation/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,8 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
+    final userAsync = ref.watch(authStateChangesProvider);
+    final user = userAsync.value;
     
     // Simple Role Detection based on current location/context assumption
     // If we are nested in TutorScaffold, the path starts with /tutor-dashboard.
@@ -24,13 +26,19 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           children: [
             // User Info
-            const CircleAvatar(
+            CircleAvatar(
               radius: 50,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user'),
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: user?.avatarUrl != null 
+                  ? NetworkImage(user!.avatarUrl!) 
+                  : null,
+              child: user?.avatarUrl == null 
+                  ? Icon(Icons.person, size: 50, color: Colors.grey.shade400) 
+                  : null,
             ),
             const SizedBox(height: 16),
             Text(
-              isTutor ? 'Gia sư Nguyễn Văn A' : 'Lê Mỹ Dung', // Mock Name
+              user?.name ?? 'Người dùng',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),

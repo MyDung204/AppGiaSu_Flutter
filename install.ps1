@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host ">>> API INSTALLER V15: CHAT DEPLOY <<<" -ForegroundColor Cyan
+Write-Host ">>> API INSTALLER V20: FINAL SEEDER FIX <<<" -ForegroundColor Cyan
 
 # 1. Project Setup
 if ((Test-Path "D:\api-tutor") -and -not (Test-Path "D:\api-tutor\artisan")) {

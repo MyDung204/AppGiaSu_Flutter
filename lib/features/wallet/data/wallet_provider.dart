@@ -1,54 +1,22 @@
-
+import 'package:doantotnghiep/features/wallet/data/wallet_repository.dart';
+import 'package:doantotnghiep/features/wallet/domain/models/wallet_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class Transaction {
-  final String id;
-  final String title;
-  final double amount;
-  final DateTime date;
-  final String type; // 'credit', 'debit'
+final walletProvider = AsyncNotifierProvider<WalletNotifier, WalletState>(WalletNotifier.new);
 
-  Transaction({
-    required this.id,
-    required this.title,
-    required this.amount,
-    required this.date,
-    required this.type,
-  });
-}
-
-class WalletState {
-  final double balance;
-  final List<Transaction> transactions;
-
-  WalletState({required this.balance, required this.transactions});
-}
-
-class WalletNotifier extends Notifier<WalletState> {
+class WalletNotifier extends AsyncNotifier<WalletState> {
   @override
-  WalletState build() {
-    return WalletState(
-      balance: 1500000,
-      transactions: [
-         Transaction(id: '1', title: 'Nạp tiền Momo', amount: 500000, date: DateTime.now().subtract(const Duration(days: 5)), type: 'credit'),
-         Transaction(id: '2', title: 'Thanh toán buổi học #123', amount: 200000, date: DateTime.now().subtract(const Duration(days: 6)), type: 'debit'),
-      ],
-    );
+  Future<WalletState> build() async {
+    return ref.read(walletRepositoryProvider).getWalletInfo();
   }
 
-  void addTransaction(Transaction tx) {
-    double newBalance = state.balance;
-    if (tx.type == 'credit') {
-      newBalance += tx.amount;
-    } else {
-      newBalance -= tx.amount;
-    }
-
-    state = WalletState(
-      balance: newBalance,
-      transactions: [tx, ...state.transactions],
-    );
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => ref.read(walletRepositoryProvider).getWalletInfo());
+  }
+  
+  Future<void> deposit(double amount) async {
+      final success = await ref.read(walletRepositoryProvider).deposit(amount);
+      if (success) refresh();
   }
 }
-
-final walletProvider = NotifierProvider<WalletNotifier, WalletState>(WalletNotifier.new);

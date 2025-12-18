@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('booking_id')->nullable()->constrained('bookings')->nullOnDelete();
             $table->foreignId('reviewer_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('reviewee_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('tutor_id')->constrained('tutors')->cascadeOnDelete();
             $table->integer('rating'); // 1-5
             $table->text('comment')->nullable();
             $table->timestamps();

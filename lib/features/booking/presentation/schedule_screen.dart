@@ -28,7 +28,7 @@ class ScheduleScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             _buildUpcomingList(context, ref),
-            _buildHistoryList(context),
+            _buildHistoryList(context, ref),
           ],
         ),
       ),
@@ -108,55 +108,80 @@ class ScheduleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryList(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Card(
-           elevation: 2,
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(color: Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                      child: const Text('Đã hoàn thành', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                    const Text('200.000đ', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text('Tiếng Anh (IELTS) - Gia sư Trần Thị B', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                const Text('10:00 - 11:30, Hôm qua', style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 12),
-                 SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context, 
-                        useRootNavigator: true,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                        builder: (context) => const ReviewModal()
-                      );
-                    },
-                    icon: const Icon(Icons.star_border),
-                    label: const Text('Đánh giá'),
+  Widget _buildHistoryList(BuildContext context, WidgetRef ref) {
+    final bookingsAsync = ref.watch(bookingProvider);
+    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
+    return bookingsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Lỗi tải lịch sử: $err')),
+      data: (allBookings) {
+        final historyBookings = allBookings.where((b) {
+           final status = b.status.toLowerCase();
+           return status == 'completed' || status == 'cancelled' || status == 'finished';
+        }).toList();
+
+        if (historyBookings.isEmpty) {
+          return const Center(child: Text('Chưa có lịch sử buổi học.'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: historyBookings.length,
+          itemBuilder: (context, index) {
+            final booking = historyBookings[index];
+            final dateStr = DateFormat('dd/MM/yyyy').format(booking.date);
+
+            return Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                        Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(color: Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                            child: Text(
+                                booking.status.toLowerCase() == 'completed' ? 'Đã hoàn thành' : 'Đã hủy', 
+                                style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold, fontSize: 12)
+                            ),
+                          ),
+                          Text(currencyFormat.format(booking.totalPrice), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text('${booking.tutor.subjects.isNotEmpty ? booking.tutor.subjects.first : "Môn học"} - ${booking.tutor.name}', 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text('${booking.timeSlot}, $dateStr', style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context, 
+                              useRootNavigator: true,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                              builder: (context) => const ReviewModal()
+                            );
+                          },
+                          icon: const Icon(Icons.star_border),
+                          label: const Text('Đánh giá'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
+            );
+          },
         );
       },
     );
