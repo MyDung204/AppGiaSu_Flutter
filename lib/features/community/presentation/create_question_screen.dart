@@ -1,7 +1,7 @@
 
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/community/data/community_provider.dart';
 import 'package:doantotnghiep/features/community/domain/models/question.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,12 +22,17 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
   void _postQuestion() {
     if (_contentCtrl.text.isEmpty) return;
     
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập để đặt câu hỏi!')));
+       return;
+    }
+
     final newQ = Question(
       id: const Uuid().v4(),
-      userId: user?.uid ?? 'guest',
-      userName: user?.displayName ?? 'Tôi',
-      userAvatar: user?.photoURL ?? 'https://i.pravatar.cc/150',
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatarUrl ?? 'https://i.pravatar.cc/150',
       subject: _selectedSubject,
       content: _contentCtrl.text,
       createdAt: DateTime.now(),
@@ -35,7 +40,7 @@ class _CreateQuestionScreenState extends ConsumerState<CreateQuestionScreen> {
 
     ref.read(communityProvider.notifier).addQuestion(newQ);
     context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã đăng câu hỏi!')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đang đăng câu hỏi...')));
   }
 
   @override

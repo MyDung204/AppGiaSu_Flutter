@@ -27,6 +27,8 @@ class CommunityNotifier extends AsyncNotifier<List<Question>> {
       // Call Laravel API: POST /questions
       await apiClient.post(ApiConstants.questions, data: {
         'user_id': q.userId,
+        'user_name': q.userName,
+        'user_avatar': q.userAvatar,
         'subject': q.subject,
         'content': q.content,
         'image_url': q.imageUrl,
