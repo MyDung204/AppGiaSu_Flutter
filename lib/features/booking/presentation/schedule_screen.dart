@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class ScheduleScreen extends ConsumerWidget {
-  const ScheduleScreen({super.key});
+  final int initialIndex;
+  const ScheduleScreen({super.key, this.initialIndex = 0});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
       length: 2,
+      initialIndex: initialIndex,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Lịch học'),

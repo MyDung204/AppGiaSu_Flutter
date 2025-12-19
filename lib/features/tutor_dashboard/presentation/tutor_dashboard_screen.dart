@@ -1,3 +1,4 @@
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_class_provider.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
 import 'package:flutter/material.dart';
@@ -10,18 +11,18 @@ class TutorDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classes = ref.watch(tutorClassProvider);
-    final requests = ref.watch(tutorRequestsProvider).take(3).toList();
-    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final classesAsync = ref.watch(tutorClassProvider);
+    final requestsAsync = ref.watch(tutorRequestsProvider);
+    final user = ref.watch(authRepositoryProvider).currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Text('Xin chào, Gia sư!', style: TextStyle(fontSize: 14, color: Colors.grey)),
-             Text('Nguyễn Văn A', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
+             const Text('Xin chào, Gia sư!', style: TextStyle(fontSize: 14, color: Colors.grey)),
+             Text(user?.name ?? 'Gia sư', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
           ],
         ),
         backgroundColor: Colors.white,
@@ -54,13 +55,13 @@ class TutorDashboardScreen extends ConsumerWidget {
                   const Text('Thu nhập tháng này', style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 8),
                   const Text(
-                    '15.200.000 đ',
+                    '0 đ',
                     style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      _buildIncomeBadge(Icons.trending_up, '+12% so với tháng trước'),
+                      _buildIncomeBadge(Icons.trending_up, 'Chưa có dữ liệu'),
                     ],
                   ),
                 ],
@@ -109,56 +110,63 @@ class TutorDashboardScreen extends ConsumerWidget {
             // Upcoming Classes
             const Text('Lớp học đang mở', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            if (classes.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có lớp học nào.", style: TextStyle(color: Colors.grey))))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: classes.take(3).length, // Show top 3
-                itemBuilder: (context, index) {
-                  final cls = classes[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 50, width: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(15),
+
+            classesAsync.when(
+              data: (classes) {
+                if (classes.isEmpty) {
+                   return const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có lớp học nào.", style: TextStyle(color: Colors.grey))));
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: classes.take(3).length, 
+                  itemBuilder: (context, index) {
+                    final cls = classes[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            height: 50, width: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Center(child: Icon(Icons.class_outlined, color: Colors.blue)),
                           ),
-                          child: const Center(child: Icon(Icons.class_outlined, color: Colors.blue)),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(cls.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              Text(cls.schedule, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                            ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(cls.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(cls.schedule, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                              ],
+                            ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text('${cls.enrolledStudentCount} HV', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                        )
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text('${cls.enrolledStudentCount} HV', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+              error: (err, stack) => Center(child: Text('Lỗi tải dữ liệu: $err')),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
             
             const SizedBox(height: 30),
              // Pending Requests
@@ -173,38 +181,45 @@ class TutorDashboardScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            if (requests.isEmpty)
-               const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có yêu cầu nào.", style: TextStyle(color: Colors.grey))))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: requests.length,
-                itemBuilder: (context, index) {
-                  final req = requests[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(backgroundColor: Colors.orange.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.orange)),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text('Học viên muốn tìm gia sư ${req.subject} (${req.gradeLevel})', style: const TextStyle(fontWeight: FontWeight.w500))),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(req.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                        ],
+            requestsAsync.when(
+              data: (requests) {
+                if (requests.isEmpty) {
+                   return const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có yêu cầu nào.", style: TextStyle(color: Colors.grey))));
+                }
+                final displayRequests = requests.take(3).toList();
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: displayRequests.length,
+                  itemBuilder: (context, index) {
+                    final req = displayRequests[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(backgroundColor: Colors.orange.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.orange)),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text('Học viên muốn tìm gia sư ${req.subject} (${req.gradeLevel})', style: const TextStyle(fontWeight: FontWeight.w500))),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(req.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                );
+              },
+              error: (err, stack) => Center(child: Text('Lỗi tải dữ liệu: $err')),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
           ],
         ),
       ),

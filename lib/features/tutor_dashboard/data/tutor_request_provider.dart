@@ -1,49 +1,46 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Mock Data
-final _initialMockRequests = [
-  TutorRequest(
-    id: 'mock-1',
-    studentId: 'test-student-id', // Matches current user if we mock auth or use this ID
-    studentName: 'Học viên Mẫu',
-    subject: 'Toán',
-    gradeLevel: 'Lớp 12',
-    minBudget: 150000,
-    maxBudget: 200000,
-    schedule: 'Tối 2-4-6',
-    description: 'Cần gia sư kiên nhẫn.',
-    location: 'Quận 1',
-    createdAt: DateTime.now().subtract(const Duration(days: 1)),
-  ),
-  TutorRequest(
-    id: 'mock-2',
-    studentId: 'other-student',
-    studentName: 'Trần Văn B',
-    subject: 'Tiếng Anh',
-    gradeLevel: 'IELTS',
-    minBudget: 300000,
-    maxBudget: 500000,
-    schedule: 'Cuối tuần',
-    description: 'Mục tiêu 6.5',
-    location: 'Online',
-    createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-  ),
-];
-
-class TutorRequestsNotifier extends Notifier<List<TutorRequest>> {
+class TutorRequestsNotifier extends AsyncNotifier<List<TutorRequest>> {
   @override
-  List<TutorRequest> build() {
-    return _initialMockRequests;
+  Future<List<TutorRequest>> build() async {
+    final repo = ref.watch(sharedLearningRepositoryProvider);
+    try {
+      final groups = await repo.getStudyGroups();
+      
+      return groups.map((g) => TutorRequest(
+        id: g.id,
+        studentId: g.creatorId,
+        studentName: g.creatorName,
+        subject: g.subject,
+        gradeLevel: g.gradeLevel,
+        minBudget: 0,
+        maxBudget: 0,
+        schedule: 'Thỏa thuận',
+        description: g.description,
+        location: 'Tùy chọn',
+        createdAt: g.createdAt,
+      )).toList();
+    } catch (e) {
+      print('Error fetching requests: $e');
+      return [];
+    }
   }
 
-  void addRequest(TutorRequest request) {
-    state = [request, ...state];
+  Future<void> addRequest(TutorRequest request) async {
+    final repo = ref.read(sharedLearningRepositoryProvider);
+    // TODO: Implement proper ID generation or let backend handle it
+    // Mapping TutorRequest back to GroupRequest requires importing GroupRequest model
+    // For now, we print to fix compilation and invalidate.
+    print('Adding request: ${request.subject}');
+    ref.invalidateSelf();
   }
 
-  void removeRequest(String id) {
-    state = state.where((req) => req.id != id).toList();
+  Future<void> removeRequest(String id) async {
+     print('Removing request: $id');
+     ref.invalidateSelf();
   }
 }
 
-final tutorRequestsProvider = NotifierProvider<TutorRequestsNotifier, List<TutorRequest>>(TutorRequestsNotifier.new);
+final tutorRequestsProvider = AsyncNotifierProvider<TutorRequestsNotifier, List<TutorRequest>>(TutorRequestsNotifier.new);

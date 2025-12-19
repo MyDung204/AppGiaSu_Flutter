@@ -81,6 +81,10 @@ class AppRouter {
              builder: (context, state) => const ScheduleScreen(),
           ),
           GoRoute(
+             path: '/history',
+             builder: (context, state) => const ScheduleScreen(initialIndex: 1),
+          ),
+          GoRoute(
              path: '/messages',
              builder: (context, state) => const ChatListScreen(),
           ),
@@ -228,6 +232,10 @@ class AppRouter {
               GoRoute(
                  path: 'schedule',
                  builder: (context, state) => const ScheduleScreen(), // Reusing Student Schedule for now or create new
+              ),
+              GoRoute(
+                 path: 'history',
+                 builder: (context, state) => const ScheduleScreen(initialIndex: 1),
               ),
               GoRoute(
                  path: 'messages',

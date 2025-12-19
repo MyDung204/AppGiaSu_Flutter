@@ -1,44 +1,37 @@
-
+import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_class.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class TutorClassNotifier extends Notifier<List<TutorClass>> {
+class TutorClassNotifier extends AsyncNotifier<List<TutorClass>> {
   @override
-  List<TutorClass> build() {
-    return [
-      TutorClass(
-        id: 'class-1',
-        tutorId: 'current-user-id',
-        name: 'Toán Lớp 12 - Ôn thi ĐH',
-        schedule: 'T2-T4-T6, 19:30 - 21:00',
-        mode: 'Online',
-        price: 2000000,
-        enrolledStudentCount: 2, // Updated to match students
+  Future<List<TutorClass>> build() async {
+    final repo = ref.watch(sharedLearningRepositoryProvider);
+    try {
+      final courses = await repo.getCourses();
+      
+      return courses.map((c) => TutorClass(
+        id: c.id,
+        tutorId: c.tutorId,
+        name: c.title,
+        schedule: c.schedule,
+        mode: 'Offline', 
+        price: c.price,
+        enrolledStudentCount: 0, // Pending backend support
         status: 'ongoing',
-        studentIds: ['student1', 'student2'],
-        paymentStatus: {'student1': 'paid', 'student2': 'unpaid'},
-        nextPaymentDate: DateTime.now().add(const Duration(days: 5)),
-      ),
-       TutorClass(
-        id: 'class-2',
-        tutorId: 'current-user-id',
-        name: 'Tiếng Anh Giao Tiếp Cơ Bản',
-        schedule: 'T3-T5, 18:00 - 19:30',
-        mode: 'Offline',
-        address: 'Quận 3, TP.HCM',
-        price: 1500000,
-        enrolledStudentCount: 1,
-        status: 'ongoing',
-        studentIds: ['student3'],
-        paymentStatus: {'student3': 'overdue'},
-        nextPaymentDate: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
+      )).toList();
+      return [];
+    } catch (e) {
+      print('Error loading tutor classes: $e');
+      return [];
+    }
   }
 
-  void addClass(TutorClass newClass) {
-    state = [newClass, ...state];
+  Future<void> addClass(TutorClass newClass) async {
+    // TODO: Connect to Real Create Course API
+    print('Creating class: ${newClass.name}');
+    // Optimistic update or just reload
+    ref.invalidateSelf();
   }
 }
 
-final tutorClassProvider = NotifierProvider<TutorClassNotifier, List<TutorClass>>(TutorClassNotifier.new);
+final tutorClassProvider = AsyncNotifierProvider<TutorClassNotifier, List<TutorClass>>(TutorClassNotifier.new);

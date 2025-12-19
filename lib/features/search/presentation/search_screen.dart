@@ -16,13 +16,12 @@ import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provid
 final searchQueryProvider = NotifierProvider.autoDispose<SearchQueryNotifier, String>(SearchQueryNotifier.new);
 
 // Provider for user's tutor requests (Mock Version)
-final myRequestsProvider = Provider.autoDispose<List<TutorRequest>>((ref) {
-  final allRequests = ref.watch(tutorRequestsProvider);
+final myRequestsProvider = Provider.autoDispose<AsyncValue<List<TutorRequest>>>((ref) {
+  final allRequestsAsync = ref.watch(tutorRequestsProvider);
   final user = FirebaseAuth.instance.currentUser;
-  // Fallback to 'test-user-id' if testing without login
   final userId = user?.uid ?? 'test-user-id';
   
-  return allRequests.where((req) => req.studentId == userId).toList();
+  return allRequestsAsync.whenData((list) => list.where((req) => req.studentId == userId).toList());
 });
 
 class SearchQueryNotifier extends Notifier<String> {
@@ -175,68 +174,74 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       // My Requests Section
                       Consumer(
                         builder: (context, ref, child) {
-                          final requests = ref.watch(myRequestsProvider);
+                          final requestsAsync = ref.watch(myRequestsProvider);
                           
-                          if (requests.isEmpty) return const SizedBox.shrink();
+                          return requestsAsync.when(
+                            data: (requests) {
+                              if (requests.isEmpty) return const SizedBox.shrink();
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 20),
-                              const Text('Yêu cầu của tôi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 140,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: requests.length,
-                                  itemBuilder: (context, index) {
-                                    final req = requests[index];
-                                    return GestureDetector(
-                                      onTap: () => context.push('/my-request-detail', extra: req),
-                                      child: Container(
-                                        width: 240,
-                                        margin: const EdgeInsets.only(right: 12),
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                                          boxShadow: [
-                                             BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 3)),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(req.subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                Text(req.gradeLevel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 20),
+                                  const Text('Yêu cầu của tôi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    height: 140,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: requests.length,
+                                      itemBuilder: (context, index) {
+                                        final req = requests[index];
+                                        return GestureDetector(
+                                          onTap: () => context.push('/my-request-detail', extra: req),
+                                          child: Container(
+                                            width: 240,
+                                            margin: const EdgeInsets.only(right: 12),
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                                              boxShadow: [
+                                                BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 3)),
                                               ],
                                             ),
-                                            Text(
-                                              '${(req.minBudget/1000).toInt()}k - ${(req.maxBudget/1000).toInt()}k',
-                                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                                            ),
-                                            Row(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                const Text('Đang tìm...', style: TextStyle(color: Colors.orange, fontSize: 12)),
-                                                const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(req.subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                                    Text(req.gradeLevel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                                  ],
+                                                ),
+                                                Text(
+                                                  '${(req.minBudget/1000).toInt()}k - ${(req.maxBudget/1000).toInt()}k',
+                                                  style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                                ),
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    const Text('Đang tìm...', style: TextStyle(color: Colors.orange, fontSize: 12)),
+                                                    const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                                  ],
+                                                )
                                               ],
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const Divider(height: 30),
-                            ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const Divider(height: 30),
+                                ],
+                              );
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
                           );
                         },
                       ),

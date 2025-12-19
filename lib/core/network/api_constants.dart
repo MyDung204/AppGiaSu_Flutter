@@ -1,7 +1,7 @@
 
 class ApiConstants {
   // 10.0.2.2 is for Emulator. For Physical Device, use your LAN IP.
-  static const String baseUrl = 'http://192.168.88.57:8000/api';
+  static const String baseUrl = 'http://192.168.50.60:8000/api';
   
   // Endpoints
   static const String login = '/login';
