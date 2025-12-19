@@ -4,6 +4,7 @@ class GroupRequest {
   final String id;
   final String creatorId;
   final String creatorName;
+  final String topic;
   final String subject;
   final String gradeLevel;
   final double pricePerSession; // Per person
@@ -20,6 +21,7 @@ class GroupRequest {
     required this.id,
     required this.creatorId,
     required this.creatorName,
+    required this.topic,
     required this.subject,
     required this.gradeLevel,
     required this.pricePerSession,
@@ -37,6 +39,7 @@ class GroupRequest {
     String? id,
     String? creatorId,
     String? creatorName,
+    String? topic,
     String? subject,
     String? gradeLevel,
     double? pricePerSession,
@@ -53,6 +56,7 @@ class GroupRequest {
       id: id ?? this.id,
       creatorId: creatorId ?? this.creatorId,
       creatorName: creatorName ?? this.creatorName,
+      topic: topic ?? this.topic,
       subject: subject ?? this.subject,
       gradeLevel: gradeLevel ?? this.gradeLevel,
       pricePerSession: pricePerSession ?? this.pricePerSession,
@@ -72,6 +76,7 @@ class GroupRequest {
       id: json['id'].toString(),
       creatorId: json['creator_id']?.toString() ?? '',
       creatorName: json['creator']?['name'] ?? 'Unknown',
+      topic: json['topic'] ?? '',
       subject: json['subject'] ?? '',
       gradeLevel: json['grade_level'] ?? '',
       pricePerSession: 0, // Not in API yet
@@ -91,6 +96,7 @@ class GroupRequest {
       'id': id,
       'creatorId': creatorId,
       'creatorName': creatorName,
+      'topic': topic,
       'subject': subject,
       'gradeLevel': gradeLevel,
       'pricePerSession': pricePerSession,

@@ -14,6 +14,7 @@ class CreateGroupScreen extends ConsumerStatefulWidget {
 
 class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _topicController = TextEditingController();
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _gradeController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
@@ -23,6 +24,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   void dispose() {
+    _topicController.dispose();
     _subjectController.dispose();
     _gradeController.dispose();
     _locationController.dispose();
@@ -81,6 +83,13 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionTitle('Thông tin nhóm'),
+                    _buildTextField(
+                      controller: _topicController,
+                      label: 'Tiêu đề nhóm',
+                      hint: 'VD: Tìm bạn cùng ôn thi Đại học...',
+                      icon: Icons.title,
+                    ),
+                    const SizedBox(height: 16),
                     _buildTextField(
                       controller: _subjectController,
                       label: 'Môn học',
@@ -205,6 +214,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         id: '', 
         creatorId: '',
         creatorName: '',
+        topic: _topicController.text,
         subject: _subjectController.text,
         gradeLevel: _gradeController.text,
         pricePerSession: double.tryParse(_priceController.text) ?? 0,

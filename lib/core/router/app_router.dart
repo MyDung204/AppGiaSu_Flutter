@@ -15,6 +15,8 @@ import 'package:doantotnghiep/features/group/presentation/create_group_screen.da
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/tutor_schedule_management_screen.dart';
 import 'package:doantotnghiep/features/profile/presentation/ekyc_update_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/create_class_screen.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/class_detail_screen.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_class.dart'; // Ensure this model is generic enough or imported correctly if missing
 import 'package:doantotnghiep/features/student/presentation/create_tutor_request_screen.dart';
 import 'package:doantotnghiep/features/student/presentation/my_request_detail_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
@@ -150,6 +152,14 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/create-class',
         builder: (context, state) => const CreateClassScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/class-detail',
+        builder: (context, state) {
+           final tutorClass = state.extra as TutorClass;
+           return ClassDetailScreen(tutorClass: tutorClass);
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

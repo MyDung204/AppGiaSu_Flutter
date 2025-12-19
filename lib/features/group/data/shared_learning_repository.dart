@@ -28,7 +28,7 @@ class SharedLearningRepository {
   Future<bool> createStudyGroup(GroupRequest req) async {
     try {
       await _client.post('/study-groups', data: {
-        'topic': req.subject, 
+        'topic': req.topic, 
         'subject': req.subject,
         'grade_level': req.gradeLevel,
         'max_members': req.maxMembers,
@@ -51,6 +51,15 @@ class SharedLearningRepository {
     } catch (e) {
       print('Error fetching courses: $e');
       return [];
+    }
+  }
+  Future<bool> createCourse(Map<String, dynamic> data) async {
+    try {
+      await _client.post('/courses', data: data);
+      return true;
+    } catch (e) {
+      print('Error creating course: $e');
+      return false;
     }
   }
 }

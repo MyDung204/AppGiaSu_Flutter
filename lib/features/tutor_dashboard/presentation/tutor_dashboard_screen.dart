@@ -122,43 +122,46 @@ class TutorDashboardScreen extends ConsumerWidget {
                   itemCount: classes.take(3).length, 
                   itemBuilder: (context, index) {
                     final cls = classes[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            height: 50, width: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(15),
+                    return GestureDetector(
+                      onTap: () => context.push('/class-detail', extra: cls),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              height: 50, width: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: const Center(child: Icon(Icons.class_outlined, color: Colors.blue)),
                             ),
-                            child: const Center(child: Icon(Icons.class_outlined, color: Colors.blue)),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(cls.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Text(cls.schedule, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                              ],
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(cls.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text(cls.schedule, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                ],
+                              ),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text('${cls.enrolledStudentCount} HV', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                          )
-                        ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text('${cls.enrolledStudentCount} HV', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                            )
+                          ],
+                        ),
                       ),
                     );
                   },

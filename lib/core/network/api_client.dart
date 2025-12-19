@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_constants.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient();
 });
@@ -21,8 +23,20 @@ class ApiClient {
       },
     ));
     
-    // Add interceptors for logging or token injection here
+    // Add interceptors
     _dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
+    
+    // Auth Token Interceptor
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+    ));
   }
 
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {

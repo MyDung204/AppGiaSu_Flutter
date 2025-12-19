@@ -13,6 +13,7 @@ class TutorClassNotifier extends AsyncNotifier<List<TutorClass>> {
         id: c.id,
         tutorId: c.tutorId,
         name: c.title,
+        description: c.description,
         schedule: c.schedule,
         mode: 'Offline', 
         price: c.price,
@@ -27,10 +28,18 @@ class TutorClassNotifier extends AsyncNotifier<List<TutorClass>> {
   }
 
   Future<void> addClass(TutorClass newClass) async {
-    // TODO: Connect to Real Create Course API
-    print('Creating class: ${newClass.name}');
-    // Optimistic update or just reload
-    ref.invalidateSelf();
+    final repo = ref.read(sharedLearningRepositoryProvider);
+    final success = await repo.createCourse({
+      'title': newClass.name,
+      'description': 'Lớp học ${newClass.mode}${newClass.address != null ? ' tại ${newClass.address}' : ''}.',
+      'price': newClass.price,
+      'schedule': newClass.schedule,
+      'start_date': DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+    });
+    
+    if (success) {
+       ref.invalidateSelf();
+    }
   }
 }
 
