@@ -1,3 +1,24 @@
+/// Tutor Tuition Screen
+/// 
+/// **Purpose:**
+/// - Quản lý học phí và thanh toán của học viên
+/// - Cho phép gia sư theo dõi trạng thái thanh toán và nhắc nợ
+/// 
+/// **Features:**
+/// - Xem danh sách lớp học và học viên
+/// - Xem trạng thái thanh toán: Đã đóng, Chưa đóng, Quá hạn
+/// - Nhắc nợ: Gửi tin nhắn tự động cho học viên chưa đóng học phí
+/// - Xem hạn thu học phí
+/// 
+/// **Payment Status:**
+/// - Paid (Đã đóng): Màu xanh, có icon check
+/// - Unpaid (Chưa đóng): Màu cam, có button "Nhắc nợ"
+/// - Overdue (Quá hạn): Màu đỏ, có button "Nhắc nợ"
+/// 
+/// **TODO:**
+/// - Tích hợp payment gateway để xử lý thanh toán
+/// - Thêm tính năng xác nhận thanh toán
+/// - Thêm lịch sử thanh toán
 
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_class_provider.dart';
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
@@ -5,6 +26,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+/// Màn hình quản lý học phí của gia sư
+/// 
+/// **Usage:**
+/// - Truy cập từ tutor navigation (nếu có menu item)
+/// - Hiển thị danh sách lớp học và trạng thái thanh toán của học viên
 class TutorTuitionScreen extends ConsumerWidget {
   const TutorTuitionScreen({super.key});
 
@@ -17,7 +43,24 @@ class TutorTuitionScreen extends ConsumerWidget {
         title: const Text('Quản lý Học phí (SaaS)'),
       ),
       body: classes.isEmpty
-          ? const Center(child: Text('Chưa có lớp học nào.'))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined, size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Chưa có lớp học nào.',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tạo lớp học để bắt đầu quản lý học phí.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: classes.length,
@@ -62,11 +105,8 @@ class TutorTuitionScreen extends ConsumerWidget {
                             label: const Text('Nhắc nợ'),
                             onPressed: () {
                               // Auto send chat reminder
-                              ref.read(chatProvider.notifier).sendMessage(
-                                studentId, 
+                              ref.read(chatControllerProvider(studentId)).sendMessage(
                                 "Chào bạn, sắp đến hạn đóng học phí cho lớp ${cls.name}. Vui lòng thanh toán sớm nhé!",
-                                isUser: false, // Sent by Tutor (me)
-                                isSystem: false, // Real chat
                               );
                               
                               ScaffoldMessenger.of(context).showSnackBar(

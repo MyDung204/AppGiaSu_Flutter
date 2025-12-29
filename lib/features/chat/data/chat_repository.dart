@@ -1,6 +1,4 @@
 import 'package:doantotnghiep/core/network/api_client.dart';
-import 'package:doantotnghiep/features/chat/domain/models/conversation.dart';
-import 'package:doantotnghiep/features/chat/domain/models/message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -12,11 +10,11 @@ class ChatRepository {
 
   ChatRepository(this._client);
 
-  Future<List<Conversation>> getConversations() async {
+  Future<List<dynamic>> getConversations() async {
     try {
       final response = await _client.get('/conversations');
       if (response is List) {
-        return response.map((e) => Conversation.fromJson(e)).toList();
+        return response;
       }
       return [];
     } catch (e) {
@@ -25,11 +23,11 @@ class ChatRepository {
     }
   }
 
-  Future<List<Message>> getMessages(String conversationId) async {
+  Future<List<dynamic>> getMessages(int conversationId) async {
     try {
       final response = await _client.get('/conversations/$conversationId/messages');
       if (response is List) {
-        return response.map((e) => Message.fromJson(e)).toList();
+        return response;
       }
       return [];
     } catch (e) {
@@ -38,17 +36,32 @@ class ChatRepository {
     }
   }
 
-  Future<Message?> sendMessage({String? conversationId, String? receiverId, required String content}) async {
+  Future<dynamic> sendMessage({int? conversationId, int? receiverId, required String content}) async {
     try {
-      final response = await _client.post('/messages', data: {
+      final data = {
+        'content': content,
         if (conversationId != null) 'conversation_id': conversationId,
         if (receiverId != null) 'receiver_id': receiverId,
-        'content': content,
-      });
-      return Message.fromJson(response);
+      };
+      
+      final response = await _client.post('/messages', data: data);
+      return response;
     } catch (e) {
       print('Error sending message: $e');
       return null;
     }
+  }
+
+  // Helper to find conversation ID by partner ID from list
+  Future<int?> findConversationId(String partnerId) async {
+    final convs = await getConversations();
+    for (var c in convs) {
+      // partner object inside conversation
+      final partner = c['partner'];
+      if (partner != null && partner['id'].toString() == partnerId) {
+        return c['id'];
+      }
+    }
+    return null;
   }
 }

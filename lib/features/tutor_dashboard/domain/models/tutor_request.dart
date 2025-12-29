@@ -28,37 +28,41 @@ class TutorRequest {
     this.status = 'open',
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'studentId': studentId,
-      'studentName': studentName,
+      'student_id': studentId,
+      'student_name': studentName,
       'subject': subject,
-      'gradeLevel': gradeLevel,
-      'minBudget': minBudget,
-      'maxBudget': maxBudget,
+      'grade_level': gradeLevel,
+      'min_budget': minBudget,
+      'max_budget': maxBudget,
       'schedule': schedule,
       'description': description,
       'location': location,
-      'createdAt': createdAt.millisecondsSinceEpoch,
+      'created_at': createdAt.toIso8601String(),
       'status': status,
     };
   }
 
-  factory TutorRequest.fromMap(Map<String, dynamic> map) {
+  factory TutorRequest.fromJson(Map<String, dynamic> json) {
     return TutorRequest(
-      id: map['id'] ?? '',
-      studentId: map['studentId'] ?? '',
-      studentName: map['studentName'] ?? '',
-      subject: map['subject'] ?? '',
-      gradeLevel: map['gradeLevel'] ?? '',
-      minBudget: (map['minBudget'] ?? 0).toDouble(),
-      maxBudget: (map['maxBudget'] ?? 0).toDouble(),
-      schedule: map['schedule'] ?? '',
-      description: map['description'] ?? '',
-      location: map['location'] ?? '',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
-      status: map['status'] ?? 'open',
+      id: json['id'].toString(),
+      studentId: json['student_id']?.toString() ?? '',
+      studentName: json['student'] != null ? json['student']['name'] ?? 'Học viên' : 'Học viên',
+      subject: json['subject'] ?? '',
+      gradeLevel: json['grade_level'] ?? '',
+      minBudget: double.tryParse(json['min_budget'].toString()) ?? 0.0,
+      maxBudget: double.tryParse(json['max_budget'].toString()) ?? 0.0,
+      schedule: json['schedule'] ?? '',
+      description: json['description'] ?? '',
+      location: json['location'] ?? '',
+      createdAt: json['created_at'] != null 
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now() 
+          : DateTime.now(),
+      status: json['status'] ?? 'open',
     );
   }
+
+  factory TutorRequest.fromMap(Map<String, dynamic> map) => TutorRequest.fromJson(map);
 }

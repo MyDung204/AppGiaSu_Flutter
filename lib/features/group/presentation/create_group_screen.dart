@@ -226,9 +226,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         startTime: DateTime.now().add(const Duration(days: 3)),
       );
 
-      final success = await ref.read(sharedLearningRepositoryProvider).createStudyGroup(newRequest);
+      final newGroup = await ref.read(sharedLearningRepositoryProvider).createStudyGroup(newRequest);
 
-      if (success && mounted) {
+      if (newGroup != null && mounted) {
         ref.refresh(groupRequestsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -237,7 +237,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        context.pop();
+        context.pushReplacement('/group-management', extra: newGroup);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Lỗi khi tạo nhóm. Vui lòng thử lại.')),

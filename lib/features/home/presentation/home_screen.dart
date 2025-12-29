@@ -1,3 +1,4 @@
+import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
@@ -5,6 +6,8 @@ import 'package:doantotnghiep/features/tutor/presentation/widgets/tutor_card.dar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
+import 'package:intl/intl.dart';
 
 final featuredTutorsProvider = FutureProvider<List<Tutor>>((ref) {
   return ref.watch(tutorRepositoryProvider).getFeaturedTutors();
@@ -51,12 +54,7 @@ class HomeScreen extends ConsumerWidget {
                       child: CircleAvatar(
                         radius: 24,
                         backgroundColor: Colors.grey.shade200,
-                        backgroundImage: user?.avatarUrl != null 
-                            ? NetworkImage(user!.avatarUrl!) 
-                            : null,
-                        child: user?.avatarUrl == null 
-                            ? const Icon(Icons.person, color: Colors.grey, size: 30) 
-                            : null,
+                        child: const Icon(Icons.person, color: Colors.grey, size: 30),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -129,6 +127,8 @@ class HomeScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 8))],
+                  // Sử dụng cached_network_image để tối ưu performance
+                  // TODO: Thay bằng CachedNetworkImage widget nếu cần tối ưu hơn
                   image: const DecorationImage(
                     image: NetworkImage('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'),
                     fit: BoxFit.cover,
@@ -174,6 +174,12 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
+          
+          // --- 2.5 My Requests Section ---
+          const _MyRequestsSection(),
+          
+          // --- 2.6 My Groups Section ---
+          _MyGroupsSection(),
 
           // --- 3. Danh mục môn học (Cuộn ngang) ---
           SliverToBoxAdapter(
@@ -298,7 +304,11 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+          
+          // --- 7. Section Tất cả yêu cầu tìm gia sư (Hiển thị ở phía dưới) ---
+          const _AllTutorRequestsSection(),
+          
+          const SliverPadding(padding: EdgeInsets.only(bottom: 100)), // Extra padding for navigation bar
         ],
       ),
     );
@@ -328,6 +338,279 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Section hiển thị tất cả yêu cầu tìm gia sư (ở phía dưới home screen)
+/// 
+/// **Purpose:**
+/// - Hiển thị tất cả các yêu cầu tìm gia sư từ học viên
+/// - Giúp học viên xem các yêu cầu khác và gia sư có thể xem yêu cầu
+/// - Hiển thị sau danh sách gia sư nổi bật
+class _AllTutorRequestsSection extends ConsumerWidget {
+  const _AllTutorRequestsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allRequestsAsync = ref.watch(tutorRequestsProvider);
+
+    return allRequestsAsync.when(
+      data: (requests) {
+        if (requests.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+
+        // Chỉ hiển thị 5 yêu cầu đầu tiên
+        final displayRequests = requests.take(5).toList();
+
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Yêu cầu tìm gia sư',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  if (requests.length > 5)
+                    TextButton(
+                      onPressed: () => context.go('/search'),
+                      child: const Text('Xem tất cả'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: displayRequests.length,
+                  itemBuilder: (context, index) {
+                    final req = displayRequests[index];
+                    return GestureDetector(
+                      onTap: () => context.push('/my-request-detail', extra: req),
+                      child: Container(
+                        width: 260,
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  req.subject,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  req.gradeLevel,
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(req.minBudget)} - ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(req.maxBudget)}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 12,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+    );
+  }
+}
+
+class _MyRequestsSection extends ConsumerWidget {
+  const _MyRequestsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myRequestsAsync = ref.watch(myTutorRequestsProvider);
+
+    return myRequestsAsync.when(
+      data: (requests) {
+        if (requests.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              Text('Yêu cầu của tôi', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: requests.length,
+                  itemBuilder: (context, index) {
+                    final req = requests[index];
+                    return GestureDetector(
+                      onTap: () => context.push('/my-request-detail', extra: req),
+                      child: Container(
+                        width: 260,
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(child: Text(req.subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                                  child: Text(req.status == 'open' ? 'Đang tìm' : 'Đã xong', style: const TextStyle(color: Colors.blue, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            Text(req.gradeLevel, style: const TextStyle(color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(req.minBudget), 
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+    );
+  }
+}
+
+class _MyGroupsSection extends ConsumerWidget {
+  const _MyGroupsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myGroupsAsync = ref.watch(myGroupsProvider);
+
+    return myGroupsAsync.when(
+      data: (groups) {
+        if (groups.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              Text('Nhóm học tập của tôi', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: groups.length,
+                  itemBuilder: (context, index) {
+                    final grp = groups[index];
+                    return GestureDetector(
+                      onTap: () => context.push('/group-management', extra: grp),
+                      child: Container(
+                        width: 260,
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.blueAccent.shade100),
+                          boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(child: Text(grp.subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                                  child: Text('${grp.currentMembers}/${grp.maxMembers} HS', style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            Text(grp.topic, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(grp.pricePerSession), 
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
     );
   }
 }

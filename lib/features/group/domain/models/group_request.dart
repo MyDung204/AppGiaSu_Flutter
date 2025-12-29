@@ -16,6 +16,7 @@ class GroupRequest {
   final DateTime createdAt;
   final DateTime startTime;
   final String status; // 'open', 'full', 'closed'
+  final String? membershipStatus; // 'pending', 'approved', 'rejected' or null
 
   GroupRequest({
     required this.id,
@@ -33,6 +34,7 @@ class GroupRequest {
     required this.createdAt,
     required this.startTime,
     this.status = 'open',
+    this.membershipStatus,
   });
 
   GroupRequest copyWith({
@@ -51,6 +53,7 @@ class GroupRequest {
     DateTime? createdAt,
     DateTime? startTime,
     String? status,
+    String? membershipStatus,
   }) {
     return GroupRequest(
       id: id ?? this.id,
@@ -68,6 +71,7 @@ class GroupRequest {
       createdAt: createdAt ?? this.createdAt,
       startTime: startTime ?? this.startTime,
       status: status ?? this.status,
+      membershipStatus: membershipStatus ?? this.membershipStatus,
     );
   }
 
@@ -79,8 +83,8 @@ class GroupRequest {
       topic: json['topic'] ?? '',
       subject: json['subject'] ?? '',
       gradeLevel: json['grade_level'] ?? '',
-      pricePerSession: 0, // Not in API yet
-      location: 'Online', // Default
+      pricePerSession: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      location: json['location'] ?? 'Online',
       description: json['description'] ?? '',
       currentMembers: json['current_members'] ?? 1,
       maxMembers: json['max_members'] ?? 5,
@@ -88,6 +92,7 @@ class GroupRequest {
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       startTime: DateTime.now().add(const Duration(days: 1)),
       status: json['status'] ?? 'open',
+      membershipStatus: json['membership_status'],
     );
   }
 

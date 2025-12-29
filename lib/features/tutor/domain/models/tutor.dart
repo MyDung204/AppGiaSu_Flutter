@@ -48,10 +48,13 @@ class Tutor {
       gender: json['gender'] ?? 'Khác',
       teachingMode: List<String>.from(json['teaching_mode'] ?? ['Online']),
       address: json['address'] ?? '',
-      weeklySchedule: Map<String, List<String>>.from(
-        (json['weekly_schedule'] as Map<String, dynamic>?)?.map(
-          (key, value) => MapEntry(key, List<String>.from(value)),
-        ) ?? {}),
+      weeklySchedule: (json['weekly_schedule'] is Map)
+          ? Map<String, List<String>>.from(
+              (json['weekly_schedule'] as Map).map(
+                (key, value) => MapEntry(key.toString(), List<String>.from(value)),
+              ),
+            )
+          : {},
       tier: json['tier'] ?? 'student',
     );
   }

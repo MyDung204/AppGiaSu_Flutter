@@ -1,26 +1,43 @@
-import 'package:flutter/material.dart';
+/// Admin Reports Screen
+/// 
+/// **Purpose:**
+/// - Quản lý các báo cáo và khiếu nại từ người dùng
+/// - Cho phép admin xem, giải quyết hoặc bỏ qua báo cáo
+/// 
+/// **Features:**
+/// - Xem danh sách báo cáo đang chờ xử lý (status = pending)
+/// - Xem chi tiết báo cáo (lý do, mô tả, người báo cáo, đối tượng)
+/// - Giải quyết báo cáo (resolve)
+/// - Bỏ qua báo cáo (dismiss)
+/// - Swipe to dismiss
+/// 
+/// **Report Status:**
+/// - Pending: Đang chờ xử lý (hiển thị trong danh sách)
+/// - Resolved: Đã được giải quyết (không hiển thị)
 
-class AdminReportsScreen extends StatefulWidget {
+import 'package:doantotnghiep/features/admin/data/admin_reports_provider.dart';
+import 'package:doantotnghiep/features/admin/data/admin_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+/// Màn hình quản lý báo cáo của admin
+/// 
+/// **Usage:**
+/// - Truy cập từ admin navigation → "Báo cáo"
+/// - Hiển thị danh sách báo cáo đang chờ xử lý
+class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
 
   @override
-  State<AdminReportsScreen> createState() => _AdminReportsScreenState();
+  ConsumerState<AdminReportsScreen> createState() => _AdminReportsScreenState();
 }
 
-class _AdminReportsScreenState extends State<AdminReportsScreen> {
-  final List<Map<String, dynamic>> _reports = List.generate(
-    5,
-    (index) => {
-      'id': index,
-      'title': index % 2 == 0 ? 'Gia sư không đến dạy đúng giờ' : 'Học viên spam tin nhắn',
-      'user': index % 2 == 0 ? 'Phụ huynh A' : 'Gia sư B',
-      'time': '${index + 1} giờ trước',
-      'status': 'pending',
-    },
-  );
-
+class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen> {
   @override
   Widget build(BuildContext context) {
+    final reportsAsync = ref.watch(adminReportsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Báo cáo & Khiếu nại'),
@@ -29,20 +46,55 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
         elevation: 0,
       ),
       backgroundColor: const Color(0xFFF5F7FA),
-      body: _reports.isEmpty 
-          ? const Center(child: Text("Không có báo cáo nào cần xử lý."))
-          : ListView.builder(
-              itemCount: _reports.length,
+      body: reportsAsync.when(
+        data: (reports) {
+           // Lọc chỉ lấy các báo cáo đang chờ xử lý
+           final pendingReports = reports.where((r) => r['status'] == 'pending').toList();
+           
+           // Empty state: Hiển thị khi không có báo cáo nào
+           if (reports.isEmpty) {
+             return Center(
+               child: Column(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   Icon(Icons.check_circle_outline, size: 64, color: Colors.green[300]),
+                   const SizedBox(height: 16),
+                   const Text(
+                     "Không có báo cáo nào cần xử lý.",
+                     style: TextStyle(fontSize: 16, color: Colors.grey),
+                   ),
+                 ],
+               ),
+             );
+           }
+           
+           // Empty state: Tất cả báo cáo đã được giải quyết
+           if (pendingReports.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.verified, size: 64, color: Colors.green[300]),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Tất cả báo cáo đã được giải quyết!",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              );
+           }
+
+           return ListView.builder(
+              itemCount: pendingReports.length,
               padding: const EdgeInsets.all(16),
               itemBuilder: (context, index) {
-                final report = _reports[index];
+                final report = pendingReports[index];
                 return Dismissible(
-                  key: ValueKey(report['id']),
+                  key: Key(report['id'].toString()),
                   onDismissed: (direction) {
-                    setState(() {
-                      _reports.removeAt(index);
-                    });
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã ẩn báo cáo.')));
+                     _handleResolve(report['id']);
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã bỏ qua.')));
                   },
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -65,37 +117,61 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                               const SizedBox(width: 8),
                               Text('Report #${report['id']}', style: const TextStyle(fontWeight: FontWeight.bold)),
                               const Spacer(),
-                              Text(report['time'], style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                              Text(_formatDate(report['created_at']), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Text(report['title'], style: const TextStyle(fontSize: 16)),
-                          Text('Báo cáo bởi: ${report['user']}', style: const TextStyle(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic)),
+                          Text(report['reason'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          if (report['description'] != null)
+                             Text(report['description'], style: const TextStyle(fontSize: 14)),
+                          
+                          const SizedBox(height: 8),
+                          Text('Báo cáo bởi: ${report['reporter_name']}', style: const TextStyle(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic)),
+                          Text('Đối tượng: ${report['target_name']}', style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+                          
                           const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed: () {
-                                   setState(() {
-                                    _reports.removeAt(index);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã bỏ qua.')));
-                                },
-                                child: const Text('Bỏ qua', style: TextStyle(color: Colors.grey)),
+                          // Chức năng giải quyết đơn giản hơn - chỉ một nút
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                // Hiển thị dialog xác nhận
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Xác nhận'),
+                                    content: const Text('Bạn có chắc chắn muốn giải quyết khiếu nại này?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text('Hủy'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                                        child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (confirmed == true) {
+                                  final success = await _handleResolve(report['id']);
+                                  if (success && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Đã giải quyết khiếu nại thành công.')),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.check_circle, size: 20),
+                              label: const Text('Đánh dấu đã giải quyết'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _reports.removeAt(index);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã giải quyết khiếu nại.')));
-                                },
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
-                                child: const Text('Giải quyết'),
-                              ),
-                            ],
+                            ),
                           )
                         ],
                       ),
@@ -103,7 +179,76 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                   ),
                 );
               },
-            ),
+            );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Lỗi: $err')),
+      ),
     );
+  }
+
+  /// Xử lý giải quyết báo cáo
+  /// 
+  /// **Purpose:**
+  /// - Gọi API để đánh dấu báo cáo đã được giải quyết
+  /// - Refresh danh sách sau khi giải quyết thành công
+  /// - Hiển thị thông báo kết quả
+  /// 
+  /// **Parameters:**
+  /// - `id`: ID của báo cáo cần giải quyết
+  /// 
+  /// **Returns:**
+  /// - `bool`: true nếu giải quyết thành công, false nếu thất bại
+  Future<bool> _handleResolve(dynamic id) async {
+     try {
+       final success = await ref.read(adminRepositoryProvider).resolveReport(int.tryParse(id.toString()) ?? 0);
+       if (success) {
+         // Refresh danh sách
+         ref.invalidate(adminReportsProvider);
+         return true;
+       } else {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(
+               content: Text('Giải quyết báo cáo thất bại. Vui lòng thử lại.'),
+               backgroundColor: Colors.red,
+             ),
+           );
+         }
+       }
+     } catch(e) {
+       print('Error resolving report: $e');
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text('Lỗi: $e'),
+             backgroundColor: Colors.red,
+           ),
+         );
+       }
+     }
+     return false;
+  }
+
+  /// Format date string từ ISO format sang định dạng dễ đọc
+  /// 
+  /// **Purpose:**
+  /// - Chuyển đổi ISO date string (e.g., "2024-12-28T10:30:00Z")
+  /// - Thành định dạng "dd/MM HH:mm" (e.g., "28/12 10:30")
+  /// 
+  /// **Parameters:**
+  /// - `iso`: ISO date string từ API
+  /// 
+  /// **Returns:**
+  /// - `String`: Formatted date string hoặc original string nếu parse lỗi
+  String _formatDate(String? iso) {
+    if (iso == null) return '';
+    try {
+      final date = DateTime.parse(iso);
+      return DateFormat('dd/MM HH:mm').format(date);
+    } catch (e) {
+      print('Error formatting date: $e');
+      return iso;
+    }
   }
 }

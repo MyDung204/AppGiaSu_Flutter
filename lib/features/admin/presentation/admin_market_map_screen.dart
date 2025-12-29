@@ -1,5 +1,26 @@
+/// Admin Market Map Screen
+/// 
+/// **Purpose:**
+/// - Hiển thị bản đồ nhiệt nhu cầu gia sư theo khu vực và môn học
+/// - Giúp admin phân tích thị trường và đưa ra quyết định
+/// 
+/// **Features:**
+/// - Bảng dữ liệu nhu cầu theo khu vực và môn học
+/// - Màu sắc thể hiện mức độ nhu cầu (đỏ = cao, xanh = thấp)
+/// - Dữ liệu được AI phân tích từ lượt tìm kiếm và đặt lịch trong 30 ngày qua
+/// 
+/// **Data Source:**
+/// - Phân tích từ lượt tìm kiếm gia sư
+/// - Phân tích từ lượt đặt lịch học
+/// - Thời gian: 30 ngày gần nhất
+
 import 'package:flutter/material.dart';
 
+/// Màn hình bản đồ nhiệt thị trường của admin
+/// 
+/// **Usage:**
+/// - Truy cập từ admin dashboard → Click vào card "Bản đồ Nhiệt"
+/// - Hoặc từ admin navigation (nếu có)
 class AdminMarketMapScreen extends StatelessWidget {
   const AdminMarketMapScreen({super.key});
 

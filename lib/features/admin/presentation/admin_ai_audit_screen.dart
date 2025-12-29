@@ -1,10 +1,39 @@
-import 'package:flutter/material.dart';
+/// Admin AI Audit Screen
+/// 
+/// **Purpose:**
+/// - Màn hình giám sát hệ thống bằng AI
+/// - Hiển thị cảnh báo thời gian thực và nhật ký quét tin nhắn
+/// 
+/// **Features:**
+/// - Cảnh báo thời gian thực: Các cảnh báo về hoạt động bất thường
+/// - Nhật ký quét tin nhắn: Lịch sử quét tin nhắn bằng AI để phát hiện spam, lừa đảo
+/// - Xử lý cảnh báo (mock - cần implement)
+/// 
+/// **AI Scanning:**
+/// - Quét tin nhắn tự động để phát hiện:
+///   - Spam messages
+///   - Fraud attempts
+///   - Inappropriate content
+///   - Suspicious behavior
 
-class AdminAiAuditScreen extends StatelessWidget {
+import 'package:doantotnghiep/features/admin/data/admin_audit_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+/// Màn hình giám sát AI của admin
+/// 
+/// **Usage:**
+/// - Truy cập từ admin navigation → "Mắt thần"
+/// - Hiển thị cảnh báo và nhật ký quét AI
+class AdminAiAuditScreen extends ConsumerWidget {
   const AdminAiAuditScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alertsAsync = ref.watch(auditAlertsProvider);
+    final logsAsync = ref.watch(auditLogsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mắt Thần AI - Giám Sát'),
@@ -18,62 +47,82 @@ class AdminAiAuditScreen extends StatelessWidget {
           children: [
             _buildSectionHeader(context, 'Cảnh báo Thời gian thực (Real-time)', Icons.warning_amber_rounded, Colors.red),
             const SizedBox(height: 12),
-            _buildAlertCard(
-              context,
-              'Phát hiện gian lận đặt lịch',
-              'Gia sư Nguyễn Văn A nhận 15 yêu cầu chỉ trong 1 phút.',
-              'Nguy hiểm cao',
-              Colors.red,
-            ),
-            _buildAlertCard(
-              context,
-              'Từ khóa nhạy cảm',
-              'Học viên B gửi tin nhắn chứa từ khóa cấm: "chuyển khoản ngoài".',
-              'Cảnh báo',
-              Colors.orange,
+            alertsAsync.when(
+              data: (alerts) {
+                if (alerts.isEmpty) return const Text('Hệ thống an toàn. Không có cảnh báo.', style: TextStyle(color: Colors.green));
+                return Column(
+                  children: alerts.map((alert) => _buildAlertCard(
+                    context,
+                    alert['title'] ?? 'Cảnh báo',
+                    alert['description'] ?? '',
+                    alert['severity'] == 'danger' ? 'Nguy hiểm cao' : 'Cảnh báo',
+                    alert['severity'] == 'danger' ? Colors.red : Colors.orange,
+                  )).toList(),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Text('Lỗi tải cảnh báo: $err'),
             ),
             
             const SizedBox(height: 24),
             _buildSectionHeader(context, 'Nhật ký Quét Tin nhắn (AI Scan)', Icons.message_outlined, Colors.blue),
             const SizedBox(height: 12),
+            
             Container(
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.black12),
               ),
-              height: 200,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Text(
-                          '[15:3${index}] AI Scan:',
-                          style: const TextStyle(fontFamily: 'monospace', color: Colors.grey, fontSize: 12),
+              height: 300, 
+              child: logsAsync.when(
+                data: (logs) {
+                  if (logs.isEmpty) return const Center(child: Text("Chưa có nhật ký quét."));
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: logs.length,
+                    itemBuilder: (context, index) {
+                      final log = logs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '[${_formatTime(log['created_at'])}] AI Scan:',
+                              style: const TextStyle(fontFamily: 'monospace', color: Colors.grey, fontSize: 12),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                log['description'] ?? '',
+                                style: TextStyle(
+                                  color: log['severity'] == 'success' ? Colors.green : Colors.orange, 
+                                  fontSize: 13
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Đã kiểm tra hội thoại #${10234 + index} - An toàn.',
-                            style: const TextStyle(color: Colors.green, fontSize: 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 },
+                 loading: () => const Center(child: CircularProgressIndicator()),
+                 error: (err, _) => Center(child: Text('Lỗi: $err')),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatTime(String? iso) {
+    if (iso == null) return '00:00';
+    try {
+      return DateFormat('HH:mm').format(DateTime.parse(iso));
+    } catch (e) { return '00:00'; }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title, IconData icon, Color color) {
@@ -120,7 +169,7 @@ class AdminAiAuditScreen extends StatelessWidget {
                   foregroundColor: badgeColor,
                   side: BorderSide(color: badgeColor),
                 ),
-                child: const Text('Xử lý ngay'),
+                child: const Text('Xử lý ngay (Mock)'),
               ),
             ),
           ],

@@ -1,55 +1,84 @@
+import 'dart:async';
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/chat/data/chat_repository.dart';
+import 'package:doantotnghiep/features/chat/domain/models/chat_message.dart';
 import 'package:doantotnghiep/features/chat/domain/models/course_offer.dart';
+import 'package:doantotnghiep/features/chat/domain/models/conversation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime time;
-  final bool isSystem; // New field for system notifications
-  final CourseOffer? offer;
+// 1. Conversations List (Unchanged)
+final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((ref) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  final res = await repo.getConversations();
+  return res.map((e) => Conversation.fromJson(e)).toList();
+});
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.time,
-    this.isSystem = false,
-    this.offer,
-  });
-}
+// 2. Server Messages (Read-Only State from API)
+final chatMessagesProvider = FutureProvider.autoDispose.family<List<ChatMessage>, String>((ref, partnerId) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  final user = ref.read(authRepositoryProvider).currentUser;
+  final currentUserId = int.tryParse(user?.id ?? '0') ?? 0;
 
-// Map<TutorID, List<ChatMessage>>
-class ChatState extends Notifier<Map<String, List<ChatMessage>>> {
-  @override
-  Map<String, List<ChatMessage>> build() {
-    return {};
+  final conversationId = await repo.findConversationId(partnerId);
+
+  if (conversationId != null) {
+    final msgsJson = await repo.getMessages(conversationId);
+    return msgsJson.map((e) => ChatMessage.fromJson(e, currentUserId)).toList();
   }
+  return [];
+});
 
-  void sendMessage(String tutorId, String text, {bool isUser = true, bool isSystem = false, CourseOffer? offer}) {
-    final currentMessages = state[tutorId] ?? [];
+// 3. Pending Messages (Optimistic Updates - using StateProvider for simplicity)
+final pendingMessagesProvider = StateProvider.autoDispose.family<List<ChatMessage>, String>((ref, partnerId) {
+  return [];
+});
+
+// 4. Chat Controller (Orchestrator)
+final chatControllerProvider = Provider.autoDispose.family<ChatController, String>((ref, partnerId) {
+  return ChatController(ref, partnerId);
+});
+
+class ChatController {
+  final Ref ref;
+  final String partnerId;
+
+  ChatController(this.ref, this.partnerId);
+
+  Future<void> sendMessage(String text, {CourseOffer? offer}) async {
+    final repo = ref.read(chatRepositoryProvider);
     
-    // Mock initial greeting if empty
-    if (currentMessages.isEmpty && !isSystem) {
-       currentMessages.add(ChatMessage(
-        text: 'Chào bạn, mình có thể giúp gì cho bạn?',
-        isUser: false,
-        time: DateTime.now().subtract(const Duration(minutes: 5)),
-      ));
-    }
+    // 1. Optimistic Update: Add to pending
+    final tempId = -DateTime.now().millisecondsSinceEpoch; 
+    final tempMessage = ChatMessage(
+      id: tempId,
+      text: text,
+      isUser: true,
+      time: DateTime.now(),
+      offer: offer,
+    );
 
-    state = {
-      ...state,
-      tutorId: [
-        ...currentMessages,
-        ChatMessage(
-          text: text,
-          isUser: isUser,
-          time: DateTime.now(),
-          isSystem: isSystem,
-          offer: offer,
-        ),
-      ],
-    };
+    ref.read(pendingMessagesProvider(partnerId).notifier).update((state) => [...state, tempMessage]);
+
+    try {
+      final conversationId = await repo.findConversationId(partnerId);
+      final response = await repo.sendMessage(
+        conversationId: conversationId,
+        receiverId: conversationId == null ? int.tryParse(partnerId) : null,
+        content: text,
+      );
+
+      if (response != null) {
+        // 2. Success: Refresh server messages
+        // We await the refresh so the new message appears in server list
+        await ref.refresh(chatMessagesProvider(partnerId).future);
+        
+        // 3. Remove from pending (now it's in server list)
+        ref.read(pendingMessagesProvider(partnerId).notifier).update((state) => state.where((m) => m.id != tempId).toList());
+      }
+    } catch (e) {
+      print("Send message failed: $e");
+      // Optional: keep in pending or handle error
+    }
   }
 }
-
-final chatProvider = NotifierProvider<ChatState, Map<String, List<ChatMessage>>>(ChatState.new);

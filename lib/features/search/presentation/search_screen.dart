@@ -1,21 +1,21 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:doantotnghiep/features/search/presentation/widgets/class_listing_tab.dart';
 import 'package:doantotnghiep/features/search/presentation/widgets/group_matching_tab.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/search/domain/models/search_filter.dart';
+import 'package:doantotnghiep/features/search/presentation/view_models/search_view_model.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/presentation/widgets/tutor_card.dart';
+import 'package:doantotnghiep/core/widgets/skeleton_loading.dart';
+import 'package:doantotnghiep/core/widgets/empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
 
-final searchQueryProvider = NotifierProvider.autoDispose<SearchQueryNotifier, String>(SearchQueryNotifier.new);
-
-// Provider for user's tutor requests (Mock Version)
+// Provider for user's tutor requests
 final myRequestsProvider = Provider.autoDispose<AsyncValue<List<TutorRequest>>>((ref) {
   final allRequestsAsync = ref.watch(tutorRequestsProvider);
   final user = FirebaseAuth.instance.currentUser;
@@ -24,28 +24,13 @@ final myRequestsProvider = Provider.autoDispose<AsyncValue<List<TutorRequest>>>(
   return allRequestsAsync.whenData((list) => list.where((req) => req.studentId == userId).toList());
 });
 
-class SearchQueryNotifier extends Notifier<String> {
-  @override
-  String build() => '';
-  void update(String value) => state = value;
-}
-
-final searchFilterProvider = NotifierProvider.autoDispose<SearchFilterNotifier, SearchFilter?>(SearchFilterNotifier.new);
-
-class SearchFilterNotifier extends Notifier<SearchFilter?> {
-  @override
-  SearchFilter? build() => null;
-
-  void update(SearchFilter? filter) {
-    state = filter;
-  }
-}
-
-// Provider to filter tutors (mock implementation)
+// Provider to filter tutors - uses ViewModel state
 final searchResultsProvider = FutureProvider.autoDispose<List<Tutor>>((ref) async {
-  final query = ref.watch(searchQueryProvider);
-  final filter = ref.watch(searchFilterProvider);
-  return ref.read(tutorRepositoryProvider).searchTutors(query, filter: filter);
+  final searchState = ref.watch(searchViewModelProvider);
+  return ref.read(tutorRepositoryProvider).searchTutors(
+    searchState.query,
+    filter: searchState.filter,
+  );
 });
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -65,23 +50,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.initState();
     _queryController = TextEditingController();
     
+    // Initialize ViewModel
     if (widget.initialSubject != null) {
-       WidgetsBinding.instance.addPostFrameCallback((_) {
-          final currentFilter = const SearchFilter(
-             minPrice: 50000, maxPrice: 1000000, 
-             gender: 'Bất kỳ',
-             teachingMode: [],
-             subjects: []
-          );
-          
-          ref.read(searchFilterProvider.notifier).update(
-            currentFilter.copyWith(subjects: [widget.initialSubject!])
-          );
-          
-          if (mounted) setState(() => _isFilterInitialized = true);
-       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(searchViewModelProvider.notifier)
+            .initializeFilterWithSubject(widget.initialSubject!);
+      });
     } else {
-       _isFilterInitialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(searchViewModelProvider.notifier).markFilterInitialized();
+      });
     }
   }
 
@@ -93,13 +71,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(searchFilterProvider);
-
-    if (!_isFilterInitialized) {
-       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    
+    final searchState = ref.watch(searchViewModelProvider);
+    final searchViewModel = ref.read(searchViewModelProvider.notifier);
     final searchResults = ref.watch(searchResultsProvider);
+
+    if (!searchState.isFilterInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return DefaultTabController(
       length: 3,
@@ -117,19 +95,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 icon: const Icon(Icons.clear),
                 onPressed: () {
                   _queryController.clear();
-                  ref.read(searchQueryProvider.notifier).update('');
+                  searchViewModel.clearQuery();
                 },
               ),
             ),
             onChanged: (value) {
-              ref.read(searchQueryProvider.notifier).update(value);
+              searchViewModel.updateQuery(value);
             },
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.tune),
               onPressed: () {
-                _showFilterModal(context, ref);
+                _showFilterModal(context, ref, searchViewModel);
               },
             ),
           ],
@@ -286,14 +264,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  void _showFilterModal(BuildContext context, WidgetRef ref) {
+  void _showFilterModal(
+    BuildContext context,
+    WidgetRef ref,
+    SearchViewModel viewModel,
+  ) {
     // Read current filter or default
-    final currentFilter = ref.read(searchFilterProvider) ?? const SearchFilter(
-      minPrice: 50000, maxPrice: 1000000, 
-      gender: 'Bất kỳ',
-      teachingMode: [],
-      subjects: []
-    );
+    final currentFilter = ref.read(searchViewModelProvider).filter ??
+        const SearchFilter(
+          minPrice: 50000,
+          maxPrice: 1000000,
+          gender: 'Bất kỳ',
+          teachingMode: [],
+          subjects: [],
+        );
 
     // Temp state for modal
     double minPrice = currentFilter.minPrice ?? 50000;
@@ -329,8 +313,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Text('Bộ lọc tìm kiếm', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         TextButton(
                           onPressed: () {
-                             ref.read(searchFilterProvider.notifier).update(null); // Clear
-                             context.pop();
+                            viewModel.clearFilter();
+                            context.pop();
                           },
                           child: const Text('Xóa lọc'),
                         )
@@ -429,8 +413,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Apply Filter
-                          final newFilter = SearchFilter(
+                          // Apply Filter using ViewModel
+                          viewModel.applyFilter(
                             minPrice: minPrice,
                             maxPrice: maxPrice,
                             teachingMode: selectedModes,
@@ -438,7 +422,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             location: selectedLocation,
                             subjects: selectedSubjects,
                           );
-                          ref.read(searchFilterProvider.notifier).update(newFilter);
                           context.pop();
                         },
                         style: ElevatedButton.styleFrom(

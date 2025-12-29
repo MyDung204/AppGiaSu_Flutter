@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EkycUpdateScreen extends StatefulWidget {
   final bool isTutor;
@@ -11,11 +13,57 @@ class EkycUpdateScreen extends StatefulWidget {
 }
 
 class _EkycUpdateScreenState extends State<EkycUpdateScreen> {
-  // Mock file selection state
-  bool _idCardUploaded = false;
-  bool _degreeUploaded = false;
-  bool _certificateUploaded = false;
-  bool _studentCardUploaded = false;
+  File? _idCardImage;
+  File? _degreeImage;
+  File? _certificateImage;
+  File? _studentCardImage;
+
+  final _picker = ImagePicker();
+
+  Future<void> _pickImage(Function(File) onPicked) async {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Wrap(
+            children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Chụp ảnh'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                try {
+                  final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+                  if (pickedFile != null) {
+                    setState(() => onPicked(File(pickedFile.path)));
+                  }
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Chọn từ thư viện'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                try {
+                  final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+                  if (pickedFile != null) {
+                    setState(() => onPicked(File(pickedFile.path)));
+                  }
+                } catch (e) {
+                   if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                }
+              },
+            ),
+          ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,49 +104,83 @@ class _EkycUpdateScreenState extends State<EkycUpdateScreen> {
               _buildUploadSection(
                 title: 'CMND / CCCD / Hộ chiếu',
                 description: 'Chụp rõ 2 mặt giấy tờ tùy thân.',
-                isUploaded: _idCardUploaded,
-                onUpload: () => setState(() => _idCardUploaded = true),
+                imageFile: _idCardImage,
+                onUpload: () => _pickImage((f) => _idCardImage = f),
               ),
               const SizedBox(height: 24),
               _buildUploadSection(
                 title: 'Bằng cấp chuyên môn',
                 description: 'Bằng Đại học, Cao đẳng hoặc Thẻ Sinh viên (nếu đang đi học).',
-                isUploaded: _degreeUploaded,
-                onUpload: () => setState(() => _degreeUploaded = true),
+                imageFile: _degreeImage,
+                onUpload: () => _pickImage((f) => _degreeImage = f),
               ),
               const SizedBox(height: 24),
               _buildUploadSection(
                 title: 'Chứng chỉ / Thành tựu (Tùy chọn)',
                 description: 'IELTS, TOEIC, Giải thưởng HSG...',
-                isUploaded: _certificateUploaded,
-                onUpload: () => setState(() => _certificateUploaded = true),
+                imageFile: _certificateImage,
+                onUpload: () => _pickImage((f) => _certificateImage = f),
                 isOptional: true,
               ),
             ] else ...[
               _buildUploadSection(
                 title: 'Thẻ Học sinh / Sinh viên',
                 description: 'Chụp rõ mặt trước thẻ để xác nhận trạng thái học viên.',
-                isUploaded: _studentCardUploaded,
-                onUpload: () => setState(() => _studentCardUploaded = true),
+                imageFile: _studentCardImage,
+                onUpload: () => _pickImage((f) => _studentCardImage = f),
               ),
             ],
 
             const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã gửi yêu cầu xác thực thành công!')),
-                  );
-                  context.pop();
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+            // SafeArea để tránh button bị che bởi navigation bar
+            SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                     if ((widget.isTutor && (_idCardImage == null || _degreeImage == null)) || 
+                         (!widget.isTutor && _studentCardImage == null)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Vui lòng tải lên đủ các giấy tờ bắt buộc.')),
+                        );
+                        return;
+                     }
+
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                    );
+
+                    // Simulate Upload
+                    Future.delayed(const Duration(seconds: 2), () {
+                      if (mounted) {
+                        Navigator.pop(context); // Pop Dialog
+                        showDialog(
+                          context: context, 
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Đã gửi yêu cầu'),
+                            content: const Text('Hồ sơ của bạn đã được gửi. Vui lòng chờ Admin phê duyệt (dự kiến 24h).'),
+                            actions: [
+                              TextButton(onPressed: () {
+                                Navigator.pop(ctx);
+                                context.pop(); // Back to Profile
+                              }, child: const Text('Đồng ý'))
+                            ],
+                          )
+                        );
+                      }
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Gửi yêu cầu'),
                 ),
-                child: const Text('Gửi yêu cầu'),
               ),
             ),
+            const SizedBox(height: 16), // Extra padding for navigation bar
           ],
         ),
       ),
@@ -108,10 +190,11 @@ class _EkycUpdateScreenState extends State<EkycUpdateScreen> {
   Widget _buildUploadSection({
     required String title,
     required String description,
-    required bool isUploaded,
+    required File? imageFile,
     required VoidCallback onUpload,
     bool isOptional = false,
   }) {
+    final isUploaded = imageFile != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -129,17 +212,17 @@ class _EkycUpdateScreenState extends State<EkycUpdateScreen> {
           onTap: onUpload,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            height: 120, // Reduced height for conciseness
+            height: 150, 
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isUploaded ? Colors.green.withOpacity(0.05) : Colors.grey[100],
+              color: isUploaded ? Colors.black : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isUploaded ? Colors.green : Colors.grey[300]!,
                 style: BorderStyle.solid,
                 width: 1.5,
               ),
-               // Dotted border effect simulation skipped for simplicity, using solid grey
+              image: isUploaded ? DecorationImage(image: FileImage(imageFile), fit: BoxFit.cover, opacity: 0.8) : null
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -151,9 +234,9 @@ class _EkycUpdateScreenState extends State<EkycUpdateScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isUploaded ? 'Đã tải lên' : 'Bấm để tải ảnh lên',
+                  isUploaded ? 'Đã chọn ảnh' : 'Bấm để chụp/tải ảnh',
                   style: TextStyle(
-                    color: isUploaded ? Colors.green : Colors.grey[600],
+                    color: isUploaded ? Colors.white : Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),

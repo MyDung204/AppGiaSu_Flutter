@@ -14,7 +14,7 @@ class CommunityScreen extends ConsumerStatefulWidget {
 
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   String _selectedTopic = 'Tất cả';
-  final List<String> _topics = ['Tất cả', 'Toán', 'Văn', 'Anh', 'Lý', 'Hóa'];
+  final List<String> _topics = ['Tất cả', 'Toán', 'Văn', 'Anh', 'Vật lý', 'Hóa'];
   
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -91,19 +91,39 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           Expanded(
             child: questionsAsync.when(
               data: (questions) {
+                // Lọc theo topic (subject)
+                // Sử dụng toLowerCase() để so sánh không phân biệt hoa thường
                 var filtered = _selectedTopic == 'Tất cả'
                     ? questions
-                    : questions.where((q) => q.subject == _selectedTopic).toList();
+                    : questions.where((q) => 
+                        q.subject.toLowerCase().contains(_selectedTopic.toLowerCase())
+                      ).toList();
 
+                // Lọc theo search text nếu có
                 if (_searchText.isNotEmpty) {
                   filtered = filtered.where((q) =>
                       q.content.toLowerCase().contains(_searchText) ||
-                      q.userName.toLowerCase().contains(_searchText)
+                      q.userName.toLowerCase().contains(_searchText) ||
+                      q.subject.toLowerCase().contains(_searchText)
                   ).toList();
                 }
 
+                // Hiển thị empty state nếu không có kết quả
                 if (filtered.isEmpty) {
-                  return const Center(child: Text('Không tìm thấy kết quả nào.'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Không tìm thấy câu hỏi nào${_selectedTopic != 'Tất cả' ? ' cho môn $_selectedTopic' : ''}.',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -124,8 +144,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                               Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundImage: NetworkImage(q.userAvatar),
                                     radius: 16,
+                                    backgroundColor: Colors.grey[300],
+                                    child: const Icon(Icons.person, size: 16, color: Colors.grey),
                                   ),
                                   const SizedBox(width: 8),
                                   Column(

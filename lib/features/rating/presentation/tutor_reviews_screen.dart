@@ -153,8 +153,9 @@ class _TutorReviewsScreenState extends ConsumerState<TutorReviewsScreen> {
           Row(
             children: [
               CircleAvatar(
-                backgroundImage: NetworkImage(review.userAvatar),
                 radius: 20,
+                backgroundColor: Colors.grey[300],
+                child: const Icon(Icons.person, size: 20, color: Colors.grey),
               ),
               const SizedBox(width: 12),
               Expanded(

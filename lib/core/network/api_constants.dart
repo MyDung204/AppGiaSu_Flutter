@@ -1,7 +1,8 @@
+import 'api_config.dart';
 
 class ApiConstants {
-  // 10.0.2.2 is for Emulator. For Physical Device, use your LAN IP.
-  static const String baseUrl = 'http://192.168.50.60:8000/api';
+  /// Base URL cho API (tự động detect platform)
+  static String get baseUrl => ApiConfig.baseUrl;
   
   // Endpoints
   static const String login = '/login';

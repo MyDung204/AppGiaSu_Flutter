@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 class TutorRequest extends Model
 {
     use HasFactory;
-    protected $fillable = ['student_id', 'subject', 'grade_level', 'description', 'budget', 'mode', 'status'];
+    protected $fillable = ['student_id', 'subject', 'grade_level', 'description', 'min_budget', 'max_budget', 'schedule', 'location', 'mode', 'status'];
 
     protected $casts = [
-        'budget' => 'decimal:2',
+        'min_budget' => 'decimal:2',
+        'max_budget' => 'decimal:2',
     ];
 
     public function student()

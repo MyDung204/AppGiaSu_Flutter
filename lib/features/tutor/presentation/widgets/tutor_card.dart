@@ -1,12 +1,49 @@
+/// Tutor Card Widget
+/// 
+/// Displays a summary card for a tutor with:
+/// - Avatar image
+/// - Name and verification badge
+/// - Subjects taught
+/// - Rating and review count
+/// - Hourly rate
+/// - Tier badge (Teacher/Student)
+/// - Location
+/// 
+/// **Design:**
+/// - Modern glassmorphism effect (backdrop blur)
+/// - Rounded corners (20px)
+/// - Subtle shadow for depth
+/// - Tap to navigate to tutor detail screen
+/// 
+/// **Usage:**
+/// ```dart
+/// TutorCard(
+///   tutor: tutor,
+///   onTap: () => context.push('/tutor-detail', extra: tutor),
+/// )
+/// ```
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 
 /// Thẻ hiển thị thông tin tóm tắt của một Gia sư
-/// Bao gồm: Avatar, Tên, Giá, Đánh giá, và Nhãn (Giáo viên/Sinh viên)
+/// 
+/// **Hiển thị:**
+/// - Avatar, Tên, Giá, Đánh giá, và Nhãn (Giáo viên/Sinh viên)
+/// 
+/// **Thiết kế:**
+/// - Glassmorphism effect (hiệu ứng kính mờ)
+/// - Bo góc 20px
+/// - Shadow nhẹ
+/// - Có thể tap để xem chi tiết
 class TutorCard extends StatelessWidget {
+  /// Tutor object to display
   final Tutor tutor;
+  
+  /// Callback when card is tapped
+  /// Usually navigates to tutor detail screen
   final VoidCallback? onTap;
 
   const TutorCard({super.key, required this.tutor, this.onTap});
@@ -53,20 +90,14 @@ class TutorCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        tutor.avatarUrl,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.person, color: Colors.grey),
-                        ),
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: const Icon(Icons.person, size: 40, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(width: 16),

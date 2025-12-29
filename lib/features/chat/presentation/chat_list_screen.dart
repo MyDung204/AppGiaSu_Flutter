@@ -1,4 +1,4 @@
-import 'package:doantotnghiep/features/chat/data/chat_providers.dart';
+import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,8 +35,8 @@ class ChatListScreen extends ConsumerWidget {
                   contentPadding: const EdgeInsets.all(12),
                   leading: CircleAvatar(
                     radius: 28,
-                    backgroundImage: NetworkImage(conv.partnerAvatar),
-                    onBackgroundImageError: (_, __) => const Icon(Icons.person),
+                    backgroundColor: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 28, color: Colors.grey),
                   ),
                   title: Text(conv.partnerName, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(conv.lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),

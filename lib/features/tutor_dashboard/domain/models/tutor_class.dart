@@ -11,9 +11,10 @@ class TutorClass {
   final double price;
   final int enrolledStudentCount;
   final String status; // 'upcoming', 'ongoing', 'completed'
+  final List<Map<String, dynamic>> students; // Added: List of {id, name, etc}
   
   // SaaS Features
-  final List<String> studentIds;
+  final List<String> studentIds; // Keep for backward compat, or just use IDs
   final Map<String, String> paymentStatus; // Key: StudentId, Value: 'paid' | 'unpaid' | 'overdue'
   final DateTime? nextPaymentDate;
 
@@ -28,6 +29,7 @@ class TutorClass {
     required this.price,
     this.enrolledStudentCount = 0,
     this.status = 'upcoming',
+    this.students = const [],
     this.studentIds = const [],
     this.paymentStatus = const {},
     this.nextPaymentDate,

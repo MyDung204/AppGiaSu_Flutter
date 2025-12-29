@@ -12,9 +12,13 @@ import 'package:doantotnghiep/features/tutor_dashboard/presentation/student_requ
 import 'package:doantotnghiep/features/rating/presentation/tutor_reviews_screen.dart';
 import 'package:doantotnghiep/features/report/presentation/create_report_screen.dart';
 import 'package:doantotnghiep/features/group/presentation/create_group_screen.dart';
+import 'package:doantotnghiep/features/search/presentation/group_management_screen.dart';
+import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
+import 'package:doantotnghiep/features/group/domain/models/course.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/tutor_schedule_management_screen.dart';
 import 'package:doantotnghiep/features/profile/presentation/ekyc_update_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/create_class_screen.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/my_classes_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/class_detail_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_class.dart'; // Ensure this model is generic enough or imported correctly if missing
 import 'package:doantotnghiep/features/student/presentation/create_tutor_request_screen.dart';
@@ -22,6 +26,8 @@ import 'package:doantotnghiep/features/student/presentation/my_request_detail_sc
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:doantotnghiep/features/notification/presentation/notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:doantotnghiep/features/student/presentation/my_requests_screen.dart';
+import 'package:doantotnghiep/features/student/presentation/my_study_groups_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -32,11 +38,13 @@ import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/presentation/tutor_detail_screen.dart';
 import 'package:doantotnghiep/features/booking/presentation/booking_screen.dart';
+import 'package:doantotnghiep/features/booking/presentation/booking_review_screen.dart';
 import 'package:doantotnghiep/features/search/presentation/search_screen.dart';
 import 'package:doantotnghiep/features/profile/presentation/profile_screen.dart';
 import 'package:doantotnghiep/features/wallet/presentation/wallet_screen.dart';
 import 'package:doantotnghiep/features/home/presentation/widgets/scaffold_with_navbar.dart';
 import 'package:doantotnghiep/features/booking/presentation/schedule_screen.dart';
+import 'package:doantotnghiep/features/booking/presentation/video_call_screen.dart';
 import 'package:doantotnghiep/features/chat/presentation/chat_screen.dart';
 import 'package:doantotnghiep/features/chat/presentation/chat_list_screen.dart';
 import 'package:doantotnghiep/features/community/presentation/community_screen.dart';
@@ -114,6 +122,16 @@ class AppRouter {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/my-requests',
+        builder: (context, state) => const MyRequestsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/my-study-groups',
+        builder: (context, state) => const MyStudyGroupsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
          path: '/my-request-detail',
          builder: (context, state) {
             final request = state.extra as TutorRequest;
@@ -138,6 +156,31 @@ class AppRouter {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/booking-review',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final tutor = extra['tutor'] as Tutor;
+          final date = extra['date'] as DateTime;
+          final timeSlot = extra['timeSlot'] as String;
+          final totalPrice = extra['totalPrice'] as double;
+          return BookingReviewScreen(
+            tutor: tutor,
+            selectedDate: date,
+            selectedTimeSlot: timeSlot,
+            totalPrice: totalPrice,
+          );
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/video-call',
+        builder: (context, state) {
+           final bookingId = state.extra as String? ?? '';
+           return VideoCallScreen(bookingId: bookingId);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/report',
         builder: (context, state) {
            return const CreateReportScreen();
@@ -150,16 +193,33 @@ class AppRouter {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/group-management',
+        builder: (context, state) {
+           final group = state.extra as GroupRequest;
+           return GroupManagementScreen(group: group);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/create-class',
-        builder: (context, state) => const CreateClassScreen(),
+        builder: (context, state) {
+           final classToEdit = state.extra as Course?;
+           final isGroup = state.uri.queryParameters['isGroup'] == 'true';
+           return CreateClassScreen(classToEdit: classToEdit, isGroup: isGroup);
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/class-detail',
         builder: (context, state) {
-           final tutorClass = state.extra as TutorClass;
-           return ClassDetailScreen(tutorClass: tutorClass);
+           final course = state.extra as Course;
+           return ClassDetailScreen(course: course);
         },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/my-classes',
+        builder: (context, state) => const MyClassesScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

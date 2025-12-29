@@ -118,7 +118,10 @@ class _QuestionDetailScreenState extends ConsumerState<QuestionDetailScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundImage: NetworkImage(q.userAvatar)),
+              CircleAvatar(
+                backgroundColor: Colors.grey[300],
+                child: const Icon(Icons.person, color: Colors.grey),
+              ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +173,11 @@ class _QuestionDetailScreenState extends ConsumerState<QuestionDetailScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(radius: 16, backgroundImage: NetworkImage(a.userAvatar)),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.grey[300],
+                child: const Icon(Icons.person, size: 16, color: Colors.grey),
+              ),
               const SizedBox(width: 8),
               Text(a.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(width: 8),

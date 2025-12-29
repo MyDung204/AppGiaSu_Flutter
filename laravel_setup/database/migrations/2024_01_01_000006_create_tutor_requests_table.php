@@ -13,7 +13,10 @@ return new class extends Migration {
             $table->string('subject');
             $table->string('grade_level');
             $table->text('description');
-            $table->decimal('budget', 15, 2)->nullable();
+            $table->decimal('min_budget', 15, 2)->nullable();
+            $table->decimal('max_budget', 15, 2)->nullable();
+            $table->string('schedule')->nullable();
+            $table->string('location')->nullable();
             $table->enum('mode', ['Online', 'Offline', 'Any'])->default('Any');
             $table->enum('status', ['open', 'closed', 'matched'])->default('open');
             $table->timestamps();

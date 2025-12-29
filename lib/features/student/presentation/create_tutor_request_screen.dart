@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:uuid/uuid.dart';
+import 'package:doantotnghiep/core/network/api_client.dart'; 
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
@@ -31,40 +32,34 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 1));
 
       try {
-        final user = FirebaseAuth.instance.currentUser;
-        // Allow mock user if not logged in for testing
-        final studentId = user?.uid ?? 'test-user-id';
-        final studentName = user?.displayName ?? user?.email ?? 'Học viên Mới';
-
-        final request = TutorRequest(
-          id: const Uuid().v4(),
-          studentId: studentId,
-          studentName: studentName,
-          subject: _subjectController.text.trim(),
-          gradeLevel: _gradeController.text.trim(),
-          minBudget: double.parse(_minBudgetController.text.trim()),
-          maxBudget: double.parse(_maxBudgetController.text.trim()),
-          schedule: _scheduleController.text.trim(),
-          description: _descController.text.trim(),
-          location: _locationController.text.trim(),
-          createdAt: DateTime.now(),
-        );
-
-        // Add to Mock Provider
-        ref.read(tutorRequestsProvider.notifier).addRequest(request);
+        final apiClient = ref.read(apiClientProvider);
+        
+        await apiClient.post('/tutor-requests', data: {
+          'subject': _subjectController.text.trim(),
+          'grade_level': _gradeController.text.trim(),
+          'min_budget': double.tryParse(_minBudgetController.text.trim()) ?? 0,
+          'max_budget': double.tryParse(_maxBudgetController.text.trim()) ?? 0,
+          'schedule': _scheduleController.text.trim(),
+          'location': _locationController.text.trim(),
+          'description': _descController.text.trim().isEmpty 
+              ? 'Không có mô tả thêm' 
+              : _descController.text.trim(),
+        });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Đăng yêu cầu thành công!')),
           );
+          // Refresh cả danh sách công khai và danh sách của tôi
+          ref.invalidate(tutorRequestsProvider);
+          ref.invalidate(myTutorRequestsProvider);
           context.pop();
         }
       } catch (e) {
          if (mounted) {
+           print('Error submitting request: $e');
            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
          }
       } finally {
@@ -84,16 +79,26 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _subjectController,
-                decoration: const InputDecoration(labelText: 'Môn học (VD: Toán, Lý...)', border: OutlineInputBorder()),
-                validator: (v) => v?.isEmpty == true ? 'Vui lòng nhập môn học' : null,
+              DropdownButtonFormField<String>(
+                value: _subjectController.text.isNotEmpty && ['Toán', 'Lý', 'Hóa', 'Tiếng Anh', 'Văn', 'Sinh', 'Sử', 'Địa', 'Tin học', 'Piano', 'Guitar'].contains(_subjectController.text) 
+                    ? _subjectController.text 
+                    : null,
+                items: ['Toán', 'Lý', 'Hóa', 'Tiếng Anh', 'Văn', 'Sinh', 'Sử', 'Địa', 'Tin học', 'Piano', 'Guitar']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (v) => setState(() => _subjectController.text = v!),
+                decoration: const InputDecoration(labelText: 'Môn học', border: OutlineInputBorder()),
+                validator: (v) => v == null || v.isEmpty ? 'Chọn môn học' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _gradeController,
-                decoration: const InputDecoration(labelText: 'Lớp (VD: Lớp 12)', border: OutlineInputBorder()),
-                validator: (v) => v?.isEmpty == true ? 'Vui lòng nhập lớp' : null,
+              DropdownButtonFormField<String>(
+                value: _gradeController.text.isNotEmpty && ['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Người đi làm'].contains(_gradeController.text) 
+                    ? _gradeController.text 
+                    : null,
+                items: ['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Người đi làm']
+                    .map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                onChanged: (v) => setState(() => _gradeController.text = v!),
+                decoration: const InputDecoration(labelText: 'Trình độ lớp', border: OutlineInputBorder()),
+                 validator: (v) => v == null || v.isEmpty ? 'Chọn lớp' : null,
               ),
               const SizedBox(height: 16),
               Row(

@@ -1,37 +1,47 @@
+/// Admin Tutor Approval Screen
+/// 
+/// **Purpose:**
+/// - Quản lý các yêu cầu đăng ký làm gia sư
+/// - Cho phép admin duyệt hoặc từ chối gia sư
+/// - Có tính năng AI Face Comparison (E-KYC) để xác thực danh tính
+/// 
+/// **Features:**
+/// - Xem danh sách gia sư chờ duyệt
+/// - Duyệt gia sư (approve)
+/// - Từ chối gia sư (reject)
+/// - Swipe to approve/reject (gesture)
+/// - AI Face Comparison: So sánh avatar với ảnh CCCD
+/// 
+/// **Approval Flow:**
+/// 1. Admin xem thông tin gia sư
+/// 2. (Optional) Chạy AI Face Comparison để xác thực
+/// 3. Duyệt hoặc từ chối
+/// 4. Gia sư được duyệt sẽ có thể nhận booking
+
+import 'package:doantotnghiep/features/admin/data/admin_repository.dart';
+import 'package:doantotnghiep/features/admin/data/admin_tutor_request_provider.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AdminTutorApprovalScreen extends StatefulWidget {
+/// Màn hình phê duyệt gia sư của admin
+/// 
+/// **Usage:**
+/// - Truy cập từ admin navigation → "Kiểm duyệt"
+/// - Hoặc từ dashboard → Click vào card "Chờ duyệt"
+class AdminTutorApprovalScreen extends ConsumerStatefulWidget {
   const AdminTutorApprovalScreen({super.key});
 
   @override
-  State<AdminTutorApprovalScreen> createState() => _AdminTutorApprovalScreenState();
+  ConsumerState<AdminTutorApprovalScreen> createState() => _AdminTutorApprovalScreenState();
 }
 
-class _AdminTutorApprovalScreenState extends State<AdminTutorApprovalScreen> {
-  // Mock data for pending tutors
-  final List<Tutor> _pendingTutors = List.generate(
-    5,
-    (index) => Tutor(
-      id: 'pending_$index',
-      name: 'Gia sư Chờ Duyệt ${index + 1}',
-      avatarUrl: 'https://i.pravatar.cc/150?u=pending_$index',
-      bio: 'Tôi là sinh viên năm cuối ĐH Sư Phạm...',
-      hourlyRate: 150000,
-      subjects: ['Toán', 'Lý'],
-      rating: 0,
-      reviewCount: 0,
-      location: 'Hà Nội',
-      isVerified: false,
-      gender: 'Nam',
-      teachingMode: ['Online'],
-      address: '123 Đường ABC, Hà Nội',
-      weeklySchedule: const {'2': ['08:00 - 10:00']}, // Mock schedule
-    ),
-  );
+class _AdminTutorApprovalScreenState extends ConsumerState<AdminTutorApprovalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final requestsAsync = ref.watch(tutorRequestsProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -40,126 +50,257 @@ class _AdminTutorApprovalScreenState extends State<AdminTutorApprovalScreen> {
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
-      body: _pendingTutors.isEmpty
-          ? const Center(child: Text('Không có yêu cầu nào đang chờ.'))
-          : ListView.builder(
+      body: requestsAsync.when(
+        data: (tutors) {
+           // Empty state: Hiển thị khi không có yêu cầu chờ duyệt
+           if (tutors.isEmpty) {
+             return Center(
+               child: Column(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   Icon(Icons.verified_user, size: 64, color: Colors.green[300]),
+                   const SizedBox(height: 16),
+                   const Text(
+                     'Không có yêu cầu nào đang chờ.',
+                     style: TextStyle(fontSize: 16, color: Colors.grey),
+                   ),
+                   const SizedBox(height: 8),
+                   Text(
+                     'Tất cả gia sư đã được duyệt!',
+                     style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                   ),
+                 ],
+               ),
+             );
+           }
+           return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _pendingTutors.length,
+              itemCount: tutors.length,
               itemBuilder: (context, index) {
-                final tutor = _pendingTutors[index];
+                final tutor = tutors[index];
                 return Dismissible(
                   key: Key(tutor.id),
                   background: _buildSwipeAction(Colors.green, Icons.check, Alignment.centerLeft),
                   secondaryBackground: _buildSwipeAction(Colors.red, Icons.close, Alignment.centerRight),
-                  onDismissed: (direction) {
-                    _removeTutor(index);
-                    final action = direction == DismissDirection.startToEnd ? 'Đã duyệt' : 'Đã từ chối';
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$action ${tutor.name}')));
+                   confirmDismiss: (direction) async {
+                    if (direction == DismissDirection.startToEnd) {
+                       return await _handleApprove(tutor);
+                    } else {
+                       return await _handleReject(tutor);
+                    }
                   },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundImage: NetworkImage(tutor.avatarUrl),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tutor.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      tutor.subjects.join(', '),
-                                      style: const TextStyle(color: Colors.grey),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(tutor.location),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          // Action Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.face_retouching_natural, color: Colors.blue),
-                                  label: const Text('AI Soi Chiếu'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue,
-                                    side: const BorderSide(color: Colors.blue),
-                                  ),
-                                  onPressed: () => _showFaceComparisonDialog(context, tutor, index),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton.icon(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                label: const Text('Từ chối', style: TextStyle(color: Colors.red)),
-                                onPressed: () {
-                                  _removeTutor(index);
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã từ chối ${tutor.name}')));
-                                },
-                              ),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.check),
-                                label: const Text('Duyệt ngay'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                ),
-                                onPressed: () {
-                                   _removeTutor(index);
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã duyệt ${tutor.name}')));
-                                },
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: _buildCard(tutor),
                 );
               },
-            ),
+            );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Lỗi: $err')),
+      )
     );
   }
 
-  void _removeTutor(int index) {
-    setState(() {
-      _pendingTutors.removeAt(index);
-    });
+  /// Xử lý duyệt gia sư
+  /// 
+  /// **Purpose:**
+  /// - Gọi API để duyệt gia sư
+  /// - Refresh danh sách sau khi duyệt thành công
+  /// - Hiển thị thông báo kết quả
+  /// 
+  /// **Parameters:**
+  /// - `tutor`: Tutor object cần duyệt
+  /// 
+  /// **Returns:**
+  /// - `bool`: true nếu duyệt thành công, false nếu thất bại
+  Future<bool> _handleApprove(Tutor tutor) async {
+     try {
+       final success = await ref.read(adminRepositoryProvider).approveTutor(int.tryParse(tutor.id) ?? 0);
+       if (success) {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+               content: Text('Đã duyệt ${tutor.name}'),
+               backgroundColor: Colors.green,
+             ),
+           );
+         }
+         // Refresh danh sách
+         ref.invalidate(tutorRequestsProvider);
+         return true;
+       } else {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(
+               content: Text('Duyệt gia sư thất bại. Vui lòng thử lại.'),
+               backgroundColor: Colors.red,
+             ),
+           );
+         }
+       }
+     } catch (e) {
+        print('Error approving tutor: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Lỗi: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+     }
+     return false;
+  }
+
+  /// Xử lý từ chối gia sư
+  /// 
+  /// **Purpose:**
+  /// - Gọi API để từ chối gia sư
+  /// - Refresh danh sách sau khi từ chối thành công
+  /// - Hiển thị thông báo kết quả
+  /// 
+  /// **Parameters:**
+  /// - `tutor`: Tutor object cần từ chối
+  /// 
+  /// **Returns:**
+  /// - `bool`: true nếu từ chối thành công, false nếu thất bại
+  Future<bool> _handleReject(Tutor tutor) async {
+      try {
+       final success = await ref.read(adminRepositoryProvider).rejectTutor(int.tryParse(tutor.id) ?? 0);
+       if (success) {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+               content: Text('Đã từ chối ${tutor.name}'),
+               backgroundColor: Colors.orange,
+             ),
+           );
+         }
+         // Refresh danh sách
+         ref.invalidate(tutorRequestsProvider);
+         return true;
+       } else {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(
+               content: Text('Từ chối gia sư thất bại. Vui lòng thử lại.'),
+               backgroundColor: Colors.red,
+             ),
+           );
+         }
+       }
+     } catch (e) {
+       print('Error rejecting tutor: $e');
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text('Lỗi: $e'),
+             backgroundColor: Colors.red,
+           ),
+         );
+       }
+     }
+     return false;
+  }
+
+  /// Build tutor card widget
+  /// 
+  /// **Purpose:**
+  /// - Hiển thị thông tin gia sư chờ duyệt
+  /// - Có các button để duyệt/từ chối
+  /// - Có button AI Face Comparison
+  /// 
+  /// **Parameters:**
+  /// - `tutor`: Tutor object cần hiển thị
+  Widget _buildCard(Tutor tutor) {
+    return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.grey[300],
+                    child: const Icon(Icons.person, size: 30, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tutor.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          tutor.subjects.join(', '),
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(tutor.location),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.face_retouching_natural, color: Colors.blue),
+                      label: const Text('AI Soi Chiếu'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        side: const BorderSide(color: Colors.blue),
+                      ),
+                      onPressed: () => _showFaceComparisonDialog(context, tutor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    label: const Text('Từ chối', style: TextStyle(color: Colors.red)),
+                    onPressed: () => _handleReject(tutor),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check),
+                    label: const Text('Duyệt ngay'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    onPressed: () => _handleApprove(tutor),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      );
   }
 
   Widget _buildSwipeAction(Color color, IconData icon, Alignment alignment) {
@@ -172,13 +313,22 @@ class _AdminTutorApprovalScreenState extends State<AdminTutorApprovalScreen> {
     );
   }
 
-  void _showFaceComparisonDialog(BuildContext context, Tutor tutor, int index) {
+  /// Hiển thị dialog AI Face Comparison
+  /// 
+  /// **Purpose:**
+  /// - So sánh avatar của gia sư với ảnh CCCD
+  /// - Tính toán độ khớp (match score)
+  /// - Cho phép duyệt ngay sau khi xác thực
+  /// 
+  /// **Parameters:**
+  /// - `context`: BuildContext để hiển thị dialog
+  /// - `tutor`: Tutor object cần xác thực
+  void _showFaceComparisonDialog(BuildContext context, Tutor tutor) {
     showDialog(
       context: context,
-      builder: (context) => _FaceComparisonDialog(tutor: tutor, onApprove: () {
-        _removeTutor(index);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã xác thực & duyệt ${tutor.name}')));
+      builder: (context) => _FaceComparisonDialog(tutor: tutor, onApprove: () async {
         Navigator.pop(context);
+        await _handleApprove(tutor);
       }),
     );
   }
@@ -270,7 +420,11 @@ class _FaceComparisonDialogState extends State<_FaceComparisonDialog> {
   Widget _buildImageCol(String label, String url) {
     return Column(
       children: [
-        CircleAvatar(radius: 35, backgroundImage: NetworkImage(url)),
+        CircleAvatar(
+          radius: 35,
+          backgroundColor: Colors.grey[300],
+          child: const Icon(Icons.person, size: 35, color: Colors.grey),
+        ),
         const SizedBox(height: 8),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],

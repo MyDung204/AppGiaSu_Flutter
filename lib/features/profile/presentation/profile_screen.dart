@@ -4,11 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _isLoggingOut = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoggingOut) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     final userAsync = ref.watch(authStateChangesProvider);
     final user = userAsync.value;
     
@@ -16,8 +29,8 @@ class ProfileScreen extends ConsumerWidget {
     // If we are nested in TutorScaffold, the path starts with /tutor-dashboard.
     // However, ProfileScreen is shared.
     // Let's check GoRouterState.
-    final String location = GoRouterState.of(context).uri.toString();
-    final bool isTutor = location.startsWith('/tutor-dashboard');
+    // Use user role from auth state mostly
+    final isTutor = user?.role == 'tutor';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tài khoản')),
@@ -29,12 +42,7 @@ class ProfileScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.grey.shade200,
-              backgroundImage: user?.avatarUrl != null 
-                  ? NetworkImage(user!.avatarUrl!) 
-                  : null,
-              child: user?.avatarUrl == null 
-                  ? Icon(Icons.person, size: 50, color: Colors.grey.shade400) 
-                  : null,
+              child: Icon(Icons.person, size: 50, color: Colors.grey.shade400),
             ),
             const SizedBox(height: 16),
             Text(
@@ -53,12 +61,19 @@ class ProfileScreen extends ConsumerWidget {
               'Lịch sử buổi học', 
               () {
                 if (isTutor) {
-                   context.go('/tutor-dashboard/manage-schedule'); // Or schedule if we separate
+                   // context.go('/tutor-dashboard/manage-schedule'); // If exists
+                   // For simplicity redirect to generic schedule but context might diff
+                   context.push('/schedule'); 
                 } else {
-                   context.go('/schedule');
+                   context.push('/schedule');
                 }
               }
             ),
+             if (!isTutor) ...[
+               _buildMenuItem(context, Icons.assignment, 'Yêu cầu tìm gia sư', () => context.push('/my-requests')),
+               _buildMenuItem(context, Icons.group, 'Nhóm học của tôi', () => context.push('/my-study-groups')),
+             ],
+               
             _buildMenuItem(
               context, 
               Icons.verified_user, 
@@ -72,8 +87,10 @@ class ProfileScreen extends ConsumerWidget {
               Icons.logout,
               'Đăng xuất',
               () async {
+                setState(() => _isLoggingOut = true);
+                
                 await ref.read(authControllerProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
+                if (mounted) context.go('/login');
               },
               isDestructive: true,
             ),

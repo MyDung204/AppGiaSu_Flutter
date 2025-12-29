@@ -29,11 +29,15 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             TutorSeeder::class,
+            StudentSeeder::class,
+            TutorRequestSeeder::class, // Thêm seeder cho tutor requests
             WalletSeeder::class,
             ChatSeeder::class,
-            DataPopulationSeeder::class,
+            DataPopulationSeeder::class, // Tạo bookings, courses, study groups, enrollments, members
             ReviewSeeder::class,
             QuestionSeeder::class,
+            ReportSeeder::class,
+            AuditLogSeeder::class,
         ]);
     }
 }

@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Tutor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,20 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role ?? 'student'
         ]);
+
+        if ($user->role === 'tutor') {
+            Tutor::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'hourly_rate' => 0,
+                'rating' => 0,
+                'subjects' => [],
+                'teaching_mode' => [],
+                'location' => '',
+                'is_verified' => false
+            ]);
+        }
+
         return response()->json(['token' => $user->createToken('auth')->plainTextToken, 'user' => $user]);
     }
     public function login(Request $request)
