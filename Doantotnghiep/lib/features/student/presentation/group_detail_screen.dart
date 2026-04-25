@@ -80,8 +80,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Tham gia nhóm?'),
-        content: const Text('Bạn có chắc chắn muốn đăng ký tham gia nhóm học tập này không?'),
+        title: const Text('Tham gia lớp học nhóm?'),
+        content: const Text('Bạn có chắc chắn muốn đăng ký tham gia lớp học nhóm này không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
           FilledButton(
@@ -135,14 +135,14 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rời nhóm?'),
-        content: const Text('Bạn có chắc chắn muốn rời khỏi nhóm này không?'),
+        title: const Text('Rời khỏi lớp học nhóm?'),
+        content: const Text('Bạn có chắc chắn muốn rời khỏi lớp học nhóm này không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Rời nhóm'),
+            child: const Text('Rời lớp học nhóm'),
           ),
         ],
       ),
@@ -163,7 +163,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           }
 
           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã rời nhóm thành công')));
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã rời lớp học nhóm thành công')));
              ref.invalidate(myJoinedGroupsProvider); // Refresh list
              context.pop(true);
           }
@@ -228,153 +228,179 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final isCreator = user?.id == _group.creatorId;
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết nhóm'),
-        actions: [
-          if (isCreator)
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: () async {
-                 final updated = await context.push('/create-group', extra: _group);
-                 if (updated == true) {
-                    _refreshGroup();
-                    ref.invalidate(groupRequestsProvider); // Ensure the list also refreshes
-                 }
-              },
-            )
-          else if (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member' || _group.membershipStatus == 'pending')
-            IconButton(
-              icon: const Icon(Icons.exit_to_app, color: Colors.red),
-              onPressed: _isLoading ? null : _leaveGroup,
-              tooltip: 'Rời nhóm',
-            ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Chi tiết lớp học nhóm'),
+          actions: [
+            if (isCreator)
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () async {
+                   final updated = await context.push('/create-group', extra: _group);
+                   if (updated == true) {
+                      _refreshGroup();
+                      ref.invalidate(groupRequestsProvider); 
+                   }
+                },
+              )
+            else if (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member' || _group.membershipStatus == 'pending')
+              IconButton(
+                icon: const Icon(Icons.exit_to_app, color: Colors.red),
+                onPressed: _isLoading ? null : _leaveGroup,
+                tooltip: 'Rời lớp học nhóm',
               ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Thông tin'),
+              Tab(text: 'Tài liệu'),
+              Tab(text: 'Bài kiểm tra'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Information
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_group.topic, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  // Status Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_group.topic, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: EduTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                              child: Text(_group.subject, style: TextStyle(color: EduTheme.primary, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(_group.gradeLevel, style: TextStyle(color: Colors.grey[600])),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        _buildInfoRow(Icons.calendar_today, 'Ngày bắt đầu:', DateFormat('dd/MM/yyyy').format(_group.startTime)),
+                        if (_group.expectedOpeningTime != null) ...[
+                          const SizedBox(height: 12),
+                          _buildInfoRow(Icons.timer_outlined, 'Dự kiến mở:', DateFormat('dd/MM/yyyy HH:mm').format(_group.expectedOpeningTime!)),
+                        ],
+                        if (_group.quizId != null) ...[
+                          const SizedBox(height: 12),
+                          _buildInfoRow(Icons.quiz_outlined, 'Bài kiểm tra:', 'Yêu cầu hoàn thành đầu vào', valueColor: Colors.blue),
+                        ],
+                        if (_group.paymentDeadline != null && (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member') && _group.paymentStatus == 'pending') ...[
+                          const SizedBox(height: 12),
+                          _buildPaymentDeadlineRow(),
+                        ],
+                        const SizedBox(height: 12),
+                        _buildInfoRow(Icons.location_on_outlined, 'Địa điểm:', _group.location),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(Icons.attach_money, 'Chi phí:', '${currencyFormat.format(_group.pricePerSession)}/buổi'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text('Mô tả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
+                  Text(_group.description.isNotEmpty ? _group.description : 'Không có mô tả', style: const TextStyle(fontSize: 15, height: 1.5, color: Colors.black87)),
+                  
+                  const SizedBox(height: 24),
+                  
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: EduTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                        child: Text(_group.subject, style: TextStyle(color: EduTheme.primary, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(_group.gradeLevel, style: TextStyle(color: Colors.grey[600])),
+                      const Text('Thành viên', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('${_group.currentMembers}/${_group.maxMembers}', style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
-                  const Divider(height: 24),
-                  _buildInfoRow(Icons.calendar_today, 'Ngày bắt đầu:', DateFormat('dd/MM/yyyy').format(_group.startTime)),
-                  if (_group.expectedOpeningTime != null) ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.timer_outlined, 'Dự kiến mở:', DateFormat('dd/MM/yyyy HH:mm').format(_group.expectedOpeningTime!)),
-                  ],
-                  if (_group.quizId != null) ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.quiz_outlined, 'Bài kiểm tra:', 'Yêu cầu hoàn thành đầu vào', valueColor: Colors.blue),
-                  ],
-                  if (_group.paymentDeadline != null && (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member') && _group.paymentStatus == 'pending') ...[
-                    const SizedBox(height: 12),
-                    _buildPaymentDeadlineRow(),
-                  ],
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_on_outlined, 'Địa điểm:', _group.location),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(Icons.attach_money, 'Chi phí:', '${currencyFormat.format(_group.pricePerSession)}/buổi'),
+                    if (isCreator)
+                      Badge(
+                        isLabelVisible: _group.pendingRequestsCount > 0,
+                        label: Text('${_group.pendingRequestsCount}'),
+                        backgroundColor: Colors.red,
+                        offset: const Offset(-5, 5),
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                             context.push('/group-management', extra: _group);
+                          },
+                          icon: const Icon(Icons.manage_accounts),
+                          label: const Text('Quản lý thành viên'),
+                        ),
+                      )
+                  else
+                     const Text('Chỉ trưởng nhóm mới có thể xem danh sách chi tiết.'),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
 
-            const Text('Mô tả', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(_group.description.isNotEmpty ? _group.description : 'Không có mô tả', style: const TextStyle(fontSize: 15, height: 1.5, color: Colors.black87)),
-            
-            const SizedBox(height: 24),
-            
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Thành viên', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('${_group.currentMembers}/${_group.maxMembers}', style: TextStyle(color: Colors.grey[600])),
-              ],
+            // Tab 2: Materials
+            ClassMaterialsTab(
+              studyGroupId: _group.id,
+              isTutor: isCreator, // Assume creator has management rights
             ),
-            const SizedBox(height: 12),
-            // Member List (Mock or Fetch)
-              if (isCreator)
-                Badge(
-                  isLabelVisible: _group.pendingRequestsCount > 0,
-                  label: Text('${_group.pendingRequestsCount}'),
-                  backgroundColor: Colors.red,
-                  offset: const Offset(-5, 5),
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                       context.push('/group-management', extra: _group);
-                    },
-                    icon: const Icon(Icons.manage_accounts),
-                    label: const Text('Quản lý thành viên'),
-                  ),
-                )
-            else
-               const Text('Chỉ trưởng nhóm mới có thể xem danh sách chi tiết.'),
+
+            // Tab 3: Quizzes
+            ClassQuizTab(
+              studyGroupId: _group.id,
+              isTutor: isCreator,
+            ),
           ],
         ),
-      ),
-      bottomNavigationBar: _buildBottomBar(isCreator),
-      // Floating Chat Bubble
-      floatingActionButton: (isCreator || _group.membershipStatus == 'approved' || _group.membershipStatus == 'member')
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute(builder: (_) => GroupChatScreen(group: _group)),
-                );
-              },
-              backgroundColor: EduTheme.primary,
-              icon: StreamBuilder<DocumentSnapshot>(
-                stream: ref.watch(firebaseChatRepositoryProvider).getGroupConversationStream(_group.id),
-                builder: (context, snapshot) {
-                  int unreadCount = 0;
-                  if (snapshot.hasData && snapshot.data!.exists) {
-                     final data = snapshot.data!.data() as Map<String, dynamic>;
-                     final unreadMap = data['unread_counts'] as Map<String, dynamic>?;
-                     final myId = ref.read(authRepositoryProvider).currentUser?.id.toString();
-                     if (unreadMap != null && myId != null) {
-                       unreadCount = unreadMap[myId] ?? 0;
-                     }
-                  }
-                  
-                  return Badge(
-                    isLabelVisible: unreadCount > 0,
-                    label: Text('$unreadCount'),
-                    smallSize: 10,
-                    backgroundColor: Colors.red,
-                    offset: const Offset(4, -4),
-                    child: const Icon(Icons.chat_bubble_rounded, color: Colors.white),
+        bottomNavigationBar: _buildBottomBar(isCreator),
+        // Floating Chat Bubble
+        floatingActionButton: (isCreator || _group.membershipStatus == 'approved' || _group.membershipStatus == 'member')
+            ? FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(builder: (_) => GroupChatScreen(group: _group)),
                   );
-                }
-              ),
-              label: const Text('Chat nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+                },
+                backgroundColor: EduTheme.primary,
+                icon: StreamBuilder<DocumentSnapshot>(
+                  stream: ref.watch(firebaseChatRepositoryProvider).getGroupConversationStream(_group.id),
+                  builder: (context, snapshot) {
+                    int unreadCount = 0;
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                       final data = snapshot.data!.data() as Map<String, dynamic>;
+                       final unreadMap = data['unread_counts'] as Map<String, dynamic>?;
+                       final myId = ref.read(authRepositoryProvider).currentUser?.id.toString();
+                       if (unreadMap != null && myId != null) {
+                         unreadCount = unreadMap[myId] ?? 0;
+                       }
+                    }
+                    
+                    return Badge(
+                      isLabelVisible: unreadCount > 0,
+                      label: Text('$unreadCount'),
+                      smallSize: 10,
+                      backgroundColor: Colors.red,
+                      offset: const Offset(4, -4),
+                      child: const Icon(Icons.chat_bubble_rounded, color: Colors.white),
+                    );
+                  }
+                ),
+                label: const Text('Chat lớp học nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      ),
     );
   }
 
@@ -389,7 +415,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
         child: ElevatedButton(
           onPressed: _isLoading ? null : _joinGroup,
           style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: EduTheme.primary),
-          child: const Text('Tham gia nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: const Text('Tham gia lớp học nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       );
     }

@@ -13,16 +13,20 @@ class Quiz extends Model
     protected $fillable = [
         'tutor_id',
         'course_id',
+        'student_id',
         'title',
         'description',
         'time_limit_minutes',
         'is_published',
+        'study_group_id',
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
         'time_limit_minutes' => 'integer',
         'course_id' => 'integer',
+        'student_id' => 'integer',
+        'study_group_id' => 'integer',
     ];
 
     public function tutor()
@@ -33,6 +37,16 @@ class Quiz extends Model
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(User::class, 'student_id');
+    }
+
+    public function studyGroup()
+    {
+        return $this->belongsTo(StudyGroup::class, 'study_group_id');
     }
 
     public function questions()

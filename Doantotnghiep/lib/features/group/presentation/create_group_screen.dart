@@ -100,7 +100,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.group != null ? 'Chỉnh sửa lớp nhóm' : 'Tạo lớp học nhóm mới', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.group != null ? 'Chỉnh sửa lớp học nhóm' : 'Tạo lớp học nhóm mới', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -143,11 +143,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('Thông tin nhóm'),
+                    _buildSectionTitle('Thông tin lớp học nhóm'),
                     _buildTextField(
                       controller: _topicController,
-                      label: 'Tiêu đề nhóm',
-                      hint: 'VD: Tìm bạn cùng ôn thi Đại học...',
+                      label: 'Tiêu đề lớp học nhóm',
+                      hint: 'VD: Lớp ôn thi Đại học cấp tốc...',
                       icon: Icons.title,
                     ),
                     const SizedBox(height: 16),
@@ -166,7 +166,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     ),
                     const SizedBox(height: 24),
                     
-                    _buildSectionTitle('Chi tiết tham gia'),
+                    _buildSectionTitle('Chi tiết lớp học'),
                     _buildTextField(
                       controller: _locationController,
                       label: 'Khu vực / Hình thức',
@@ -252,7 +252,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                           elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: Text(widget.group != null ? 'Cập nhật lớp học' : 'Tạo lớp học nhóm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text(widget.group != null ? 'Cập nhật lớp học nhóm' : 'Tạo lớp học nhóm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -415,13 +415,13 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         if (success && mounted) {
            ref.invalidate(groupRequestsProvider);
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Đã cập nhật nhóm thành công!'), backgroundColor: Colors.green),
+             const SnackBar(content: Text('Đã cập nhật lớp học nhóm thành công!'), backgroundColor: Colors.green),
            );
            // Navigate back and ideally signal refresh
            context.pop(true);
         } else if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Lỗi khi cập nhật nhóm. Vui lòng thử lại.')),
+             const SnackBar(content: Text('Lỗi khi cập nhật lớp học nhóm. Vui lòng thử lại.')),
            );
         }
       } else {
@@ -450,7 +450,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           ref.invalidate(groupRequestsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Đã tạo nhóm thành công!'),
+              content: Text('Đã tạo lớp học nhóm thành công!'),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
@@ -458,7 +458,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           context.pushReplacement('/group-management', extra: newGroup);
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lỗi khi tạo nhóm. Vui lòng thử lại.')),
+            const SnackBar(content: Text('Lỗi khi tạo lớp học nhóm. Vui lòng thử lại.')),
           );
         }
       }

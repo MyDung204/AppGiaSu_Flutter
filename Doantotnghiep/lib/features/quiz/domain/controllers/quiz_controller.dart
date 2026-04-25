@@ -3,16 +3,28 @@ import '../models/quiz.dart';
 import '../models/quiz_attempt.dart';
 import '../../data/quiz_repository.dart';
 
-// List of quizzes (Support filtering by tutorId later if needed)
+// List of quizzes
 final quizListProvider = FutureProvider.family<List<Quiz>, int?>((ref, tutorId) async {
   final repository = ref.watch(quizRepositoryProvider);
   return repository.getQuizzes(tutorId: tutorId);
 });
 
-// Quizzes by Course
+// Quizzes by Course (1-1 Classes - Legacy name but used for enrollments)
 final courseQuizzesProvider = FutureProvider.family<List<Quiz>, int>((ref, courseId) async {
   final repository = ref.watch(quizRepositoryProvider);
   return repository.getQuizzes(courseId: courseId);
+});
+
+// Quizzes by Study Group (Group Classes)
+final studyGroupQuizzesProvider = FutureProvider.family<List<Quiz>, int>((ref, studyGroupId) async {
+  final repository = ref.watch(quizRepositoryProvider);
+  return repository.getQuizzes(studyGroupId: studyGroupId);
+});
+
+// Quizzes by Student
+final studentQuizzesProvider = FutureProvider.family<List<Quiz>, int>((ref, studentId) async {
+  final repository = ref.watch(quizRepositoryProvider);
+  return repository.getQuizzes(studentId: studentId);
 });
 
 // Quiz Detail
@@ -42,6 +54,30 @@ class QuizActionController extends StateNotifier<AsyncValue<void>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       return null;
+    }
+  }
+
+  Future<Quiz?> updateQuiz(int quizId, Map<String, dynamic> data) async {
+    state = const AsyncValue.loading();
+    try {
+      final quiz = await _repository.updateQuiz(quizId, data);
+      state = const AsyncValue.data(null);
+      return quiz;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
+
+  Future<bool> deleteQuiz(int quizId) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.deleteQuiz(quizId);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
     }
   }
 

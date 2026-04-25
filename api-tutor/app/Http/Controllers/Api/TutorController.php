@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers\Api;
+
 use App\Http\Controllers\Controller;
 use App\Models\Tutor;
 use App\Models\TutorMaterial;
@@ -32,9 +34,7 @@ class TutorController extends Controller
             $subjects = explode(',', $request->subjects);
             $query->where(function ($q) use ($subjects) {
                 foreach ($subjects as $subject) {
-                    // Robust JSON Search: Match "Subject" inside JSON
                     $q->orWhere('subjects', 'like', '%"' . $subject . '"%');
-                    // Fallback: standard like for non-json or partial matches
                     $q->orWhere('subjects', 'like', "%{$subject}%");
                 }
             });
@@ -73,7 +73,7 @@ class TutorController extends Controller
             $query->where('rating', '>=', $request->min_rating);
         }
 
-        // 9. Degrees (Tier or Degree text)
+        // 9. Degrees
         if ($request->has('degrees') && $request->degrees != null) {
             $degrees = explode(',', $request->degrees);
             $query->where(function ($q) use ($degrees) {
@@ -84,7 +84,6 @@ class TutorController extends Controller
                         $q->orWhere('tier', 'teacher')
                           ->orWhere('degree', 'like', '%Giáo viên%');
                     } else {
-                        // Thạc sĩ, Giảng viên, etc.
                         $q->orWhere('degree', 'like', "%{$degree}%");
                     }
                 }
@@ -104,15 +103,14 @@ class TutorController extends Controller
                 $data['is_favorite'] = in_array($tutor->id, $favoriteTutorIds);
                 return $data;
             });
-            return $tutors;
         }
 
-        return $tutors;
+        return response()->json($tutors);
     }
+
     public function show(Request $request, $id)
     {
-        $tutorQuery = Tutor::with('user.badges');
-        $tutor = $tutorQuery->find($id);
+        $tutor = Tutor::with('user.badges')->find($id);
         
         if (!$tutor) {
             return response()->json(['message' => 'Tutor not found'], 404);
@@ -122,11 +120,10 @@ class TutorController extends Controller
         $data['is_favorite'] = false;
 
         if ($user = $request->user('sanctum')) {
-            $isFav = DB::table('user_favorite_tutors')
+            $data['is_favorite'] = DB::table('user_favorite_tutors')
                 ->where('user_id', $user->id)
                 ->where('tutor_id', $id)
                 ->exists();
-            $data['is_favorite'] = $isFav;
         }
 
         return response()->json($data);
@@ -141,10 +138,7 @@ class TutorController extends Controller
     public function updateAvailability(Request $request)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
-
-        $tutor = Tutor::where('user_id', $user->id)->first();
-        if (!$tutor) return response()->json(['message' => 'Tutor profile not found'], 404);
+        $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
 
         $request->validate([
             'availabilities' => 'present|array',
@@ -153,7 +147,6 @@ class TutorController extends Controller
             'availabilities.*.end_time' => 'required',
         ]);
 
-        // Replace existing availabilities
         $tutor->availabilities()->delete();
 
         $scheduleForJson = [];
@@ -166,10 +159,7 @@ class TutorController extends Controller
                 'is_recurring' => true 
             ]);
 
-            // Build JSON structure: {'2': ['08:00 - 10:00'], ...}
             $day = (string)$slot['day_of_week'];
-            // Normalize time string (08:00:00 -> 08:00) if needed, but input is usually clean. 
-            // Better to ensure it's H:i format.
             $start = substr($slot['start_time'], 0, 5);
             $end = substr($slot['end_time'], 0, 5);
             $timeSlot = "$start - $end";
@@ -180,19 +170,15 @@ class TutorController extends Controller
             $scheduleForJson[$day][] = $timeSlot;
         }
 
-        // Sync to weekly_schedule column for Frontend consumption
         $tutor->weekly_schedule = $scheduleForJson;
         $tutor->save();
 
         return response()->json(['message' => 'Availability updated', 'availabilities' => $tutor->availabilities]);
     }
+
     public function getMyAvailability(Request $request) {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
-
-        $tutor = Tutor::where('user_id', $user->id)->first();
-        if (!$tutor) return response()->json(['message' => 'Tutor profile not found'], 404);
-
+        $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
         return response()->json($tutor->availabilities);
     }
 
@@ -220,9 +206,33 @@ class TutorController extends Controller
     public function listMaterials(Request $request)
     {
         $user = $request->user();
-        $materials = TutorMaterial::where('tutor_id', $user->id)
-            ->latest()
-            ->get();
+        $query = TutorMaterial::query();
+
+        if ($user->role === 'tutor') {
+            $query->where('tutor_id', $user->id);
+        } else {
+            // Student filtering: must be explicitly assigned to them OR part of a course they are in
+            $courseIds = DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
+            
+            $query->where(function($q) use ($user, $courseIds) {
+                $q->where('student_id', $user->id)
+                  ->orWhereIn('course_id', $courseIds);
+            });
+        }
+
+        if ($request->has('course_id')) {
+            $query->where('course_id', $request->course_id);
+        }
+
+        if ($request->has('student_id')) {
+            $query->where('student_id', $request->student_id);
+        }
+
+        if ($request->has('study_group_id')) {
+            $query->where('study_group_id', $request->study_group_id);
+        }
+
+        $materials = $query->latest()->get();
         return response()->json($materials);
     }
 
@@ -239,6 +249,9 @@ class TutorController extends Controller
 
         $material = TutorMaterial::create([
             'tutor_id' => $user->id,
+            'course_id' => $request->course_id,
+            'student_id' => $request->student_id,
+            'study_group_id' => $request->study_group_id,
             'name' => $file->getClientOriginalName(),
             'file_path' => $path,
             'file_type' => $file->getClientOriginalExtension(),
@@ -253,12 +266,26 @@ class TutorController extends Controller
         $user = $request->user();
         $material = TutorMaterial::where('tutor_id', $user->id)->findOrFail($id);
 
-        // Delete from storage
         Storage::disk('public')->delete($material->file_path);
-        
         $material->delete();
 
         return response()->json(['message' => 'Material deleted successfully']);
+    }
+
+    public function updateMaterial(Request $request, $id)
+    {
+        $user = $request->user();
+        $material = TutorMaterial::where('tutor_id', $user->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'course_id' => 'nullable|integer|exists:courses,id',
+            'student_id' => 'nullable|integer|exists:users,id',
+        ]);
+
+        $material->update($validated);
+
+        return response()->json($material->fresh());
     }
 
     private function formatBytes($bytes, $precision = 2) {
@@ -270,14 +297,12 @@ class TutorController extends Controller
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
 
-    // --- FAVORITES (WISHLIST) ---
     public function toggleFavorite(Request $request, $id)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
-
-        $tutor = Tutor::find($id);
-        if (!$tutor) return response()->json(['message' => 'Tutor not found'], 404);
+        if (!$user || $user->role !== 'student') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         $existing = DB::table('user_favorite_tutors')
             ->where('user_id', $user->id)
@@ -301,23 +326,19 @@ class TutorController extends Controller
     public function getFavorites(Request $request)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+        if (!$user || $user->role !== 'student') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         $favoriteTutorIds = DB::table('user_favorite_tutors')
             ->where('user_id', $user->id)
             ->pluck('tutor_id')
             ->toArray();
 
-        if (empty($favoriteTutorIds)) {
-            return response()->json([]);
-        }
-
         $tutors = Tutor::with('user.badges')->whereIn('id', $favoriteTutorIds)->get();
         
-        $tutors = $tutors->map(function ($tutor) {
-            $data = $tutor->toArray();
-            $data['is_favorite'] = true;
-            return $data;
+        $tutors->each(function ($tutor) {
+            $tutor->is_favorite = true;
         });
 
         return response()->json($tutors);
@@ -326,10 +347,7 @@ class TutorController extends Controller
     public function myStatistics(Request $request)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
-
-        $tutor = Tutor::where('user_id', $user->id)->first();
-        if (!$tutor) return response()->json(['message' => 'Tutor not found'], 404);
+        $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
 
         $totalRevenue = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
@@ -352,7 +370,6 @@ class TutorController extends Controller
             ->where('status', 'completed')
             ->count();
 
-        // Tỉ lệ đặt lịch = (Số lịch được chấp nhận / Tổng số yêu cầu đã xử lý)
         $totalProcessed = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->whereIn('status', ['confirmed', 'completed', 'rejected'])
@@ -369,7 +386,7 @@ class TutorController extends Controller
             'total_revenue' => $totalRevenue,
             'active_classes' => $activeClasses,
             'total_students' => $totalStudents,
-            'teaching_hours' => $completedSessions * 1.5, // Giả định mỗi buổi 1.5h
+            'teaching_hours' => $completedSessions * 1.5,
             'completed_sessions' => $completedSessions,
             'rating' => $tutor->rating,
             'review_count' => $tutor->review_count,
@@ -383,10 +400,7 @@ class TutorController extends Controller
     public function myTuitions(Request $request)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
-
-        $tutor = Tutor::where('user_id', $user->id)->first();
-        if (!$tutor) return response()->json(['message' => 'Tutor not found'], 404);
+        $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
 
         $bookings = \App\Models\Booking::with(['student'])
             ->where('tutor_id', $tutor->id)

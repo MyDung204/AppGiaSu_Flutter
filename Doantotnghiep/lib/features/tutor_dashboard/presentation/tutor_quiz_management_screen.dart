@@ -9,12 +9,11 @@ class TutorQuizManagementScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // tutorId = null means we fetch the current user's quizzes based on the API endpoint logic
     final quizzesAsync = ref.watch(quizListProvider(null));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quản lý Bài Kiểm Tra'),
+        title: const Text('Quản lý bài kiểm tra'),
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(quizListProvider(null).future),
@@ -49,12 +48,12 @@ class TutorQuizManagementScreen extends ConsumerWidget {
                 ],
               );
             }
+
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: quizzes.length,
               itemBuilder: (context, index) {
-                final quiz = quizzes[index];
-                return _QuizItemCard(quiz: quiz);
+                return _QuizItemCard(quiz: quizzes[index]);
               },
             );
           },
@@ -78,12 +77,12 @@ class TutorQuizManagementScreen extends ConsumerWidget {
   }
 }
 
-class _QuizItemCard extends StatelessWidget {
+class _QuizItemCard extends ConsumerWidget {
   final Quiz quiz;
   const _QuizItemCard({required this.quiz});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -122,12 +121,48 @@ class _QuizItemCard extends StatelessWidget {
             ),
           ],
         ),
-        onTap: () {
-          // Future scope: View quiz details / Edit quiz
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tính năng chỉnh sửa bài kiểm tra sẽ được cập nhật sau.')),
-          );
-        },
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) async {
+            if (value == 'edit') {
+              context.push('/tutor-create-quiz', extra: quiz);
+              return;
+            }
+
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Xóa bài kiểm tra?'),
+                content: Text('Bạn có chắc chắn muốn xóa "${quiz.title}" không?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Xóa'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true && context.mounted) {
+              final success = await ref.read(quizActionProvider.notifier).deleteQuiz(quiz.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? 'Đã xóa bài kiểm tra' : 'Xóa bài kiểm tra thất bại'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+                ref.invalidate(quizListProvider(null));
+              }
+            }
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'edit', child: Text('Sửa')),
+            PopupMenuItem(value: 'delete', child: Text('Xóa')),
+          ],
+        ),
+        onTap: () => context.push('/tutor-create-quiz', extra: quiz),
       ),
     );
   }

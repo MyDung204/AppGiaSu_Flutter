@@ -253,13 +253,61 @@ class SharedLearningController extends Controller
         return response()->json($course, 201);
     }
 
+    public function updateCourse(Request $request, $id)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::findOrFail($id);
+        $tutor = \App\Models\Tutor::where('user_id', $user->id)->first();
+        if ($user->role !== 'admin' && (!$tutor || $course->tutor_id != $tutor->id)) {
+            return response()->json(['message' => 'Bạn không có quyền sửa lớp học này.'], 403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'subject' => 'sometimes|required|string',
+            'grade_level' => 'sometimes|required|string',
+            'description' => 'sometimes|required|string',
+            'price' => 'sometimes|required|numeric',
+            'max_students' => 'sometimes|required|integer|min:1',
+            'schedule' => 'sometimes|required|string',
+            'mode' => 'sometimes|required|in:Online,Offline',
+            'address' => 'nullable|string',
+            'start_date' => 'sometimes|required|date',
+            'status' => 'sometimes|required|in:open,ongoing,closed,pending',
+        ]);
+
+        $course->update($validated);
+        return response()->json($course->fresh(), 200);
+    }
+
+    public function deleteCourse(Request $request, $id)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::findOrFail($id);
+        $tutor = \App\Models\Tutor::where('user_id', $user->id)->first();
+        if ($user->role !== 'admin' && (!$tutor || $course->tutor_id != $tutor->id)) {
+            return response()->json(['message' => 'Bạn không có quyền xóa lớp học này.'], 403);
+        }
+
+        $course->delete();
+        return response()->json(['message' => 'Đã xóa lớp học.']);
+    }
+
     // Create a Study Group
     public function storeGroup(Request $request)
     {
         $user = $request->user();
         
-        // Only Tutors (teachers) can create groups
-        if ($user->role !== 'teacher') {
+        // Only tutors can create group classes.
+        if ($user->role !== 'tutor') {
             return response()->json(['message' => 'Chỉ gia sư mới có quyền tạo lớp học nhóm.'], 403);
         }
 
@@ -313,18 +361,22 @@ class SharedLearningController extends Controller
 
         $group->update($validated);
 
-        // Map price payload to price_per_session if needed. Actually backend migration 
-        // probably named it price_per_session. Let's check what UI passes. 
-        // UI passes 'price'. We map it.
-        if ($request->has('price')) {
-             $group->price_per_session = $request->input('price');
-        }
-        if ($request->has('location')) {
-             $group->location = $request->input('location');
-        }
-        $group->save();
-
         return response()->json($group, 200);
+    }
+
+    public function deleteGroup(Request $request, $id)
+    {
+        $group = StudyGroup::findOrFail($id);
+        $user = $request->user();
+
+        if ($user->role !== 'admin' && $group->creator_id !== $user->id) {
+            return response()->json(['message' => 'Bạn không có quyền xóa nhóm này.'], 403);
+        }
+
+        DB::table('study_group_members')->where('study_group_id', $group->id)->delete();
+        $group->delete();
+
+        return response()->json(['message' => 'Đã xóa lớp học nhóm.']);
     }
     // Join a Study Group
     public function joinGroup(Request $request, $id)
@@ -351,7 +403,7 @@ class SharedLearningController extends Controller
                 }
 
                 $creator = \App\Models\User::find($group->creator_id);
-                $isTutorGroup = $creator && $creator->role === 'teacher';
+                $isTutorGroup = $creator && $creator->role === 'tutor';
 
                 DB::table('study_group_members')
                     ->where('id', $existing->id)
@@ -393,7 +445,7 @@ class SharedLearningController extends Controller
 
         // Check if Tutor Group for Auto-Approval
         $creator = \App\Models\User::find($group->creator_id);
-        $isTutorGroup = $creator && $creator->role === 'teacher';
+        $isTutorGroup = $creator && $creator->role === 'tutor';
 
         // Add to members table
         DB::table('study_group_members')->insert([
@@ -458,7 +510,7 @@ class SharedLearningController extends Controller
         }
 
         // 4. Process Payment
-        $price = $group->price_per_session;
+        $price = $group->price;
         $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
 
         if ($wallet->balance < $price) {

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_announcements_tab.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_assignments_tab.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_quiz_tab.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_materials_tab.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -50,7 +51,7 @@ class ClassDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: _EduTheme.background,
       body: DefaultTabController(
-        length: 5,
+        length: 6,
         child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
@@ -78,6 +79,7 @@ class ClassDetailScreen extends ConsumerWidget {
                   background: _buildHeroSection(context, currencyFormat),
                 ),
                 bottom: const TabBar(
+                  isScrollable: true,
                   indicatorColor: Colors.white,
                   indicatorWeight: 3,
                   labelColor: Colors.white,
@@ -87,6 +89,7 @@ class ClassDetailScreen extends ConsumerWidget {
                     Tab(text: "Tổng quan"),
                     Tab(text: "Bảng tin"),
                     Tab(text: "Bài tập"),
+                    Tab(text: "Tài liệu"),
                     Tab(text: "Trắc nghiệm"),
                     Tab(text: "Mọi người"),
                   ],
@@ -136,10 +139,15 @@ class ClassDetailScreen extends ConsumerWidget {
                         ? _buildRestrictedAccessView()
                         : ClassAssignmentsTab(course: course, isTutor: isTutor),
                   
-                    // 4. Quiz Tab
+                    // 4. Materials Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
-                        : ClassQuizTab(course: course, isTutor: isTutor),
+                        : ClassMaterialsTab(courseId: int.tryParse(course.id) ?? 0, isTutor: isTutor),
+
+                    // 5. Quiz Tab
+                    shouldBlockAccess && !isTutor
+                        ? _buildRestrictedAccessView()
+                        : ClassQuizTab(courseId: int.tryParse(course.id) ?? 0, isTutor: isTutor),
 
                     // 5. People Tab
                     SingleChildScrollView(
@@ -280,7 +288,7 @@ class ClassDetailScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xin gia hạn đóng học phí?'),
-        content: const Text('Bạn sẽ có thêm 3 ngày để truy cập lớp học trước khi bị hạn chế hoàn toàn. Bạn có chắc chắn muốn gia hạn không?'),
+        content: const Text('Bạn sẽ có thêm 3 ngày để truy cập lớp học nhóm trước khi bị hạn chế hoàn toàn. Bạn có chắc chắn muốn gia hạn không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Đồng ý')),
@@ -387,7 +395,7 @@ class ClassDetailScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(Icons.school, size: 32, color: Colors.white),
@@ -428,9 +436,9 @@ class ClassDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -440,7 +448,7 @@ class ClassDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Học phí',
-                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
                         ),
                         const SizedBox(height: 4),
                         Text(

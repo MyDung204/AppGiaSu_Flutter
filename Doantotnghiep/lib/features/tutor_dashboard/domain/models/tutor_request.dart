@@ -12,6 +12,8 @@ class TutorRequest {
   final String location;
   final DateTime createdAt;
   final String status; // 'open', 'closed'
+  final String requestType; // '1-1', 'group'
+  final bool isTutorCreated;
 
   TutorRequest({
     required this.id,
@@ -26,6 +28,8 @@ class TutorRequest {
     required this.location,
     required this.createdAt,
     this.status = 'open',
+    this.requestType = '1-1',
+    this.isTutorCreated = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -42,6 +46,8 @@ class TutorRequest {
       'location': location,
       'created_at': createdAt.toIso8601String(),
       'status': status,
+      'request_type': requestType,
+      'is_tutor_created': isTutorCreated,
     };
   }
 
@@ -61,6 +67,8 @@ class TutorRequest {
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now() 
           : DateTime.now(),
       status: json['status'] ?? 'open',
+      requestType: json['request_type'] ?? '1-1',
+      isTutorCreated: json['is_tutor_created'] == 1 || json['is_tutor_created'] == true,
     );
   }
 

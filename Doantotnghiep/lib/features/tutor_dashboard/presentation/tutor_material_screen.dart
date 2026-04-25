@@ -89,6 +89,46 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
     }
   }
 
+  Future<void> _renameMaterial(Map<String, dynamic> material) async {
+    final controller = TextEditingController(text: material['name']?.toString() ?? '');
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Đổi tên tài liệu'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Tên tài liệu',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (newName == null || newName.isEmpty || newName == material['name']) return;
+
+    final success = await ref.read(tutorMaterialsProvider.notifier).updateMaterial(
+          material['id'].toString(),
+          newName,
+        );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Đã cập nhật tài liệu' : 'Cập nhật tài liệu thất bại'),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(tutorMaterialsProvider);
@@ -210,11 +250,23 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.grey),
             onSelected: (value) {
-              if (value == 'delete') {
+              if (value == 'rename') {
+                _renameMaterial(material);
+              } else if (value == 'delete') {
                 _deleteMaterial(material['id'].toString());
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'rename',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Sửa tên'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'delete',
                 child: Row(

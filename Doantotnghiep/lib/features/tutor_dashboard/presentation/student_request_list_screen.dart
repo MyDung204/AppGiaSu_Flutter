@@ -11,6 +11,7 @@
 library;
 
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_request_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,8 @@ class _EduTheme {
 }
 
 class StudentRequestListScreen extends ConsumerStatefulWidget {
-  const StudentRequestListScreen({super.key});
+  final int initialTab;
+  const StudentRequestListScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<StudentRequestListScreen> createState() => _StudentRequestListScreenState();
@@ -40,72 +42,116 @@ class StudentRequestListScreen extends ConsumerStatefulWidget {
 class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScreen> {
   String? _selectedSubject;
   String? _selectedGrade;
+  int _currentTab = 0;
 
   final List<String> _subjects = ['Toán', 'Lý', 'Hóa', 'Văn', 'Anh', 'Sinh', 'Sử', 'Địa', 'Tin', 'Piano', 'Khác'];
   final List<String> _grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'ĐH'];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTab = widget.initialTab;
+  }
 
   @override
   Widget build(BuildContext context) {
     final requestsAsync = ref.watch(tutorRequestsProvider);
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
 
-    return Scaffold(
-      backgroundColor: _EduTheme.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header
-            _buildHeader(context),
-            
-            // Filter Section
-            _buildFilterSection(),
-            
-            // Request List
-            Expanded(
-              child: requestsAsync.when(
-                data: (requests) {
-                  final filtered = requests.where((req) {
-                    if (_selectedSubject != null && req.subject != _selectedSubject) return false;
-                    if (_selectedGrade != null && !req.gradeLevel.contains(_selectedGrade!)) return false;
-                    return true;
-                  }).toList();
-
-                  if (filtered.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final req = filtered[index];
-                      return _buildRequestCard(context, req, currencyFormat);
-                    },
-                  );
-                },
-                error: (err, stack) => Center(child: Text('Lỗi: $err')),
-                loading: () => const Center(child: CircularProgressIndicator(color: _EduTheme.primary)),
+    return DefaultTabController(
+      initialIndex: widget.initialTab,
+      length: 2,
+      child: Scaffold(
+        backgroundColor: _EduTheme.background,
+        floatingActionButton: _currentTab == 1 ? FloatingActionButton.extended(
+          onPressed: () => context.push('/create-tutor-request?isTutor=true&type=group'),
+          backgroundColor: _EduTheme.primary,
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: const Text('Tạo tin tuyển', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ) : null,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header
+              _buildHeader(context),
+              
+              // Tabs
+              Container(
+                color: _EduTheme.cardBg,
+                child: TabBar(
+                  onTap: (index) => setState(() => _currentTab = index),
+                  labelColor: _EduTheme.primary,
+                  unselectedLabelColor: _EduTheme.textSecondary,
+                  indicatorColor: _EduTheme.primary,
+                  indicatorWeight: 3,
+                  tabs: const [
+                    Tab(text: 'Học viên 1-1'),
+                    Tab(text: 'Học viên Nhóm'),
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Filter Section
+              _buildFilterSection(),
+              
+              // Request List
+              Expanded(
+                child: TabBarView(
+                  physics: const NeverScrollableScrollPhysics(), // Handle via state
+                  children: [
+                    _buildRequestList(requestsAsync, currencyFormat, '1-1', false),
+                    _buildRequestList(requestsAsync, currencyFormat, 'group', true),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRequestList(AsyncValue<List<TutorRequest>> requestsAsync, NumberFormat currencyFormat, String type, bool tutorCreatedOnly) {
+    return requestsAsync.when(
+      data: (requests) {
+        final filtered = requests.where((req) {
+          // Filter by Tab/Type
+          if (req.requestType != type) return false;
+          // For Group tab, show those created by tutors (or students looking for groups)
+          // User said "do gia sư tạo" for groups, so we prioritize that.
+          if (type == 'group' && !req.isTutorCreated) return false;
+          if (type == '1-1' && req.isTutorCreated) return false;
+
+          // Standard Filters
+          if (_selectedSubject != null && req.subject != _selectedSubject) return false;
+          if (_selectedGrade != null && !req.gradeLevel.contains(_selectedGrade!)) return false;
+          return true;
+        }).toList();
+
+        if (filtered.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final req = filtered[index];
+            return _buildRequestCard(context, req, currencyFormat);
+          },
+        );
+      },
+      error: (err, stack) => Center(child: Text('Lỗi: $err')),
+      loading: () => const Center(child: CircularProgressIndicator(color: _EduTheme.primary)),
     );
   }
 
   /// Header with search hint
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       decoration: BoxDecoration(
         color: _EduTheme.cardBg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -138,7 +184,7 @@ class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScr
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Tìm học viên phù hợp với bạn',
+                  _currentTab == 0 ? 'Học viên đang tìm dạy kèm 1-1' : 'Các lớp nhóm đang tìm học viên',
                   style: TextStyle(
                     fontSize: 13,
                     color: _EduTheme.textSecondary,
@@ -146,16 +192,6 @@ class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScr
                 ),
               ],
             ),
-          ),
-          
-          // Search Icon
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: _EduTheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.search_rounded, color: _EduTheme.primary),
           ),
         ],
       ),
@@ -288,7 +324,7 @@ class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScr
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Tìm gia sư ${req.subject}',
+                            req.requestType == 'group' ? 'Lớp học nhóm ${req.subject}' : 'Dạy kèm 1-1 ${req.subject}',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 17,

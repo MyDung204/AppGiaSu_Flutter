@@ -77,8 +77,8 @@ class ProfileScreen extends ConsumerWidget {
              if (!isTutor) ...[
                _buildMenuItem(context, Icons.favorite, 'Gia sư yêu thích', () => context.push('/favorite-tutors')),
                _buildMenuItem(context, Icons.quiz_outlined, 'Bài thi trắc nghiệm', () => context.push('/quizzes')),
-               _buildMenuItem(context, Icons.assignment, 'Yêu cầu tìm gia sư', () => context.push('/my-requests')),
-               _buildMenuItem(context, Icons.group, 'Nhóm học của tôi', () => context.push('/my-study-groups')),
+               _buildMenuItem(context, Icons.assignment, 'Yêu cầu tìm dạy kèm 1-1', () => context.push('/my-requests')),
+               _buildMenuItem(context, Icons.group, 'Lớp học nhóm của tôi', () => context.push('/my-study-groups')),
              ],
                
             _buildMenuItem(

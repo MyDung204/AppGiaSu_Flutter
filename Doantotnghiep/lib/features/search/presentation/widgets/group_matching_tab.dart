@@ -47,7 +47,7 @@ class GroupMatchingTab extends ConsumerWidget {
             child: ElevatedButton.icon(
               onPressed: () => context.push('/create-group'),
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Tạo nhóm học mới'),
+              label: const Text('Tạo lớp học nhóm mới'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -81,7 +81,7 @@ class GroupMatchingTab extends ConsumerWidget {
                             children: [
                               Icon(Icons.group_off_outlined, size: 60, color: Colors.grey.shade300),
                               const SizedBox(height: 16),
-                              const Text("Chưa có nhóm nào.", style: TextStyle(color: Colors.grey)),
+                              const Text("Chưa có lớp học nhóm nào.", style: TextStyle(color: Colors.grey)),
                             ],
                           ),
                         ),
@@ -222,7 +222,7 @@ class GroupMatchingTab extends ConsumerWidget {
                          _showGroupManagement(context, req);
                     },
                     icon: const Icon(Icons.settings),
-                    label: const Text('Kiểm tra nhóm'),
+                    label: const Text('Quản lý lớp học nhóm'),
                   )
                 // Member status: Approved (already joined) or Pending (waiting for approval)
                 : (isApproved || isPending)
@@ -243,7 +243,7 @@ class GroupMatchingTab extends ConsumerWidget {
                           _showLeaveConfirmation(context, req, ref);
                         },
                         icon: const Icon(Icons.logout, size: 18),
-                        label: Text(isApproved ? 'Rời nhóm' : 'Hủy yêu cầu'),
+                        label: Text(isApproved ? 'Rời lớp học nhóm' : 'Hủy yêu cầu'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.redAccent,
                           side: const BorderSide(color: Colors.redAccent),
@@ -279,7 +279,7 @@ class GroupMatchingTab extends ConsumerWidget {
                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                        foregroundColor: Colors.blueAccent,
                     ),
-                    child: const Text('Tham gia nhóm'),
+                    child: const Text('Tham gia lớp học nhóm'),
                   ),
             ),
           ],
@@ -304,8 +304,8 @@ class GroupMatchingTab extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận tham gia'),
-        content: Text('Bạn có chắc chắn muốn tham gia nhóm "${req.subject}" này không?'),
+        title: const Text('Xác nhận tham gia lớp học nhóm'),
+        content: Text('Bạn có chắc chắn muốn tham gia lớp học nhóm "${req.subject}" này không?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -362,8 +362,8 @@ class GroupMatchingTab extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận rời nhóm'),
-        content: Text('Bạn có chắc chắn muốn rời khỏi nhóm "${req.subject}" không?'),
+        title: const Text('Xác nhận rời lớp học nhóm'),
+        content: Text('Bạn có chắc chắn muốn rời khỏi lớp học nhóm "${req.subject}" không?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -381,13 +381,13 @@ class GroupMatchingTab extends ConsumerWidget {
                     ref.invalidate(myAllGroupsProvider);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã rời nhóm thành công!')),
+                        const SnackBar(content: Text('Đã rời lớp học nhóm thành công!')),
                       );
                     }
                 } else {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Rời nhóm thất bại. Vui lòng thử lại.')),
+                        const SnackBar(content: Text('Rời lớp học nhóm thất bại. Vui lòng thử lại.')),
                       );
                     }
                 }
@@ -400,7 +400,7 @@ class GroupMatchingTab extends ConsumerWidget {
               }
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Rời nhóm'),
+            child: const Text('Rời lớp học nhóm'),
           ),
         ],
       ),

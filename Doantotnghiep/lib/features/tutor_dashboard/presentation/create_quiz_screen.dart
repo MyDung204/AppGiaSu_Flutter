@@ -1,10 +1,14 @@
 import 'package:doantotnghiep/features/quiz/domain/controllers/quiz_controller.dart';
+import 'package:doantotnghiep/features/quiz/domain/models/quiz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class CreateQuizScreen extends ConsumerStatefulWidget {
-  const CreateQuizScreen({super.key});
+  final Quiz? quizToEdit;
+  final int? courseId;
+
+  const CreateQuizScreen({super.key, this.quizToEdit, this.courseId});
 
   @override
   ConsumerState<CreateQuizScreen> createState() => _CreateQuizScreenState();
@@ -42,8 +46,29 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   @override
   void initState() {
     super.initState();
-    // Start with 1 default question
-    _addQuestion();
+    final quiz = widget.quizToEdit;
+    if (quiz == null) {
+      _addQuestion();
+    } else {
+      _titleController.text = quiz.title;
+      _descController.text = quiz.description ?? '';
+      _timeLimitController.text = (quiz.timeLimitMinutes ?? 15).toString();
+      _isPublished = quiz.isPublished;
+      for (final question in quiz.questions) {
+        _questions.add(
+          _QuizQuestionData(
+            content: question.content,
+            options: question.options
+                .map((option) => _QuizOptionData(
+                      content: option.content,
+                      isCorrect: option.isCorrect == true,
+                    ))
+                .toList(),
+          ),
+        );
+      }
+      if (_questions.isEmpty) _addQuestion();
+    }
   }
 
   @override
@@ -129,15 +154,17 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
       }
     }
 
-    final quizData = {
+    final Map<String, dynamic> quizData = {
       "title": _titleController.text.trim(),
       "description": _descController.text.trim(),
       "time_limit": int.tryParse(_timeLimitController.text.trim()) ?? 0,
       "is_published": _isPublished,
+      if (widget.courseId != null) "course_id": widget.courseId,
       "questions": _questions.map((q) {
         return {
           "content": q.contentController.text.trim(),
           "is_multiple_choice": q.isMultipleChoice,
+          "points": 1,
           "options": q.options.map((o) {
              return {
                "content": o.contentController.text.trim(),
@@ -156,11 +183,18 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
       
-      await quizAction.createQuiz(quizData);
+      if (widget.quizToEdit == null) {
+        await quizAction.createQuiz(quizData);
+      } else {
+        await quizAction.updateQuiz(widget.quizToEdit!.id, quizData);
+      }
       
       if (context.mounted) {
         Navigator.pop(context); // close dialog
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tạo bài kiểm tra thành công!'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(widget.quizToEdit == null ? 'Tạo bài kiểm tra thành công!' : 'Cập nhật bài kiểm tra thành công!'),
+          backgroundColor: Colors.green,
+        ));
         // Refresh quiz list
         ref.invalidate(quizListProvider(null));
         context.pop();
@@ -177,7 +211,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tạo Bài Kiểm Tra'),
+        title: Text(widget.quizToEdit == null ? 'Tạo Bài Kiểm Tra' : 'Sửa Bài Kiểm Tra'),
         actions: [
           TextButton.icon(
             onPressed: _submitQuiz,

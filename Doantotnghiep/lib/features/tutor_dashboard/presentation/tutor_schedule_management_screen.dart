@@ -311,7 +311,7 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  isGroup ? 'Lớp nhóm' : _getStatusText(item.status ?? 'upcoming'),
+                  isGroup ? 'Lớp học nhóm' : _getStatusText(item.status ?? 'upcoming'),
                   style: TextStyle(
                     color: isGroup ? Colors.orange : _getStatusColor(item.status ?? ''),
                     fontWeight: FontWeight.bold,

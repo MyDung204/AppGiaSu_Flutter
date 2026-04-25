@@ -80,6 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                    const _MyRequestsSection(),
                    const SizedBox(height: 20),
 
+                   const _MyLearningOverviewSection(),
+                   const SizedBox(height: 20),
+
                    const _MyGroupsSection(),
                    const SizedBox(height: 20),
 
@@ -303,7 +306,7 @@ class _HomeHeader extends ConsumerWidget {
                    Icon(Icons.search_rounded, color: EduTheme.primary),
                    const SizedBox(width: 12),
                    Expanded(
-                     child: Text('Tìm giáo viên, môn học...', style: TextStyle(color: Colors.grey[500], fontSize: 15)),
+                     child: Text('Tìm gia sư, lớp học nhóm...', style: TextStyle(color: Colors.grey[500], fontSize: 15)),
                    ),
                 ],
               ),
@@ -328,7 +331,7 @@ class _BannerSectionState extends State<_BannerSection> {
 
   final List<Map<String, dynamic>> _banners = [
     {
-      'title': 'Tìm Gia Sư\nChất Lượng Cao',
+      'title': 'Dạy Kèm 1-1\nChất Lượng Cao',
       'subtitle': 'Đội ngũ giảng viên uy tín\ntừ các trường đại học hàng đầu',
       'image': 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFF667eea), Color(0xFF764ba2)],
@@ -336,20 +339,20 @@ class _BannerSectionState extends State<_BannerSection> {
       'buttonText': 'Khám phá ngay',
     },
     {
-      'title': 'Học nhóm\nHiệu quả hơn',
-      'subtitle': 'Tham gia nhóm học tập\nvới bạn bè cùng môn',
+      'title': 'Lớp Học Nhóm\nHiệu quả hơn',
+      'subtitle': 'Tham gia lớp học nhóm\nvới bạn bè cùng môn',
       'image': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFF11998e), Color(0xFF38ef7d)],
       'action': '/my-study-groups',
       'buttonText': 'Tham gia ngay',
     },
     {
-      'title': 'Đăng ký\nLớp học mới',
-      'subtitle': 'Khám phá các lớp học\nphù hợp với bạn',
+      'title': 'Đăng ký\nLớp học nhóm',
+      'subtitle': 'Khám phá các lớp học nhóm\nphù hợp với bạn',
       'image': 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFFf093fb), Color(0xFFf5576c)],
       'action': '/search?tab=classes',
-      'buttonText': 'Xem lớp học',
+      'buttonText': 'Xem lớp nhóm',
     },
   ];
 
@@ -753,7 +756,7 @@ class _MyRequestsSection extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Yêu cầu của tôi', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text('Yêu cầu tìm dạy kèm 1-1', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                   GestureDetector(
                     onTap: () => context.push('/my-requests'),
                     child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -892,7 +895,7 @@ class _MyClassesSection extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text('Lớp học của tôi', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                   Text('Lớp học nhóm của tôi', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                    GestureDetector(
                      onTap: () => context.push('/my-enrolled-classes'),
                      child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -967,6 +970,141 @@ class _MyClassesSection extends ConsumerWidget {
   }
 }
 
+class _MyLearningOverviewSection extends ConsumerWidget {
+  const _MyLearningOverviewSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateChangesProvider).value;
+    if (user == null || user.role == 'tutor') return const SizedBox.shrink();
+
+    final coursesAsync = ref.watch(myEnrolledCoursesProvider);
+    final groupsAsync = ref.watch(myGroupsProvider);
+
+    final classCount = coursesAsync.maybeWhen(
+      data: (courses) => courses.length,
+      orElse: () => 0,
+    );
+    final groupCount = groupsAsync.maybeWhen(
+      data: (groups) => groups.length,
+      orElse: () => 0,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Lớp của tôi',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MyLearningOverviewCard(
+                  title: 'Dạy kèm 1-1',
+                  subtitle: classCount > 0 ? '$classCount lớp đang theo học' : 'Xem lớp đã đăng ký',
+                  icon: Icons.person,
+                  color: Colors.green,
+                  onTap: () => context.push('/my-enrolled-classes'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MyLearningOverviewCard(
+                  title: 'Lớp học nhóm',
+                  subtitle: groupCount > 0 ? '$groupCount lớp học nhóm' : 'Xem lớp học nhóm đã tham gia',
+                  icon: Icons.groups,
+                  color: Colors.blue,
+                  onTap: () => context.push('/my-study-groups'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MyLearningOverviewCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _MyLearningOverviewCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 116,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MyGroupsSection extends ConsumerWidget {
   const _MyGroupsSection();
 
@@ -986,7 +1124,7 @@ class _MyGroupsSection extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text('Nhóm học tập', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                   Text('Lớp học nhóm', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                    GestureDetector(
                      onTap: () => context.push('/my-study-groups'),
                      child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -1077,9 +1215,9 @@ class _QuickActionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      {'icon': Icons.person_search_rounded, 'label': 'Tìm gia sư', 'route': '/search', 'color': Colors.blue},
+      {'icon': Icons.person_search_rounded, 'label': 'Dạy kèm 1-1', 'route': '/search', 'color': Colors.blue},
       {'icon': Icons.post_add_rounded, 'label': 'Đăng yêu cầu', 'route': '/create-tutor-request', 'color': Colors.orange},
-      {'icon': Icons.group_add_rounded, 'label': 'Tạo nhóm', 'route': '/create-group', 'color': Colors.green},
+      {'icon': Icons.groups_rounded, 'label': 'Lớp học nhóm', 'route': '/search?tab=groups', 'color': Colors.green},
       {'icon': Icons.calendar_month_rounded, 'label': 'Lịch học', 'route': '/schedule', 'color': Colors.purple},
     ];
 

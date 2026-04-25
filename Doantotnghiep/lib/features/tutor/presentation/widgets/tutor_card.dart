@@ -30,6 +30,7 @@ import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Thẻ hiển thị thông tin tóm tắt của một Gia sư
 /// 
@@ -93,14 +94,32 @@ class TutorCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.person, size: 40, color: Colors.grey),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: tutor.avatarUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: tutor.avatarUrl,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[200],
+                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.person, size: 40, color: Colors.grey),
+                              ),
+                            )
+                          : Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.person, size: 40, color: Colors.grey),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -129,14 +148,21 @@ class TutorCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          tutor.subjects.join(', '),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.black54,
-                                fontStyle: FontStyle.italic,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: tutor.subjects.take(3).map((s) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                            ),
+                            child: Text(
+                              s,
+                              style: const TextStyle(fontSize: 10, color: Colors.blueAccent),
+                            ),
+                          )).toList(),
                         ),
                         const SizedBox(height: 8),
                         Row(

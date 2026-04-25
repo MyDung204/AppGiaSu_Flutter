@@ -139,7 +139,7 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
            ref.invalidate(coursesProvider);
            ref.invalidate(myCoursesProvider);
            ref.invalidate(tutorClassProvider);
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật lớp học!')));
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật lớp học nhóm!')));
            context.pop();
          } else {
            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra.')));
@@ -155,7 +155,7 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
              ref.invalidate(tutorClassProvider);
              ScaffoldMessenger.of(context).showSnackBar(
                const SnackBar(
-                 content: Text('Tạo lớp học thành công!'),
+                 content: Text('Tạo lớp học nhóm thành công!'),
                  backgroundColor: Colors.green,
                ),
              );
@@ -199,8 +199,8 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
   @override
   Widget build(BuildContext context) {
     String title = widget.classToEdit != null 
-        ? 'Cập nhật lớp học' 
-        : 'Mở lớp học';
+        ? 'Cập nhật lớp học nhóm' 
+        : 'Mở lớp học nhóm';
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -212,8 +212,8 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Tên lớp học', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập tên lớp' : null,
+                decoration: const InputDecoration(labelText: 'Tên lớp học nhóm', border: OutlineInputBorder()),
+                validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập tên lớp nhóm' : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -327,7 +327,7 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
                     backgroundColor: Colors.blueAccent,
                     foregroundColor: Colors.white,
                   ),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(widget.classToEdit != null ? 'Lưu thay đổi' : 'Tạo lớp học'),
+                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(widget.classToEdit != null ? 'Lưu thay đổi' : 'Tạo lớp học nhóm'),
                 ),
               ),
             ],

@@ -6,212 +6,202 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SharedLearningController;
 use App\Http\Controllers\Api\AdminController;
-use App\Http\Controllers\Api\WalletController; // Added this import
+use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\AssignmentController;
+use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\SmartMatchingController;
+use App\Http\Controllers\Api\MapController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\VerificationController;
+use App\Http\Controllers\Api\TutorRequestController;
+use App\Http\Controllers\Api\AdminFinanceController;
+use App\Http\Controllers\Api\AdminSystemController;
+use App\Http\Controllers\Api\SmartMatchController;
+use App\Http\Controllers\Api\CommunityController;
 
-// ... existing code ...
-
-// Admin Routes
-Route::prefix('admin')->group(function () {
-    Route::get('/stats', [AdminController::class, 'stats']);
-    Route::get('/users', [AdminController::class, 'users']);
-    Route::get('/users/{id}', [AdminController::class, 'showUser']); // NEW
-    Route::put('/users/{id}', [AdminController::class, 'updateUser']); // NEW
-    // Smart Matching
-    Route::post('/smart-match', [App\Http\Controllers\Api\SmartMatchController::class, 'getMatches']);
-    Route::post('/user/learning-tags', [App\Http\Controllers\Api\SmartMatchController::class, 'saveTags']);
-
-    // Community Q&A
-    Route::apiResource('questions', App\Http\Controllers\Api\CommunityController::class)->only(['index', 'store', 'show']);
-    Route::post('/questions/{id}/answers', [App\Http\Controllers\Api\CommunityController::class, 'storeAnswer']); // NEW
-    Route::get('/users/{id}/activities', [AdminController::class, 'getUserActivities']); // NEW
-    Route::post('/users/{id}/ban', [AdminController::class, 'toggleBan']);
-
-    // Tutor Approval
-    Route::get('/tutor-requests', [AdminController::class, 'tutorRequests']);
-    Route::post('/tutors/{id}/approve', [AdminController::class, 'approveTutor']);
-    Route::post('/tutors/{id}/reject', [AdminController::class, 'rejectTutor']);
-
-    // Reports
-    Route::get('/reports', [AdminController::class, 'reports']);
-    Route::post('/reports/{id}/resolve', [AdminController::class, 'resolveReport']);
-
-    // Audit Logs
-    Route::get('/audit-logs', [AdminController::class, 'getAuditLogs']);
-
-    // Course Approval
-    Route::get('/courses/pending', [AdminController::class, 'pendingCourses']);
-    Route::post('/courses/{id}/approve', [AdminController::class, 'approveCourse']);
-    Route::post('/courses/{id}/reject', [AdminController::class, 'rejectCourse']);
-
-    // Broadcast Notifications
-    Route::post('/notifications/broadcast', [AdminController::class, 'broadcast']);
-
-    // Financials
-    Route::get('/withdrawals', [App\Http\Controllers\Api\AdminFinanceController::class, 'index']);
-    Route::post('/withdrawals/{id}/approve', [App\Http\Controllers\Api\AdminFinanceController::class, 'approve']);
-    Route::post('/withdrawals/{id}/reject', [App\Http\Controllers\Api\AdminFinanceController::class, 'reject']);
-
-    // System Data
-    Route::get('/system/subjects', [App\Http\Controllers\Api\AdminSystemController::class, 'subjects']);
-    Route::post('/system/subjects', [App\Http\Controllers\Api\AdminSystemController::class, 'storeSubject']);
-    Route::put('/system/subjects/{id}', [App\Http\Controllers\Api\AdminSystemController::class, 'updateSubject']);
-    Route::delete('/system/subjects/{id}', [App\Http\Controllers\Api\AdminSystemController::class, 'destroySubject']);
-});
-
-
+// Public Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->get('/user', [AuthController::class, 'me']);
-Route::middleware('auth:sanctum')->post('/device-token', [AuthController::class, 'updateDeviceToken']);
 
-Route::middleware('auth:sanctum')->post('/device-token', [AuthController::class, 'updateDeviceToken']);
-
-// Shared Learning
 Route::get('/study-groups', [SharedLearningController::class, 'indexGroups']);
-Route::middleware('auth:sanctum')->get('/my-study-groups', [SharedLearningController::class, 'myStudyGroups']);
 Route::get('/courses', [SharedLearningController::class, 'indexCourses']);
-Route::middleware('auth:sanctum')->post('/courses', [SharedLearningController::class, 'storeCourse']);
-Route::middleware('auth:sanctum')->post('/courses/{id}/join', [SharedLearningController::class, 'joinCourse']);
-Route::middleware('auth:sanctum')->post('/courses/{id}/leave', [SharedLearningController::class, 'leaveCourse']);
-Route::middleware('auth:sanctum')->post('/courses/{id}/kick', [SharedLearningController::class, 'removeStudentFromCourse']); // Kick Student
-Route::middleware('auth:sanctum')->post('/courses/{id}/tuition/refuse', [SharedLearningController::class, 'refuseTuition']); // Refuse Tuition (Grace Period)
-Route::middleware('auth:sanctum')->get('/my-courses', [SharedLearningController::class, 'myCourses']);
-Route::middleware('auth:sanctum')->post('/study-groups', [SharedLearningController::class, 'storeGroup']);
-Route::middleware('auth:sanctum')->put('/study-groups/{id}', [SharedLearningController::class, 'updateGroup']);
-Route::middleware('auth:sanctum')->post('/study-groups/{id}/join', [SharedLearningController::class, 'joinGroup']);
-Route::middleware('auth:sanctum')->post('/study-groups/{id}/members/{userId}/approve', [SharedLearningController::class, 'approveMember']);
-Route::middleware('auth:sanctum')->post('/study-groups/{id}/members/{userId}/reject', [SharedLearningController::class, 'rejectMember']);
-Route::middleware('auth:sanctum')->delete('/study-groups/{id}/members/{userId}', [SharedLearningController::class, 'removeMember']);
-Route::middleware('auth:sanctum')->post('/study-groups/{id}/leave', [SharedLearningController::class, 'leaveGroup']);
-Route::middleware('auth:sanctum')->post('/study-groups/{id}/pay', [SharedLearningController::class, 'payGroupTuition']);
 Route::get('/study-groups/{id}/members', [SharedLearningController::class, 'getGroupMembers']);
 
 Route::get('/tutors', [TutorController::class, 'index']);
 Route::get('/tutors/{id}', [TutorController::class, 'show'])->where('id', '[0-9]+');
+Route::get('/tutors/{id}/availability', [TutorController::class, 'getAvailability'])->where('id', '[0-9]+');
+
 Route::get('/questions', [QuestionController::class, 'index']);
 Route::post('/questions', [QuestionController::class, 'store']);
 Route::post('/questions/{id}/answers', [QuestionController::class, 'storeAnswer']);
 
-Route::get('/tutors/{id}/availability', [TutorController::class, 'getAvailability'])->where('id', '[0-9]+'); // Public
+Route::get('/tutor-requests', [TutorRequestController::class, 'index']);
 
-// New routes for favorites
-Route::middleware('auth:sanctum')->group(function() {
+// Protected Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [AuthController::class, 'me']);
+    Route::post('/device-token', [AuthController::class, 'updateDeviceToken']);
+
+    // Shared Learning
+    Route::get('/my-study-groups', [SharedLearningController::class, 'myStudyGroups']);
+    Route::post('/courses', [SharedLearningController::class, 'storeCourse']);
+    Route::put('/courses/{id}', [SharedLearningController::class, 'updateCourse']);
+    Route::delete('/courses/{id}', [SharedLearningController::class, 'deleteCourse']);
+    Route::post('/courses/{id}/join', [SharedLearningController::class, 'joinCourse']);
+    Route::post('/courses/{id}/leave', [SharedLearningController::class, 'leaveCourse']);
+    Route::post('/courses/{id}/kick', [SharedLearningController::class, 'removeStudentFromCourse']);
+    Route::post('/courses/{id}/tuition/refuse', [SharedLearningController::class, 'refuseTuition']);
+    Route::get('/my-courses', [SharedLearningController::class, 'myCourses']);
+    
+    Route::post('/study-groups', [SharedLearningController::class, 'storeGroup']);
+    Route::put('/study-groups/{id}', [SharedLearningController::class, 'updateGroup']);
+    Route::delete('/study-groups/{id}', [SharedLearningController::class, 'deleteGroup']);
+    Route::post('/study-groups/{id}/join', [SharedLearningController::class, 'joinGroup']);
+    Route::post('/study-groups/{id}/members/{userId}/approve', [SharedLearningController::class, 'approveMember']);
+    Route::post('/study-groups/{id}/members/{userId}/reject', [SharedLearningController::class, 'rejectMember']);
+    Route::delete('/study-groups/{id}/members/{userId}', [SharedLearningController::class, 'removeMember']);
+    Route::post('/study-groups/{id}/leave', [SharedLearningController::class, 'leaveGroup']);
+    Route::post('/study-groups/{id}/pay', [SharedLearningController::class, 'payGroupTuition']);
+
+    // Announcements
+    Route::get('/courses/{id}/announcements', [SharedLearningController::class, 'indexAnnouncements']);
+    Route::post('/courses/{id}/announcements', [SharedLearningController::class, 'storeAnnouncement']);
+
+    // Tutors & Availability
     Route::post('/tutors/{id}/favorite', [TutorController::class, 'toggleFavorite']);
     Route::get('/favorites/tutors', [TutorController::class, 'getFavorites']);
-});
-
-// Protected Booking Routes
-Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tutors/my-availability', [TutorController::class, 'getMyAvailability']);
     Route::post('/tutors/availability', [TutorController::class, 'updateAvailability']);
+    Route::post('/tutors/update-profile', [TutorController::class, 'updateProfile']);
+    Route::get('/tutors/my-statistics', [TutorController::class, 'myStatistics']);
+    Route::get('/tutors/my-tuitions', [TutorController::class, 'myTuitions']);
 
+    // Materials
+    Route::get('/tutors/materials', [TutorController::class, 'listMaterials']);
+    Route::post('/tutors/upload-material', [TutorController::class, 'uploadMaterial']);
+    Route::put('/tutors/materials/{id}', [TutorController::class, 'updateMaterial']);
+    Route::delete('/tutors/materials/{id}', [TutorController::class, 'deleteMaterial']);
+
+    // Bookings
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings/lock', [BookingController::class, 'lockSlot']);
     Route::post('/bookings/{id}/confirm', [BookingController::class, 'confirm']);
     Route::post('/bookings/{id}/reject', [BookingController::class, 'reject']);
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
     Route::post('/bookings/{id}/session-info', [BookingController::class, 'updateSessionInfo']);
+
+    // Chat
+    Route::get('/conversations', [ChatController::class, 'index']);
+    Route::get('/conversations/{id}/messages', [ChatController::class, 'show']);
+    Route::post('/messages', [ChatController::class, 'store']);
+    Route::post('/chat/upload', [ChatController::class, 'upload']);
+    Route::post('/chat/offer/accept', [ChatController::class, 'acceptOffer']);
+
+    // Wallet
+    Route::get('/wallet', [WalletController::class, 'index']);
+    Route::post('/wallet/deposit', [WalletController::class, 'deposit']);
+    Route::post('/wallet/withdraw', [WalletController::class, 'withdraw']);
+    Route::post('/wallet/pin/setup', [WalletController::class, 'setupPin']);
+    Route::post('/wallet/pin/change', [WalletController::class, 'changePin']);
+    Route::post('/wallet/pin/verify', [WalletController::class, 'verifyPin']);
+
+    // Tutor Requests
+    Route::post('/tutor-requests', [TutorRequestController::class, 'store']);
+    Route::get('/my-tutor-requests', [TutorRequestController::class, 'myRequests']);
+    Route::delete('/tutor-requests/{id}', [TutorRequestController::class, 'destroy']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // Assignments
+    Route::get('/assignments', [AssignmentController::class, 'index']);
+    Route::post('/assignments', [AssignmentController::class, 'store']);
+    Route::put('/assignments/{id}', [AssignmentController::class, 'update']);
+    Route::post('/assignments/{id}/submit', [AssignmentController::class, 'submit']);
+    Route::get('/assignments/{id}/submissions', [AssignmentController::class, 'submissions']);
+    Route::delete('/assignments/{id}', [AssignmentController::class, 'destroy']);
+
+    // Quiz System
+    Route::get('/quizzes', [QuizController::class, 'index']);
+    Route::get('/quizzes/{id}', [QuizController::class, 'show']);
+    Route::post('/quizzes', [QuizController::class, 'store']);
+    Route::put('/quizzes/{id}', [QuizController::class, 'update']);
+    Route::delete('/quizzes/{id}', [QuizController::class, 'destroy']);
+    Route::post('/quizzes/{id}/submit', [QuizController::class, 'submit']);
+    Route::get('/my-quiz-attempts', [QuizController::class, 'attempts']);
+
+    // Smart Matching
+    Route::get('/smart-matching/request/{id}', [SmartMatchingController::class, 'matchTutorsForRequest']);
+    Route::get('/smart-matching/tutor', [SmartMatchingController::class, 'matchRequestsForTutor']);
+
+    // Map System
+    Route::post('/map/update-location', [MapController::class, 'updateLocation']);
+    Route::get('/map/nearby', [MapController::class, 'getNearbyUsers']);
+
+    // Verification (eKYC)
+    Route::post('/verification/submit', [VerificationController::class, 'submit']);
+    Route::get('/verification/status', [VerificationController::class, 'getStatus']);
+    Route::post('/verification/{id}/approve', [VerificationController::class, 'approve']);
+    Route::post('/verification/{id}/reject', [VerificationController::class, 'reject']);
+    Route::get('/verification/pending', [VerificationController::class, 'listPending']);
+
+    // Payment Simulation
+    Route::post('/payment/simulate', [PaymentController::class, 'simulate']);
 });
 
-// Chat
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/conversations', [App\Http\Controllers\Api\ChatController::class, 'index']);
-    Route::get('/conversations/{id}/messages', [App\Http\Controllers\Api\ChatController::class, 'show']);
-    Route::post('/messages', [App\Http\Controllers\Api\ChatController::class, 'store']);
-    Route::post('/chat/upload', [App\Http\Controllers\Api\ChatController::class, 'upload']);
-    Route::post('/chat/offer/accept', [App\Http\Controllers\Api\ChatController::class, 'acceptOffer']);
+// Admin Routes
+Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/stats', [AdminController::class, 'stats']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::get('/users/{id}', [AdminController::class, 'showUser']);
+    Route::put('/users/{id}', [AdminController::class, 'updateUser']);
+    Route::get('/users/{id}/activities', [AdminController::class, 'getUserActivities']);
+    Route::post('/users/{id}/ban', [AdminController::class, 'toggleBan']);
+
+    Route::post('/smart-match', [SmartMatchController::class, 'getMatches']);
+    Route::post('/user/learning-tags', [SmartMatchController::class, 'saveTags']);
+
+    Route::apiResource('community-questions', CommunityController::class)->only(['index', 'store', 'show']);
+    Route::post('/community-questions/{id}/answers', [CommunityController::class, 'storeAnswer']);
+
+    Route::get('/tutor-requests', [AdminController::class, 'tutorRequests']);
+    Route::post('/tutors/{id}/approve', [AdminController::class, 'approveTutor']);
+    Route::post('/tutors/{id}/reject', [AdminController::class, 'rejectTutor']);
+
+    Route::get('/reports', [AdminController::class, 'reports']);
+    Route::post('/reports/{id}/resolve', [AdminController::class, 'resolveReport']);
+
+    Route::get('/audit-logs', [AdminController::class, 'getAuditLogs']);
+
+    Route::get('/courses/pending', [AdminController::class, 'pendingCourses']);
+    Route::post('/courses/{id}/approve', [AdminController::class, 'approveCourse']);
+    Route::post('/courses/{id}/reject', [AdminController::class, 'rejectCourse']);
+
+    Route::post('/notifications/broadcast', [AdminController::class, 'broadcast']);
+
+    Route::get('/withdrawals', [AdminFinanceController::class, 'index']);
+    Route::post('/withdrawals/{id}/approve', [AdminFinanceController::class, 'approve']);
+    Route::post('/withdrawals/{id}/reject', [AdminFinanceController::class, 'reject']);
+
+    Route::get('/system/subjects', [AdminSystemController::class, 'subjects']);
+    Route::post('/system/subjects', [AdminSystemController::class, 'storeSubject']);
+    Route::put('/system/subjects/{id}', [AdminSystemController::class, 'updateSubject']);
+    Route::delete('/system/subjects/{id}', [AdminSystemController::class, 'destroySubject']);
 });
 
-// Wallet
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/wallet', [App\Http\Controllers\Api\WalletController::class, 'index']);
-    Route::post('/wallet/deposit', [App\Http\Controllers\Api\WalletController::class, 'deposit']);
-    Route::post('/wallet/withdraw', [App\Http\Controllers\Api\WalletController::class, 'withdraw']);
-    
-    // PIN System
-    Route::post('/wallet/pin/setup', [App\Http\Controllers\Api\WalletController::class, 'setupPin']);
-    Route::post('/wallet/pin/change', [App\Http\Controllers\Api\WalletController::class, 'changePin']);
-    Route::post('/wallet/pin/verify', [App\Http\Controllers\Api\WalletController::class, 'verifyPin']);
-
-    Route::post('/tutors/update-profile', [TutorController::class, 'updateProfile']);
-    Route::get('/tutors/materials', [TutorController::class, 'listMaterials']);
-    Route::post('/tutors/upload-material', [TutorController::class, 'uploadMaterial']);
-    Route::delete('/tutors/materials/{id}', [TutorController::class, 'deleteMaterial']);
-});
-
-// Tutor Requests
-Route::middleware('auth:sanctum')->post('/tutor-requests', [App\Http\Controllers\Api\TutorRequestController::class, 'store']);
-Route::get('/tutor-requests', [App\Http\Controllers\Api\TutorRequestController::class, 'index']);
-Route::middleware('auth:sanctum')->get('/my-tutor-requests', [App\Http\Controllers\Api\TutorRequestController::class, 'myRequests']);
-Route::middleware('auth:sanctum')->delete('/tutor-requests/{id}', [App\Http\Controllers\Api\TutorRequestController::class, 'destroy']);
-
-// Tutor specific stats & tuitions
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/tutors/my-statistics', [TutorController::class, 'myStatistics']);
-    Route::get('/tutors/my-tuitions', [TutorController::class, 'myTuitions']);
-});
-
-// Test Notification
+// Test/Webhook Routes
 Route::post('/send-notification', function (Illuminate\Http\Request $request, App\Services\FirebaseNotificationService $service) {
     $request->validate([
         'user_id' => 'required',
         'title' => 'required',
         'body' => 'required',
     ]);
-
-    $service->sendToUser(
-        $request->user_id,
-        $request->title,
-        $request->body,
-        $request->input('type', 'system'),
-        $request->input('data', [])
-    );
-
+    $service->sendToUser($request->user_id, $request->title, $request->body, $request->input('type', 'system'), $request->input('data', []));
     return response()->json(['message' => 'Notification sent']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index']);
-    Route::post('/notifications/{id}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
-
-    // Assignments
-    Route::get('/courses/{courseId}/assignments', [App\Http\Controllers\AssignmentController::class, 'index']);
-    Route::post('/assignments', [App\Http\Controllers\AssignmentController::class, 'store']);
-    Route::post('/assignments/{id}/submit', [App\Http\Controllers\AssignmentController::class, 'submit']);
-    Route::get('/assignments/{id}/submissions', [App\Http\Controllers\AssignmentController::class, 'submissions']);
-    Route::delete('/assignments/{id}', [App\Http\Controllers\AssignmentController::class, 'destroy']);
-
-    // Announcements
-    Route::get('/courses/{id}/announcements', [SharedLearningController::class, 'indexAnnouncements']);
-    Route::post('/courses/{id}/announcements', [SharedLearningController::class, 'storeAnnouncement']);
-
-    // Quiz System
-    Route::get('/quizzes', [App\Http\Controllers\Api\QuizController::class, 'index']);
-    Route::get('/quizzes/{id}', [App\Http\Controllers\Api\QuizController::class, 'show']);
-    Route::post('/quizzes', [App\Http\Controllers\Api\QuizController::class, 'store']); // Tutor only
-    Route::post('/quizzes/{id}/submit', [App\Http\Controllers\Api\QuizController::class, 'submit']); // Student only
-    Route::get('/my-quiz-attempts', [App\Http\Controllers\Api\QuizController::class, 'attempts']);
-
-    // Smart Matching
-    Route::get('/smart-matching/request/{id}', [App\Http\Controllers\Api\SmartMatchingController::class, 'matchTutorsForRequest']);
-    Route::get('/smart-matching/tutor', [App\Http\Controllers\Api\SmartMatchingController::class, 'matchRequestsForTutor']);
-
-    // Map System
-    Route::post('/map/update-location', [App\Http\Controllers\Api\MapController::class, 'updateLocation']);
-    Route::get('/map/nearby', [App\Http\Controllers\Api\MapController::class, 'getNearbyUsers']);
-
-    // Payment Sandbox (Protected)
-    Route::post('/payment/simulate', [App\Http\Controllers\Api\PaymentController::class, 'simulate']);
-
-    // Verification (eKYC)
-    Route::post('/verification/submit', [App\Http\Controllers\Api\VerificationController::class, 'submit']);
-    Route::get('/verification/status', [App\Http\Controllers\Api\VerificationController::class, 'getStatus']);
-    // Admin Routes (Should be protected by admin middleware, keeping here for now)
-    Route::post('/verification/{id}/approve', [App\Http\Controllers\Api\VerificationController::class, 'approve']);
-    Route::post('/verification/{id}/reject', [App\Http\Controllers\Api\VerificationController::class, 'reject']);
-    Route::get('/verification/pending', [App\Http\Controllers\Api\VerificationController::class, 'listPending']);
-});
-
-// Public Webhook for Payment (simulating SePay/Casso calls)
-Route::post('/payment/webhook', [App\Http\Controllers\Api\PaymentController::class, 'webhook']);
+Route::post('/payment/webhook', [PaymentController::class, 'webhook']);

@@ -1,7 +1,7 @@
 /// My Tutor Requests Screen
 /// 
 /// **Purpose:**
-/// - Hiển thị danh sách các yêu cầu tìm gia sư mà học viên đã tạo
+/// - Hiển thị danh sách các yêu cầu tìm dạy kèm 1-1 mà học viên đã tạo
 /// - Cho phép học viên xem chi tiết, chỉnh sửa hoặc xóa yêu cầu
 /// 
 /// **Features:**
@@ -24,7 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-/// Provider để lấy danh sách yêu cầu tìm gia sư của học viên
+/// Provider để lấy danh sách yêu cầu tìm dạy kèm 1-1 của học viên
 /// 
 /// **Purpose:**
 /// - Tự động fetch danh sách yêu cầu từ API
@@ -39,7 +39,7 @@ final myTutorRequestsProvider = FutureProvider.autoDispose<List<TutorRequest>>((
 /// Màn hình hiển thị các yêu cầu tìm gia sư của học viên
 /// 
 /// **Usage:**
-/// - Truy cập từ Profile Screen → "Yêu cầu tìm gia sư"
+/// - Truy cập từ Profile Screen → "Yêu cầu tìm dạy kèm 1-1"
 /// - Hiển thị tất cả yêu cầu mà user đã tạo
 class MyRequestsScreen extends ConsumerWidget {
   const MyRequestsScreen({super.key});
@@ -50,7 +50,7 @@ class MyRequestsScreen extends ConsumerWidget {
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Yêu cầu tìm gia sư của tôi')),
+      appBar: AppBar(title: const Text('Yêu cầu tìm dạy kèm 1-1')),
       body: requestsAsync.when(
         data: (requests) {
           // Empty state: Hiển thị khi chưa có yêu cầu nào
@@ -62,7 +62,7 @@ class MyRequestsScreen extends ConsumerWidget {
                    const Icon(Icons.assignment_outlined, size: 64, color: Colors.grey),
                    const SizedBox(height: 16),
                    const Text(
-                     'Bạn chưa có yêu cầu tìm gia sư nào.',
+                     'Bạn chưa có yêu cầu tìm dạy kèm 1-1 nào.',
                      style: TextStyle(fontSize: 16, color: Colors.grey),
                    ),
                    const SizedBox(height: 24),
@@ -187,7 +187,7 @@ class MyRequestsScreen extends ConsumerWidget {
                                 );
                               },
                               icon: const Icon(Icons.auto_awesome, size: 18),
-                              label: const Text('Tìm gia sư phù hợp'),
+                              label: const Text('Tìm gia sư dạy kèm 1-1'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFe0c3fc).withOpacity(0.3),
                                 foregroundColor: Colors.deepPurple,

@@ -6,21 +6,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ClassQuizTab extends ConsumerWidget {
-  final Course course;
+  final int? courseId;
+  final int? studentId;
+  final int? studyGroupId;
   final bool isTutor;
 
   const ClassQuizTab({
     super.key,
-    required this.course,
+    this.courseId,
+    this.studentId,
+    this.studyGroupId,
     required this.isTutor,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quizzesAsync = ref.watch(courseQuizzesProvider(int.tryParse(course.id) ?? 0));
+    final quizzesAsync = studyGroupId != null
+        ? ref.watch(studyGroupQuizzesProvider(studyGroupId!))
+        : studentId != null 
+            ? ref.watch(studentQuizzesProvider(studentId!))
+            : ref.watch(courseQuizzesProvider(courseId ?? 0));
 
     return RefreshIndicator(
-      onRefresh: () => ref.refresh(courseQuizzesProvider(int.tryParse(course.id) ?? 0).future),
+      onRefresh: () => studyGroupId != null
+          ? ref.refresh(studyGroupQuizzesProvider(studyGroupId!).future)
+          : studentId != null
+              ? ref.refresh(studentQuizzesProvider(studentId!).future)
+              : ref.refresh(courseQuizzesProvider(courseId ?? 0).future),
       child: quizzesAsync.when(
         data: (quizzes) {
           if (quizzes.isEmpty) {
@@ -55,7 +67,14 @@ class ClassQuizTab extends ConsumerWidget {
           if (isTutor) ...[
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => context.push('/tutor-create-quiz', extra: course.id),
+              onPressed: () {
+                // Pass either course_id or student_id to creation screen
+                final Map<String, dynamic> extra = {};
+                if (courseId != null) extra['course_id'] = courseId;
+                if (studentId != null) extra['student_id'] = studentId;
+                if (studyGroupId != null) extra['study_group_id'] = studyGroupId;
+                context.push('/tutor-create-quiz', extra: extra);
+              },
               icon: const Icon(Icons.add),
               label: const Text('Tạo bài trắc nghiệm'),
             ),

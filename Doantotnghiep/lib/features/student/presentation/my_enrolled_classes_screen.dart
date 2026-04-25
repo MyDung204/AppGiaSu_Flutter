@@ -22,7 +22,7 @@ class MyEnrolledClassesScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: EduTheme.background,
       appBar: AppBar(
-        title: const Text('Lớp học của tôi'),
+        title: const Text('Lớp học nhóm của tôi'),
         elevation: 0,
       ),
       body: coursesAsync.when(
@@ -34,11 +34,11 @@ class MyEnrolledClassesScreen extends ConsumerWidget {
                 children: [
                   const Icon(Icons.class_outlined, size: 60, color: Colors.grey),
                   const SizedBox(height: 16),
-                  const Text('Bạn chưa tham gia lớp học nào', style: TextStyle(color: Colors.grey)),
+                  const Text('Bạn chưa tham gia lớp học nhóm nào', style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => context.go('/search?subject='), // Go to search to find classes
-                    child: const Text('Tìm lớp học ngay'),
+                    child: const Text('Tìm lớp học nhóm ngay'),
                   ),
                 ],
               ),

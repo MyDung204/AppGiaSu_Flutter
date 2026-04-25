@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Screen displaying detailed information about a tutor
 /// 
@@ -129,10 +130,17 @@ class TutorDetailScreen extends ConsumerWidget {
                                     )
                                   ],
                                 ),
-                                child: CircleAvatar(
-                                  radius: 50,
-                                  backgroundImage: NetworkImage(tutor.avatarUrl),
-                                  onBackgroundImageError: (_, __) => const Icon(Icons.person),
+                                child: ClipOval(
+                                  child: tutor.avatarUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: tutor.avatarUrl,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                          errorWidget: (context, url, error) => const Icon(Icons.person, size: 50),
+                                        )
+                                      : const Icon(Icons.person, size: 50),
                                 ),
                               ),
                             ),

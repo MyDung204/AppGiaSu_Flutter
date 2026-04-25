@@ -5,6 +5,12 @@ import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_statistics_pro
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:doantotnghiep/features/wallet/data/wallet_provider.dart';
+import 'package:doantotnghiep/features/wallet/domain/models/wallet_models.dart';
+import 'package:doantotnghiep/features/wallet/presentation/deposit_screen.dart';
+import 'package:doantotnghiep/features/wallet/presentation/pin_change_screen.dart';
+import 'package:doantotnghiep/features/wallet/presentation/pin_setup_screen.dart';
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 
 class TutorStatisticsScreen extends ConsumerStatefulWidget {
   final int initialTab;
@@ -34,6 +40,7 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
     final currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
     final statsAsync = ref.watch(tutorStatisticsProvider);
     final tuitionsAsync = ref.watch(tutorTuitionsProvider);
+    final walletAsync = ref.watch(walletProvider);
     
     return Scaffold(
       backgroundColor: EduTheme.background,
@@ -55,7 +62,7 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
         controller: _tabController,
         children: [
           _buildOverviewTab(statsAsync, currency),
-          _buildWalletTab(tuitionsAsync, statsAsync, currency),
+          _buildUnifiedWalletTab(walletAsync, tuitionsAsync, currency),
         ],
       ),
     );
@@ -112,77 +119,226 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
     );
   }
 
-  Widget _buildWalletTab(AsyncValue<List<dynamic>> tuitionsAsync, AsyncValue<Map<String, dynamic>> statsAsync, NumberFormat currency) {
-    return Column(
-      children: [
-        // Balance Section
-        statsAsync.maybeWhen(
-          data: (stats) => Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Row(
+  Widget _buildUnifiedWalletTab(AsyncValue<WalletState> walletAsync, AsyncValue<List<dynamic>> tuitionsAsync, NumberFormat currency) {
+    return walletAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => Center(child: Text('Lỗi tải ví: $e')),
+      data: (wallet) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(walletProvider);
+            ref.invalidate(tutorTuitionsProvider);
+            ref.invalidate(tutorStatisticsProvider);
+            return ref.read(walletProvider.future);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Premium Wallet Card
+                _buildPremiumWalletCard(wallet, currency),
+                const SizedBox(height: 24),
+
+                // Action Buttons Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
                     children: [
-                      const Text('Số dư khả dụng', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                      const SizedBox(height: 8),
-                      Text(currency.format(stats['total_revenue'] ?? 0), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: EduTheme.primary)),
+                      Expanded(
+                        child: _buildWalletActionBtn(
+                          icon: Icons.add_circle_outline_rounded,
+                          label: 'Nạp tiền',
+                          color: EduTheme.primary,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DepositScreen())),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildWalletActionBtn(
+                          icon: Icons.account_balance_rounded,
+                          label: 'Rút tiền',
+                          color: EduTheme.secondary,
+                          onTap: () => _showWithdrawDialog(context, ref, wallet.balance),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildWalletActionBtn(
+                          icon: Icons.vpn_key_outlined,
+                          label: wallet.hasPaymentPin ? 'Đổi PIN' : 'Tạo PIN',
+                          color: EduTheme.purple,
+                          onTap: () {
+                            if (wallet.hasPaymentPin) {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const PinChangeScreen()));
+                            } else {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const PinSetupScreen()));
+                            }
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () => _showWithdrawBottomSheet(context, ref),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: EduTheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 32),
+
+                // Transactions List Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Lịch sử thu nhập',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EduTheme.textPrimary),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text('Tất cả', style: TextStyle(color: EduTheme.primary)),
+                      ),
+                    ],
                   ),
-                  child: const Text('Rút tiền'),
                 ),
+                const SizedBox(height: 8),
+
+                // Combined Transaction / Tuition List
+                tuitionsAsync.when(
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())),
+                  error: (e, s) => Center(child: Text('Lỗi tải lịch sử thu nhập')),
+                  data: (tuitions) {
+                    if (tuitions.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            Icon(Icons.history_rounded, size: 64, color: Colors.grey.withOpacity(0.3)),
+                            const SizedBox(height: 16),
+                            const Text('Chưa có lịch sử thu nhập', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: tuitions.length,
+                      itemBuilder: (context, index) {
+                        return _buildTuitionItem(tuitions[index], currency);
+                      },
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          orElse: () => const SizedBox.shrink(),
-        ),
+        );
+      },
+    );
+  }
 
-        // Transactions List
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Lịch sử thu nhập', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
+  Widget _buildPremiumWalletCard(WalletState wallet, NumberFormat currency) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [EduTheme.primary, Color(0xFF6366F1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: tuitionsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Lỗi tải dữ liệu')),
-            data: (tuitions) {
-              if (tuitions.isEmpty) {
-                return const Center(child: Text('Chưa có lịch sử thu nhập'));
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: tuitions.length,
-                itemBuilder: (context, index) {
-                  final t = tuitions[index];
-                  return _buildTuitionItem(t, currency);
-                },
-              );
-            },
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: EduTheme.primary.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Số dư khả dụng',
+                style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              Icon(Icons.account_balance_wallet_rounded, color: Colors.white.withOpacity(0.5), size: 24),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            currency.format(wallet.balance),
+            style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      wallet.hasPaymentPin ? Icons.verified_user_rounded : Icons.warning_amber_rounded,
+                      color: wallet.hasPaymentPin ? Colors.greenAccent : Colors.orangeAccent,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      wallet.hasPaymentPin ? 'Đã bảo mật PIN' : 'Chưa cài PIN',
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              const Text(
+                'Tutor Wallet',
+                style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletActionBtn({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
-      ],
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -235,68 +391,90 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
     );
   }
 
-  void _showWithdrawBottomSheet(BuildContext context, WidgetRef ref) {
+  void _showWithdrawDialog(BuildContext context, WidgetRef ref, double currentBalance) {
     final amountController = TextEditingController();
-    
-    showModalBottomSheet(
+    final bankNameController = TextEditingController();
+    final accountNumberController = TextEditingController();
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Rút tiền về ngân hàng', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Yêu cầu Rút tiền', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16.0),
+              child: Text(
+                'Lưu ý: Số tiền rút tối thiểu là 50.000đ. Vui lòng nhập đúng thông tin tài khoản.',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: 'Số tiền (VNĐ)',
-                hintText: 'Tối thiểu 50.000đ',
+                labelText: 'Số tiền rút (VNĐ)',
+                hintText: 'Tối thiểu 50.000',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final amount = double.tryParse(amountController.text) ?? 0;
-                  if (amount < 50000) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số tiền tối thiểu là 50.000đ')));
-                    return;
-                  }
-                  
-                  final success = await ref.read(tutorRepositoryProvider).requestWithdrawal('Default', 'Default', amount);
-                  if (success) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gửi yêu cầu rút tiền!'), backgroundColor: Colors.green));
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: EduTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Gửi yêu cầu'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bankNameController,
+              decoration: InputDecoration(
+                labelText: 'Tên ngân hàng',
+                hintText: 'VD: Vietcombank',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            TextField(
+              controller: accountNumberController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Số tài khoản',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount < 50000) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số tiền tối thiểu là 50.000đ')));
+                return;
+              }
+              if (amount > currentBalance) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số dư không đủ')));
+                return;
+              }
+              if (bankNameController.text.isEmpty || accountNumberController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin ngân hàng')));
+                return;
+              }
+
+              ref.read(walletProvider.notifier).withdraw(amount, bankNameController.text, accountNumberController.text);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Đang xử lý rút tiền...'), backgroundColor: Colors.green),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: EduTheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Xác nhận'),
+          ),
+        ],
       ),
     );
   }

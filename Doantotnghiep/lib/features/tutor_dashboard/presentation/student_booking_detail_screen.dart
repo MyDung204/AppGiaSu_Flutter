@@ -1,3 +1,5 @@
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_materials_tab.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_quiz_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -27,75 +29,91 @@ class StudentBookingDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // We re-fetch bookings here to ensure we have the latest status
-    // and to simplify logic (filtering again)
     final bookingsAsync = ref.watch(bookingProvider);
     
-    return Scaffold(
-      backgroundColor: _EduTheme.background,
-      appBar: AppBar(
-        title: const Text('Chi tiết dạy kèm', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: _EduTheme.textPrimary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => context.pop(),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: _EduTheme.background,
+        appBar: AppBar(
+          title: const Text('Chi tiết dạy kèm 1-1', style: TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          foregroundColor: _EduTheme.textPrimary,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            onPressed: () => context.pop(),
+          ),
+          bottom: const TabBar(
+            labelColor: _EduTheme.primary,
+            unselectedLabelColor: _EduTheme.textSecondary,
+            indicatorColor: _EduTheme.primary,
+            tabs: [
+              Tab(text: 'Lịch học'),
+              Tab(text: 'Tài liệu'),
+              Tab(text: 'Trắc nghiệm'),
+            ],
+          ),
         ),
-      ),
-      body: bookingsAsync.when(
-        data: (bookings) {
-          // Filter bookings for this student AND this tutor (implicitly handled by provider mostly, but safe to check)
-          // Actually provider returns ALL bookings. We need to filter for this student.
-          final studentBookings = bookings.where((b) => b.student?.id == student.id).toList();
-          
-          if (studentBookings.isEmpty) {
-            return const Center(child: Text('Không tìm thấy lịch học'));
-          }
-
-          // Sort by date descending
-          studentBookings.sort((a, b) => b.date.compareTo(a.date));
-
-          // Calculate stats
-          final total = studentBookings.length;
-          final completed = studentBookings.where((b) => b.status.toLowerCase() == 'completed').length;
-          final cancelled = studentBookings.where((b) => b.status.toLowerCase() == 'cancelled').length;
-          final upcoming = total - completed - cancelled;
-          
-          // Progress
-          final progress = total > 0 ? completed / total : 0.0;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Student Profile Card
-                _buildStudentProfileCard(context, total, completed, progress),
+        body: TabBarView(
+          children: [
+            // Tab 1: Bookings List
+            bookingsAsync.when(
+              data: (bookings) {
+                final studentBookings = bookings.where((b) => b.student?.id == student.id).toList();
                 
-                const SizedBox(height: 24),
-                const Text(
-                  'Lịch sử buổi học',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _EduTheme.textPrimary),
-                ),
-                const SizedBox(height: 16),
-                
-                // Booking List
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: studentBookings.length,
-                  itemBuilder: (context, index) {
-                    return _buildBookingItem(context, ref, studentBookings[index]);
-                  },
-                ),
-              ],
+                if (studentBookings.isEmpty) {
+                  return const Center(child: Text('Không tìm thấy lịch học'));
+                }
+
+                studentBookings.sort((a, b) => b.date.compareTo(a.date));
+
+                final total = studentBookings.length;
+                final completed = studentBookings.where((b) => b.status.toLowerCase() == 'completed').length;
+                final progress = total > 0 ? completed / total : 0.0;
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildStudentProfileCard(context, total, completed, progress),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Lịch sử buổi học',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _EduTheme.textPrimary),
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: studentBookings.length,
+                        itemBuilder: (context, index) {
+                          return _buildBookingItem(context, ref, studentBookings[index]);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            
+            // Tab 2: Materials
+            ClassMaterialsTab(
+              studentId: int.tryParse(student.id.toString()),
+              isTutor: true,
+            ),
+            
+            // Tab 3: Quizzes
+            ClassQuizTab(
+              studentId: int.tryParse(student.id.toString()),
+              isTutor: true,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -141,7 +159,6 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                    ],
                  ),
                ),
-               // Call/Chat buttons could go here
              ],
            ),
            const Divider(height: 32),
@@ -186,9 +203,7 @@ class StudentBookingDetailScreen extends ConsumerWidget {
   Widget _buildBookingItem(BuildContext context, WidgetRef ref, BookingItem booking) {
     final statusColor = _getStatusColor(booking.status);
     final statusText = _getStatusText(booking.status);
-    final isUpcoming = booking.status.toLowerCase() == 'confirmed' || booking.status.toLowerCase() == 'pending'; // Adjust based on exact status strings
-    // Can action if: Status is confirmed AND date is today/past
-    // Or if we want to allow marking complete manually? Yes.
+    final isUpcoming = booking.status.toLowerCase() == 'confirmed' || booking.status.toLowerCase() == 'pending';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -259,7 +274,6 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                    ],
 
-                   // Actions
                    if (isUpcoming) 
                    Row(
                      mainAxisAlignment: MainAxisAlignment.end,
@@ -357,14 +371,8 @@ class StudentBookingDetailScreen extends ConsumerWidget {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
             ElevatedButton(
               onPressed: () async {
-                 // Call Update API
                  Navigator.pop(ctx);
-                 
                  final notifier = ref.read(bookingProvider.notifier);
-                 // Assuming updateSessionInfo exists in BookingNotifier or we call Repo directly.
-                 // Ideally we should create a method in BookingNotifier.
-                 // For now, let's assume we implement it there.
-                 
                  await notifier.updateSessionInfo(
                    booking.id, 
                    meetingLink: linkController.text,

@@ -19,6 +19,8 @@ class TutorRequestController extends Controller
             'max_budget' => 'required|numeric',
             'schedule' => 'nullable|string',
             'location' => 'nullable|string',
+            'request_type' => 'nullable|string|in:1-1,group',
+            'is_tutor_created' => 'nullable|boolean',
         ]);
 
         $tutorRequest = TutorRequest::create([
@@ -32,6 +34,8 @@ class TutorRequestController extends Controller
             'location' => $request->location,
             'status' => 'open',
             'mode' => 'Any',
+            'request_type' => $request->request_type ?? '1-1',
+            'is_tutor_created' => $request->is_tutor_created ?? false,
         ]);
 
         return response()->json(['message' => 'Created successfully', 'data' => $tutorRequest], 201);
@@ -39,8 +43,17 @@ class TutorRequestController extends Controller
 
     public function index(Request $request)
     {
-        // For Tutor Dashboard to see requests
-        return response()->json(TutorRequest::with('student')->orderBy('created_at', 'desc')->get());
+        $query = TutorRequest::with('student');
+        
+        if ($request->has('request_type')) {
+            $query->where('request_type', $request->request_type);
+        }
+        
+        if ($request->has('is_tutor_created')) {
+            $query->where('is_tutor_created', $request->is_tutor_created);
+        }
+
+        return response()->json($query->orderBy('created_at', 'desc')->get());
     }
 
     public function myRequests(Request $request)

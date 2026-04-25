@@ -33,7 +33,8 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Tutor>>((ref) asyn
 
 class SearchScreen extends ConsumerStatefulWidget {
   final String? initialSubject;
-  const SearchScreen({super.key, this.initialSubject});
+  final int initialTab;
+  const SearchScreen({super.key, this.initialSubject, this.initialTab = 0});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -79,6 +80,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return DefaultTabController(
       length: 3,
+      initialIndex: widget.initialTab.clamp(0, 2).toInt(),
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
@@ -111,9 +113,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ],
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Tìm Gia sư'),
+              Tab(text: 'Dạy kèm 1-1'),
               Tab(text: 'Học ghép'),
-              Tab(text: 'Lớp học'),
+              Tab(text: 'Lớp học nhóm'),
             ],
             labelColor: Colors.blueAccent,
             unselectedLabelColor: Colors.grey,
@@ -137,7 +139,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             context.push('/create-tutor-request');
                           },
                           icon: const Icon(Icons.post_add),
-                          label: const Text('Đăng tìm gia sư', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: const Text('Đăng tìm dạy kèm 1-1', style: TextStyle(fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

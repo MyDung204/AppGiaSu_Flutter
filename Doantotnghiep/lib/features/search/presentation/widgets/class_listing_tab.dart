@@ -32,7 +32,7 @@ class ClassListingTab extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.add, color: Colors.white), Text(' Tạo lớp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                        Icon(Icons.add, color: Colors.white), Text(' Tạo lớp học nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                       ]),
                     ),
                   ),
@@ -51,7 +51,7 @@ class ClassListingTab extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.list, color: Colors.blue), Text(' Lớp của tôi', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+                        Icon(Icons.list, color: Colors.blue), Text(' Lớp học nhóm của tôi', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
                       ]),
                     ),
                 ),
@@ -76,7 +76,7 @@ class ClassListingTab extends ConsumerWidget {
                             children: [
                               Icon(Icons.class_outlined, size: 60, color: Colors.grey.shade300),
                               const SizedBox(height: 16),
-                              const Text("Chưa có lớp học nào.", style: TextStyle(color: Colors.grey)),
+                              const Text("Chưa có lớp học nhóm nào.", style: TextStyle(color: Colors.grey)),
                             ],
                           ),
                         ),
@@ -169,7 +169,7 @@ class ClassListingTab extends ConsumerWidget {
                                         showDialog(
                                           context: context,
                                           builder: (ctx) => AlertDialog(
-                                            title: const Text('Đăng ký lớp học', style: TextStyle(fontWeight: FontWeight.bold)),
+                                            title: const Text('Đăng ký lớp học nhóm', style: TextStyle(fontWeight: FontWeight.bold)),
                                             content: const Text('Bạn sẽ được gia nhập lớp và có 7 ngày học thử miễn phí trước khi cần thanh toán học phí. Bạn có muốn tiếp tục?'),
                                             actions: [
                                               TextButton(onPressed: () => ctx.pop(), child: const Text('Hủy')),

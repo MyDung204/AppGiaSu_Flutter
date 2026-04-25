@@ -10,7 +10,15 @@ import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_reque
 
 class CreateTutorRequestScreen extends ConsumerStatefulWidget {
   final TutorRequest? requestToEdit;
-  const CreateTutorRequestScreen({super.key, this.requestToEdit});
+  final bool isTutor;
+  final String requestType;
+
+  const CreateTutorRequestScreen({
+    super.key, 
+    this.requestToEdit, 
+    this.isTutor = false,
+    this.requestType = '1-1',
+  });
 
   @override
   ConsumerState<CreateTutorRequestScreen> createState() => _CreateTutorRequestScreenState();
@@ -59,14 +67,16 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
           'description': _descController.text.trim().isEmpty 
               ? 'Không có mô tả thêm' 
               : _descController.text.trim(),
+          'is_tutor_created': widget.isTutor,
+          'request_type': widget.requestType,
         };
 
         if (widget.requestToEdit != null) {
           // Update existing request
           await apiClient.put('/tutor-requests/${widget.requestToEdit!.id}', data: data);
-           if (mounted) {
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cập nhật yêu cầu thành công!')),
+              const SnackBar(content: Text('Cập nhật thành công!')),
             );
           }
         } else {
@@ -74,7 +84,7 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
           await apiClient.post('/tutor-requests', data: data);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đăng yêu cầu thành công!')),
+              SnackBar(content: Text(widget.isTutor ? 'Đăng tin tuyển học viên cho lớp nhóm thành công!' : 'Đăng yêu cầu dạy kèm 1-1 thành công!')),
             );
           }
         }
@@ -97,15 +107,29 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
 
   @override
   Widget build(BuildContext context) {
+    String title = 'Đăng yêu cầu dạy kèm 1-1';
+    if (widget.requestToEdit != null) {
+      title = 'Cập nhật yêu cầu';
+    } else if (widget.isTutor) {
+      title = 'Tuyển học viên cho lớp nhóm';
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.requestToEdit != null ? 'Cập nhật yêu cầu' : 'Đăng yêu cầu tìm gia sư')),
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0.5,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildSectionTitle('Thông tin cơ bản'),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _subjectController.text.isNotEmpty && ['Toán', 'Lý', 'Hóa', 'Tiếng Anh', 'Văn', 'Sinh', 'Sử', 'Địa', 'Tin học', 'Piano', 'Guitar'].contains(_subjectController.text) 
                     ? _subjectController.text 
@@ -113,7 +137,11 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
                 items: ['Toán', 'Lý', 'Hóa', 'Tiếng Anh', 'Văn', 'Sinh', 'Sử', 'Địa', 'Tin học', 'Piano', 'Guitar']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (v) => setState(() => _subjectController.text = v!),
-                decoration: const InputDecoration(labelText: 'Môn học', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Môn học', 
+                  prefixIcon: const Icon(Icons.book_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 validator: (v) => v == null || v.isEmpty ? 'Chọn môn học' : null,
               ),
               const SizedBox(height: 16),
@@ -124,17 +152,27 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
                 items: ['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Người đi làm']
                     .map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (v) => setState(() => _gradeController.text = v!),
-                decoration: const InputDecoration(labelText: 'Trình độ lớp', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Trình độ lớp', 
+                  prefixIcon: const Icon(Icons.school_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                  validator: (v) => v == null || v.isEmpty ? 'Chọn lớp' : null,
               ),
-              const SizedBox(height: 16),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle(widget.isTutor ? 'Học phí dự kiến / Học viên' : 'Ngân sách học phí'),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _minBudgetController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Ngân sách từ (VNĐ)', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                        labelText: 'Từ (VNĐ)', 
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       validator: (v) => v?.isEmpty == true ? 'Nhập số tiền' : null,
                     ),
                   ),
@@ -143,39 +181,86 @@ class _CreateTutorRequestScreenState extends ConsumerState<CreateTutorRequestScr
                     child: TextFormField(
                       controller: _maxBudgetController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Đến (VNĐ)', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                        labelText: 'Đến (VNĐ)', 
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       validator: (v) => v?.isEmpty == true ? 'Nhập số tiền' : null,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Thời gian & Địa điểm'),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _scheduleController,
-                decoration: const InputDecoration(labelText: 'Thời gian học (VD: Tối 2-4-6)', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Thời gian học (VD: Tối 2-4-6)', 
+                  prefixIcon: const Icon(Icons.calendar_today_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 validator: (v) => v?.isEmpty == true ? 'Vui lòng nhập thời gian' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Địa điểm / Hình thức (VD: Online, Quận 1)', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: 'Địa điểm / Hình thức (VD: Online, Quận 1)', 
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 validator: (v) => v?.isEmpty == true ? 'Vui lòng nhập địa điểm' : null,
               ),
-              const SizedBox(height: 16),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Mô tả chi tiết'),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _descController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Yêu cầu thêm (VD: Sinh viên Bách Khoa...)', border: OutlineInputBorder()),
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: widget.isTutor ? 'Mô tả về lớp học và yêu cầu với học viên' : 'Yêu cầu thêm (VD: Sinh viên Bách Khoa...)', 
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  alignLabelWithHint: true,
+                ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submitRequest,
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: _isLoading ? const CircularProgressIndicator() : Text(widget.requestToEdit != null ? 'Cập nhật' : 'Đăng tin'),
+              
+              const SizedBox(height: 32),
+              SizedBox(
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitRequest,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isLoading 
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                    : Text(
+                        widget.requestToEdit != null ? 'Cập nhật' : 'Đăng tin ngay',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
       ),
     );
   }

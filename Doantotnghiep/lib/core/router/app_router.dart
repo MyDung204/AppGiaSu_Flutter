@@ -116,7 +116,14 @@ class AppRouter {
             path: '/search',
             builder: (context, state) {
               final subject = state.uri.queryParameters['subject'];
-              return SearchScreen(initialSubject: subject);
+              final tabName = state.uri.queryParameters['tab'];
+              var initialTab = 0;
+              if (tabName == 'groups') {
+                initialTab = 1;
+              } else if (tabName == 'classes') {
+                initialTab = 2;
+              }
+              return SearchScreen(initialSubject: subject, initialTab: initialTab);
             },
           ),
           GoRoute(
@@ -137,6 +144,14 @@ class AppRouter {
           ),
           GoRoute(
             path: '/wallet',
+            redirect: (context, state) async {
+              final prefs = await SharedPreferences.getInstance();
+              final role = prefs.getString('user_role');
+              if (role == 'tutor') {
+                return '/tutor-dashboard/statistics?tab=1';
+              }
+              return null;
+            },
             builder: (context, state) => const WalletScreen(),
           ),
           GoRoute(
@@ -155,7 +170,11 @@ class AppRouter {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
          path: '/create-tutor-request',
-         builder: (context, state) => const CreateTutorRequestScreen(),
+         builder: (context, state) {
+            final isTutor = state.uri.queryParameters['isTutor'] == 'true';
+            final type = state.uri.queryParameters['type'] ?? '1-1';
+            return CreateTutorRequestScreen(isTutor: isTutor, requestType: type);
+         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -449,7 +468,10 @@ class AppRouter {
             routes: [
               GoRoute(
                  path: 'find-students',
-                 builder: (context, state) => const StudentRequestListScreen(),
+                 builder: (context, state) {
+                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    return StudentRequestListScreen(initialTab: tab);
+                 },
               ),
               GoRoute(
                  path: 'booking-requests',
@@ -457,7 +479,7 @@ class AppRouter {
               ),
               GoRoute(
                  path: 'schedule',
-                 builder: (context, state) => const ScheduleScreen(), // Reusing Student Schedule for now or create new
+                 builder: (context, state) => const TutorScheduleManagementScreen(),
               ),
               GoRoute(
                  path: 'history',
@@ -560,7 +582,19 @@ class AppRouter {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/tutor-create-quiz',
-        builder: (context, state) => const CreateQuizScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Quiz) {
+            return CreateQuizScreen(quizToEdit: extra);
+          }
+          if (extra is Map<String, dynamic>) {
+            return CreateQuizScreen(
+              quizToEdit: extra['quiz'] as Quiz?,
+              courseId: extra['courseId'] as int?,
+            );
+          }
+          return const CreateQuizScreen();
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -660,4 +694,3 @@ class GoRouterRefreshStream extends ChangeNotifier {
     super.dispose();
   }
 }
-

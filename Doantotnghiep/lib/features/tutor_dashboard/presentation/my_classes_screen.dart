@@ -53,8 +53,8 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
     // 0: Classes (Lớp học)
     // 1: Tutoring (Dạy kèm)
     final isTutoring = widget.initialIndex == 1;
-    final title = isTutoring ? 'Học viên dạy kèm' : 'Quản lý lớp học';
-    final subtitle = isTutoring ? 'Danh sách học viên' : 'Các lớp học đang giảng dạy';
+    final title = isTutoring ? 'Dạy kèm 1-1' : 'Lớp học nhóm';
+    final subtitle = isTutoring ? 'Quản lý học viên dạy kèm' : 'Quản lý các lớp học nhóm';
 
     return Scaffold(
       backgroundColor: _EduTheme.background,
@@ -90,7 +90,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
         skipLoadingOnRefresh: true,
         data: (courses) {
           if (courses.isEmpty) {
-             return _buildEmptyState(context, ref, 'Chưa có lớp học nào', 'Tạo lớp học đầu tiên của bạn');
+             return _buildEmptyState(context, ref, 'Chưa có lớp học nhóm nào', 'Mở lớp học nhóm đầu tiên của bạn');
           }
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -136,7 +136,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
       final currentUser = ref.watch(authRepositoryProvider).currentUser;
 
       if (bookings.isEmpty) {
-          return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm', 'Học viên sẽ đặt lịch với bạn');
+          return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm 1-1', 'Học viên sẽ đặt lịch với bạn');
       }
 
       // Filter bookings where I am the tutor
@@ -148,7 +148,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
       }).toList();
 
       if (myBookings.isEmpty) {
-          return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm', 'Danh sách dạy kèm trống');
+          return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm 1-1', 'Danh sách dạy kèm trống');
       }
 
       final Map<String, List<BookingItem>> studentGroups = {};
@@ -382,7 +382,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
                       context: context, 
                       builder: (context) => AlertDialog(
                         title: const Text('Yêu cầu xác thực'),
-                        content: const Text('Bạn cần xác thực tài khoản (KYC) để tạo lớp học mới.'),
+                        content: const Text('Bạn cần xác thực tài khoản (KYC) để tạo lớp học nhóm mới.'),
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
                           FilledButton(onPressed: () => context.push('/settings'), child: const Text('Cài đặt')),

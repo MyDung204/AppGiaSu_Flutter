@@ -1,6 +1,7 @@
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/tutor/presentation/widgets/tutor_card.dart';
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,14 @@ class FavoriteTutorsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateChangesProvider).value;
+    if (user?.role == 'tutor') {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Gia sư yêu thích')),
+        body: const Center(child: Text('Chức năng này chỉ dành cho học viên.')),
+      );
+    }
+
     final asyncTutors = ref.watch(favoriteTutorsProvider);
 
     return Scaffold(

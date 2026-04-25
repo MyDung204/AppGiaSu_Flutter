@@ -13,6 +13,44 @@ use Illuminate\Support\Facades\Validator;
 
 class QuizController extends Controller
 {
+    private function validateQuizPayload(Request $request, bool $isUpdate = false)
+    {
+        $questionRule = $isUpdate ? 'sometimes|array|min:1' : 'required|array|min:1';
+
+        return Validator::make($request->all(), [
+            'title' => ($isUpdate ? 'sometimes|' : 'required|') . 'string|max:255',
+            'course_id' => 'nullable|integer|exists:courses,id',
+            'student_id' => 'nullable|integer|exists:users,id',
+            'study_group_id' => 'nullable|integer|exists:study_groups,id',
+            'description' => 'nullable|string',
+            'time_limit_minutes' => 'nullable|integer',
+            'time_limit' => 'nullable|integer',
+            'is_published' => 'boolean',
+            'questions' => $questionRule,
+            'questions.*.content' => 'required_with:questions|string',
+            'questions.*.points' => 'required_with:questions|integer|min:1',
+            'questions.*.options' => 'required_with:questions|array|min:2',
+            'questions.*.options.*.content' => 'required_with:questions|string',
+            'questions.*.options.*.is_correct' => 'required_with:questions|boolean',
+        ]);
+    }
+
+    private function assertTutorOwnsCourse(Request $request)
+    {
+        if (!$request->filled('course_id')) {
+            return null;
+        }
+
+        $course = \App\Models\Course::findOrFail($request->course_id);
+        $tutor = \App\Models\Tutor::where('user_id', $request->user()->id)->first();
+
+        if (!$tutor || $course->tutor_id != $tutor->id) {
+            return response()->json(['message' => 'Bạn không có quyền gắn bài kiểm tra vào lớp này.'], 403);
+        }
+
+        return null;
+    }
+
     // List quizzes (Tutor sees their own, Student sees published ones)
     public function index(Request $request)
     {
@@ -26,15 +64,19 @@ class QuizController extends Controller
                 ->get();
         } else {
             // Student: list published quizzes
-            $query = Quiz::where('is_published', true)->with('tutor');
+            $courseIds = DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
+            $groupIds = DB::table('study_group_members')->where('user_id', $user->id)->pluck('study_group_id');
+            
+            $query = Quiz::where('is_published', true)
+                ->where(function($q) use ($user, $courseIds, $groupIds) {
+                    $q->where('student_id', $user->id)
+                      ->orWhereIn('course_id', $courseIds)
+                      ->orWhereIn('study_group_id', $groupIds);
+                })
+                ->with('tutor');
 
-            if ($request->has('tutor_id')) {
-                $query->where('tutor_id', $request->tutor_id);
-            }
-
-            if ($request->has('course_id')) {
-                $query->where('course_id', $request->course_id);
-            }
+            if ($request->has('course_id')) $query->where('course_id', $request->course_id);
+            if ($request->has('study_group_id')) $query->where('study_group_id', $request->study_group_id);
 
             $quizzes = $query->latest()->get();
         }
@@ -75,24 +117,14 @@ class QuizController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Validate
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'course_id' => 'nullable|integer|exists:courses,id',
-            'description' => 'nullable|string',
-            'time_limit_minutes' => 'nullable|integer',
-            'time_limit' => 'nullable|integer', // Accept both names for compatibility
-            'is_published' => 'boolean',
-            'questions' => 'required|array|min:1',
-            'questions.*.content' => 'required|string',
-            'questions.*.points' => 'required|integer|min:1',
-            'questions.*.options' => 'required|array|min:2',
-            'questions.*.options.*.content' => 'required|string',
-            'questions.*.options.*.is_correct' => 'required|boolean',
-        ]);
+        $validator = $this->validateQuizPayload($request);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        if ($courseError = $this->assertTutorOwnsCourse($request)) {
+            return $courseError;
         }
 
         try {
@@ -102,6 +134,8 @@ class QuizController extends Controller
             $quiz = Quiz::create([
                 'tutor_id' => $user->id,
                 'course_id' => $request->course_id,
+                'student_id' => $request->student_id,
+                'study_group_id' => $request->study_group_id,
                 'title' => $request->title,
                 'description' => $request->description,
                 'time_limit_minutes' => $request->time_limit_minutes ?? $request->time_limit,
@@ -130,6 +164,81 @@ class QuizController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Failed to create quiz: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function update($id, Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'tutor') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $quiz = Quiz::with('questions.options')->findOrFail($id);
+        if ($quiz->tutor_id !== $user->id) {
+            return response()->json(['message' => 'Bạn không có quyền sửa bài kiểm tra này.'], 403);
+        }
+
+        $validator = $this->validateQuizPayload($request, true);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        if ($courseError = $this->assertTutorOwnsCourse($request)) {
+            return $courseError;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $quiz->fill($request->only(['title', 'course_id', 'student_id', 'description', 'is_published']));
+            if ($request->has('time_limit_minutes') || $request->has('time_limit')) {
+                $quiz->time_limit_minutes = $request->time_limit_minutes ?? $request->time_limit;
+            }
+            $quiz->save();
+
+            if ($request->has('questions')) {
+                foreach ($quiz->questions as $question) {
+                    $question->options()->delete();
+                }
+                $quiz->questions()->delete();
+
+                foreach ($request->questions as $qData) {
+                    $question = $quiz->questions()->create([
+                        'content' => $qData['content'],
+                        'points' => $qData['points'] ?? 1,
+                    ]);
+
+                    foreach ($qData['options'] as $oData) {
+                        $question->options()->create([
+                            'content' => $oData['content'],
+                            'is_correct' => $oData['is_correct'],
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+            return response()->json($quiz->fresh()->load('questions.options'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update quiz: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($id, Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'tutor' && $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $quiz = Quiz::findOrFail($id);
+        if ($user->role !== 'admin' && $quiz->tutor_id !== $user->id) {
+            return response()->json(['message' => 'Bạn không có quyền xóa bài kiểm tra này.'], 403);
+        }
+
+        $quiz->delete();
+        return response()->json(['message' => 'Đã xóa bài kiểm tra.']);
     }
 
     // Submit quiz answers (Student)

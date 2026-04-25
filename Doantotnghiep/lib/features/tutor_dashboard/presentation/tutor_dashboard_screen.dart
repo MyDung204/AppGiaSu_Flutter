@@ -27,6 +27,7 @@ import 'package:doantotnghiep/features/notification/domain/models/app_notificati
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/chat/domain/models/conversation.dart';
 import 'package:doantotnghiep/core/widgets/edu_marquee.dart';
+import 'package:doantotnghiep/features/group/domain/models/course.dart';
 import 'dart:async';
 
 class TutorDashboardScreen extends ConsumerStatefulWidget {
@@ -156,7 +157,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     final requestsAsync = ref.watch(tutorRequestsProvider);
     final bookingsAsync = ref.watch(bookingProvider);
     final user = ref.watch(authRepositoryProvider).currentUser;
-
+    final rating = (double.tryParse(user?.tutorProfile?['rating']?.toString() ?? '0') ?? 0.0).toStringAsFixed(1);
     final statsAsync = ref.watch(tutorStatisticsProvider);
     final stats = statsAsync.valueOrNull ?? {};
 
@@ -692,7 +693,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
         // Group 1: Giảng dạy (Teaching)
         const Padding(
           padding: EdgeInsets.only(left: 4, bottom: 10),
-          child: Text('Giảng dạy & Lớp học', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey, fontSize: 13)),
+          child: Text('Giảng dạy & Lớp học nhóm', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey, fontSize: 13)),
         ),
         GridView.count(
           crossAxisCount: 4,
@@ -705,21 +706,21 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             _buildQuickActionButton(
               context,
               icon: Icons.add_circle_rounded,
-              label: 'Tạo lớp',
+              label: 'Tạo lớp nhóm',
               gradient: [EduTheme.primary, EduTheme.primaryLight],
               onTap: () => context.push('/create-class'),
             ),
              _buildQuickActionButton(
               context,
               icon: Icons.class_rounded,
-              label: 'Lớp học',
+              label: 'Lớp học nhóm',
               gradient: [Colors.orange, Colors.orangeAccent],
               onTap: () => context.push('/my-classes?index=0'),
             ),
              _buildQuickActionButton(
               context,
               icon: Icons.person_search_rounded,
-              label: 'Dạy kèm',
+              label: 'Dạy kèm 1-1',
               gradient: [const Color(0xFF10B981), const Color(0xFF34D399)],
               onTap: () => context.push('/my-classes?index=1'),
             ),
@@ -757,10 +758,17 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
           children: [
              _buildQuickActionButton(
               context,
-              icon: Icons.search_rounded,
-              label: 'Tìm HV',
+              icon: Icons.person_search_rounded,
+              label: 'Học viên 1-1',
               gradient: [const Color(0xFF0EA5E9), const Color(0xFF38BDF8)],
-              onTap: () => context.go('/tutor-dashboard/find-students'),
+              onTap: () => context.go('/tutor-dashboard/find-students?tab=0'),
+            ),
+            _buildQuickActionButton(
+              context,
+              icon: Icons.group_add_rounded,
+              label: 'Học viên Nhóm',
+              gradient: [const Color(0xFF06B6D4), const Color(0xFF22D3EE)],
+              onTap: () => context.go('/tutor-dashboard/find-students?tab=1'),
             ),
             _buildQuickActionButton(
               context,

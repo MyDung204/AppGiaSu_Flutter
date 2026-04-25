@@ -24,6 +24,8 @@ class TutorRequestsNotifier extends AsyncNotifier<List<TutorRequest>> {
           location: data['location'] ?? data['mode'] ?? 'Online',
           createdAt: data['created_at'] != null ? DateTime.parse(data['created_at']) : DateTime.now(),
           status: data['status'] ?? 'open',
+          requestType: data['request_type'] ?? '1-1',
+          isTutorCreated: data['is_tutor_created'] == 1 || data['is_tutor_created'] == true,
         );
       }).toList();
     } catch (e) {
@@ -74,6 +76,8 @@ final myTutorRequestsProvider = FutureProvider.autoDispose<List<TutorRequest>>((
       location: d['location'] ?? d['mode'] ?? 'Online',
       createdAt: d['created_at'] != null ? DateTime.parse(d['created_at']) : DateTime.now(),
       status: d['status'] ?? 'open',
+      requestType: d['request_type'] ?? '1-1',
+      isTutorCreated: d['is_tutor_created'] == 1 || d['is_tutor_created'] == true,
     );
   }).toList();
 });
@@ -97,6 +101,8 @@ final matchingRequestsProvider = FutureProvider.autoDispose<List<TutorRequest>>(
       location: d['location'] ?? d['mode'] ?? 'Online',
       createdAt: d['created_at'] != null ? DateTime.parse(d['created_at']) : DateTime.now(),
       status: d['status'] ?? 'open',
+      requestType: d['request_type'] ?? '1-1',
+      isTutorCreated: d['is_tutor_created'] == 1 || d['is_tutor_created'] == true,
     );
   }).toList();
 });

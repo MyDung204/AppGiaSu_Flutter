@@ -71,7 +71,7 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
        context: context,
        builder: (context) => AlertDialog(
          title: const Text('Xác nhận'),
-         content: const Text('Bạn có chắc muốn mời thành viên này ra khỏi nhóm?'),
+         content: const Text('Bạn có chắc muốn mời thành viên này ra khỏi lớp học nhóm?'),
          actions: [
            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Đồng ý')),
@@ -89,7 +89,7 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
         userId
       );
 
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã mời ra khỏi nhóm')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã mời ra khỏi lớp học nhóm')));
       _fetchMembers();
     }
   }
@@ -99,10 +99,10 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
        context: context,
        builder: (context) => AlertDialog(
          title: const Text('Xác nhận giải tán'),
-         content: const Text('Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa nhóm?'),
+         content: const Text('Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa lớp học nhóm?'),
          actions: [
            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-           TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Xóa nhóm')),
+           TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Xóa lớp học nhóm')),
          ],
        ),
      );
@@ -112,7 +112,7 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
      final success = await repo.deleteGroup(widget.group.id);
      if (success) {
        if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã giải tán nhóm')));
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã giải tán lớp học nhóm')));
            Navigator.pop(context); // Back to list
        }
      }
@@ -122,14 +122,14 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quản lý nhóm'),
+        title: const Text('Quản lý lớp học nhóm'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'delete') _deleteGroup();
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'delete', child: Text('Giải tán nhóm', style: TextStyle(color: Colors.red))),
+              const PopupMenuItem(value: 'delete', child: Text('Giải tán lớp học nhóm', style: TextStyle(color: Colors.red))),
             ],
           ),
         ],
@@ -195,7 +195,7 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
                                       IconButton(
                                         icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
                                         onPressed: () => _removeMember(member['id'].toString()),
-                                        tooltip: 'Mời ra khỏi nhóm',
+                                        tooltip: 'Mời ra khỏi lớp học nhóm',
                                       ),
                                 ],
                               ),
