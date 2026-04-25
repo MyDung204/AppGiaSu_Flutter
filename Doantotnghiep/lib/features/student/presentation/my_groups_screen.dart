@@ -1,4 +1,5 @@
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
+import 'package:doantotnghiep/features/auth/presentation/view_models/auth_view_model.dart';
 import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +30,12 @@ class MyGroupsScreen extends ConsumerWidget {
             _GroupList(provider: myJoinedGroupsProvider, isCreated: false),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push('/create-group'),
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: (ref.watch(authStateChangesProvider).value?.role == 'tutor') 
+          ? FloatingActionButton(
+              onPressed: () => context.push('/create-group'),
+              child: const Icon(Icons.add),
+            )
+          : null,
       ),
     );
   }
@@ -121,25 +124,53 @@ class _GroupList extends ConsumerWidget {
                                ),
                              ),
                              if (group.membershipStatus == 'pending')
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                child: const Text('Chờ duyệt', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
-                              )
+                               Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                 child: const Text('Chờ duyệt', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
+                               )
                              else if (group.status == 'open')
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                child: const Text('Đang tìm', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
-                              )
+                               Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                 child: const Text('Đang tìm', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                               )
                              else
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                                child: const Text('Đã đóng', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-                              )
+                               Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(color: Colors.grey.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                                 child: const Text('Đã đóng', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                               ),
+                             if (!isCreated && group.paymentStatus == 'pending' && group.status == 'full')
+                               Container(
+                                 margin: const EdgeInsets.only(left: 4),
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                 child: const Text('Cần thanh toán', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                               ),
+                             if (!isCreated && group.paymentStatus == 'paid')
+                               Container(
+                                 margin: const EdgeInsets.only(left: 4),
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                 child: const Text('Đã đóng phí', style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
+                               )
                            ],
                          ),
+                         if (!isCreated && group.paymentStatus == 'pending' && group.paymentDeadline != null)
+                           Padding(
+                             padding: const EdgeInsets.only(top: 8),
+                             child: Row(
+                               children: [
+                                 const Icon(Icons.timer_outlined, color: Colors.red, size: 14),
+                                 const SizedBox(width: 4),
+                                 Text(
+                                   'Hạn: ${DateFormat('HH:mm dd/MM').format(group.paymentDeadline!)}',
+                                   style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+                                 ),
+                               ],
+                             ),
+                           ),
                          const Divider(height: 24),
                          Row(
                            mainAxisAlignment: MainAxisAlignment.spaceBetween,

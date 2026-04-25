@@ -16,9 +16,14 @@ class GroupRequest {
   final DateTime createdAt;
   final DateTime startTime;
   final String status; // 'open', 'full', 'closed'
-  final String? membershipStatus; // 'pending', 'approved', 'rejected' or null
+  final String? membershipStatus;
+  final DateTime? expectedOpeningTime;
+  final DateTime? paymentDeadline;
   final int pendingRequestsCount;
   final bool hasNewMessages;
+  final String? quizId;
+  final String paymentStatus; // 'pending', 'paid'
+  final DateTime? joinedAt;
 
   GroupRequest({
     required this.id,
@@ -37,8 +42,13 @@ class GroupRequest {
     required this.startTime,
     this.status = 'open',
     this.membershipStatus,
+    this.expectedOpeningTime,
+    this.paymentDeadline,
     this.pendingRequestsCount = 0,
     this.hasNewMessages = false,
+    this.quizId,
+    this.paymentStatus = 'pending',
+    this.joinedAt,
   });
 
   GroupRequest copyWith({
@@ -58,6 +68,11 @@ class GroupRequest {
     DateTime? startTime,
     String? status,
     String? membershipStatus,
+    DateTime? expectedOpeningTime,
+    DateTime? paymentDeadline,
+    String? quizId,
+    String? paymentStatus,
+    DateTime? joinedAt,
   }) {
     return GroupRequest(
       id: id ?? this.id,
@@ -76,6 +91,11 @@ class GroupRequest {
       startTime: startTime ?? this.startTime,
       status: status ?? this.status,
       membershipStatus: membershipStatus ?? this.membershipStatus,
+      expectedOpeningTime: expectedOpeningTime ?? this.expectedOpeningTime,
+      paymentDeadline: paymentDeadline ?? this.paymentDeadline,
+      quizId: quizId ?? this.quizId,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      joinedAt: joinedAt ?? this.joinedAt,
     );
   }
 
@@ -97,11 +117,16 @@ class GroupRequest {
       maxMembers: json['max_members'] ?? 5,
       minMembers: 2,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
-      startTime: DateTime.now().add(const Duration(days: 1)),
+      startTime: json['expected_opening_time'] != null ? DateTime.parse(json['expected_opening_time']) : DateTime.now(),
       status: json['status'] ?? 'open',
       membershipStatus: json['membership_status'],
+      expectedOpeningTime: json['expected_opening_time'] != null ? DateTime.parse(json['expected_opening_time']) : null,
+      paymentDeadline: json['payment_deadline'] != null ? DateTime.parse(json['payment_deadline']) : null,
       pendingRequestsCount: json['pending_requests_count'] ?? 0,
       hasNewMessages: json['has_new_messages'] ?? false,
+      quizId: json['quiz_id']?.toString(),
+      paymentStatus: json['payment_status'] ?? 'pending',
+      joinedAt: json['joined_at'] != null ? DateTime.parse(json['joined_at']) : null,
     );
   }
 
@@ -119,9 +144,10 @@ class GroupRequest {
       'currentMembers': currentMembers,
       'maxMembers': maxMembers,
       'minMembers': minMembers,
-      'createdAt': createdAt.millisecondsSinceEpoch,
-      'startTime': startTime.millisecondsSinceEpoch,
+      'createdAt': createdAt.toIso8601String(),
+      'startTime': startTime.toIso8601String(),
       'status': status,
+      'quiz_id': quizId,
     };
   }
 }

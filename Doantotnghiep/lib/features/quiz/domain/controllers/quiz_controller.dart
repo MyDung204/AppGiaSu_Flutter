@@ -9,6 +9,12 @@ final quizListProvider = FutureProvider.family<List<Quiz>, int?>((ref, tutorId) 
   return repository.getQuizzes(tutorId: tutorId);
 });
 
+// Quizzes by Course
+final courseQuizzesProvider = FutureProvider.family<List<Quiz>, int>((ref, courseId) async {
+  final repository = ref.watch(quizRepositoryProvider);
+  return repository.getQuizzes(courseId: courseId);
+});
+
 // Quiz Detail
 final quizDetailProvider = FutureProvider.family<Quiz, int>((ref, quizId) async {
   final repository = ref.watch(quizRepositoryProvider);

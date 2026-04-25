@@ -19,6 +19,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:doantotnghiep/features/admin/data/admin_system_provider.dart';
+import 'package:doantotnghiep/features/chat/presentation/widgets/location_bubble.dart';
 
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -341,37 +342,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (msg.attachmentType == 'image' && msg.attachmentUrl != null)
                 AttachmentImage(url: msg.attachmentUrl!)
               else if (msg.attachmentType == 'location')
-                GestureDetector(
-                  onTap: () {
-                     final parts = msg.text.split(',');
-                     if (parts.length == 2) {
-                        try {
-                          final lat = double.parse(parts[0]);
-                          final lng = double.parse(parts[1]);
-                          context.push('/map', extra: LatLng(lat, lng));
-                        } catch (e) {
-                          print('Error parsing location: $e');
-                        }
-                     }
-                  },
-                  child: Container(
-                    height: 150,
-                    width: 250,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blueAccent, width: 2),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.location_on, color: Colors.red, size: 40),
-                        const SizedBox(height: 8),
-                        const Text('Vị trí hiện tại', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                        Text(msg.text, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                      ],
-                    ),
-                  ),
+                LocationBubble(
+                  locationString: msg.text,
+                  isUser: msg.isUser,
+                  time: msg.time,
+                  isRead: msg.isRead,
                 )
               else 
                 Container( // File (keeping existing logic for 'file')

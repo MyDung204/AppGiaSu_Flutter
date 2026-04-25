@@ -26,11 +26,14 @@ class QuizController extends Controller
                 ->get();
         } else {
             // Student: list published quizzes
-            // Optional: filter by tutor_id if provided
             $query = Quiz::where('is_published', true)->with('tutor');
 
             if ($request->has('tutor_id')) {
                 $query->where('tutor_id', $request->tutor_id);
+            }
+
+            if ($request->has('course_id')) {
+                $query->where('course_id', $request->course_id);
             }
 
             $quizzes = $query->latest()->get();
@@ -75,8 +78,10 @@ class QuizController extends Controller
         // Validate
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
+            'course_id' => 'nullable|integer|exists:courses,id',
             'description' => 'nullable|string',
             'time_limit_minutes' => 'nullable|integer',
+            'time_limit' => 'nullable|integer', // Accept both names for compatibility
             'is_published' => 'boolean',
             'questions' => 'required|array|min:1',
             'questions.*.content' => 'required|string',
@@ -96,9 +101,10 @@ class QuizController extends Controller
             // Create Quiz
             $quiz = Quiz::create([
                 'tutor_id' => $user->id,
+                'course_id' => $request->course_id,
                 'title' => $request->title,
                 'description' => $request->description,
-                'time_limit_minutes' => $request->time_limit_minutes,
+                'time_limit_minutes' => $request->time_limit_minutes ?? $request->time_limit,
                 'is_published' => $request->is_published ?? false,
             ]);
 

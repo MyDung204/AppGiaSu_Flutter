@@ -38,7 +38,6 @@ class ProfileScreen extends ConsumerWidget {
 
             // Menu Items
             _buildMenuItem(context, Icons.account_balance_wallet, 'Ví của tôi', () => context.push('/wallet')),
-            _buildMenuItem(context, Icons.favorite, 'Gia sư yêu thích', () => context.push('/favorite-tutors')),
             
             if (isTutor) ...[
               _buildMenuItem(
@@ -76,6 +75,7 @@ class ProfileScreen extends ConsumerWidget {
               }
             ),
              if (!isTutor) ...[
+               _buildMenuItem(context, Icons.favorite, 'Gia sư yêu thích', () => context.push('/favorite-tutors')),
                _buildMenuItem(context, Icons.quiz_outlined, 'Bài thi trắc nghiệm', () => context.push('/quizzes')),
                _buildMenuItem(context, Icons.assignment, 'Yêu cầu tìm gia sư', () => context.push('/my-requests')),
                _buildMenuItem(context, Icons.group, 'Nhóm học của tôi', () => context.push('/my-study-groups')),
@@ -85,7 +85,19 @@ class ProfileScreen extends ConsumerWidget {
               context, 
               Icons.verified_user, 
               'Xác thực danh tính (eKYC)', 
-              () => context.push(Uri(path: '/ekyc', queryParameters: {'isTutor': isTutor.toString()}).toString())
+              () {
+                final isVerified = isTutor 
+                    ? (user?.tutorProfile?['is_verified'] == true || user?.tutorProfile?['is_verified'] == 1)
+                    : false; 
+                
+                if (isVerified) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Bạn đã xác thực danh tính thành công.')),
+                  );
+                } else {
+                  context.push(Uri(path: '/ekyc', queryParameters: {'isTutor': isTutor.toString()}).toString());
+                }
+              }
             ),
             _buildMenuItem(context, Icons.settings, 'Cài đặt', () => context.push('/settings')),
             _buildMenuItem(

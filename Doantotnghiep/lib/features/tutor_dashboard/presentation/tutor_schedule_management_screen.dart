@@ -25,6 +25,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_schedule_provider.dart';
+import 'package:doantotnghiep/core/theme/edu_theme.dart';
+import 'package:intl/intl.dart';
+import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/unified_schedule_item.dart';
 
 /// Màn hình quản lý lịch dạy của gia sư
 /// 
@@ -38,7 +43,9 @@ class TutorScheduleManagementScreen extends ConsumerStatefulWidget {
   ConsumerState<TutorScheduleManagementScreen> createState() => _TutorScheduleManagementScreenState();
 }
 
-class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleManagementScreen> {
+class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleManagementScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
   // Key mapping: '2' = Thứ 2, '3' = Thứ 3, ..., '8' = Chủ Nhật
   final Map<String, List<String>> _schedule = {
     '2': [], '3': [], '4': [], '5': [], '6': [], '7': [], '8': [],
@@ -61,15 +68,17 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
   @override
   void initState() {
     super.initState();
-    _fetchAvailability();
+    _tabController = TabController(length: 2, vsync: this);
   }
 
-  Future<void> _fetchAvailability() async {
-    setState(() => _isLoading = true);
-    try {
-      final availabilities = await ref.read(tutorRepositoryProvider).getMyAvailability();
-      
-      // Clear current
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _syncLocalSchedule(List<Map<String, dynamic>> availabilities) {
+    // Clear current
     for (var key in _schedule.keys) {
       _schedule[key] = [];
     }
@@ -81,21 +90,11 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
       final endTime = _parseTime(item['end_time'].toString());
       final slot = '$startTime - $endTime';
       
-      print('Parsed slot: $slot'); // Debug log
-      
       if (_schedule.containsKey(day)) {
-        if (_timeSlots.contains(slot)) {
-           _schedule[day]!.add(slot);
-        } else {
-           // Handle custom slots if any? For now only predefined.
-           _schedule[day]!.add(slot);
+        if (!_schedule[day]!.contains(slot)) {
+          _schedule[day]!.add(slot);
         }
       }
-    }
-    setState(() => _isLoading = false);
-    } catch (e) {
-      // print('DEBUG: Error in _fetchAvailability: $e\n$stack'); // Optional: keep silent or log to service
-      setState(() => _isLoading = false);
     }
   }
 
@@ -156,8 +155,6 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
   }
 
   Future<void> _saveSchedule() async {
-    setState(() => _isLoading = true);
-    
     List<Map<String, dynamic>> apiPayload = [];
     _schedule.forEach((day, slots) {
       for (var slot in slots) {
@@ -170,8 +167,7 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
       }
     });
 
-    final success = await ref.read(tutorRepositoryProvider).updateAvailability(apiPayload);
-    setState(() => _isLoading = false);
+    final success = await ref.read(tutorScheduleProvider.notifier).updateAvailability(apiPayload);
 
     if (success) {
       if (mounted) {
@@ -186,190 +182,382 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
 
   @override
   Widget build(BuildContext context) {
+    final scheduleState = ref.watch(tutorScheduleProvider);
+    
+    // Sync local schedule when data is loaded
+    if (!scheduleState.isLoading && scheduleState.availability.isNotEmpty) {
+      _syncLocalSchedule(scheduleState.availability);
+    }
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Quản lý Lịch dạy'),
+        title: const Text('Lịch dạy & Giảng dạy'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: EduTheme.primary,
+          labelColor: EduTheme.primary,
+          unselectedLabelColor: Colors.grey,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          tabs: const [
+            Tab(text: 'Lịch dạy (Bookings)'),
+            Tab(text: 'Lịch rảnh (Availability)'),
+          ],
+        ),
         actions: [
-          if (_isLoading)
+          if (scheduleState.isLoading)
              const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))))
-          else
+          else if (_tabController.index == 1)
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveSchedule,
             )
         ],
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        itemCount: _dayLabels.length,
-        itemBuilder: (context, index) {
-          final dayKey = _dayLabels.keys.elementAt(index);
-          final dayName = _dayLabels[dayKey]!;
-          final currentSlots = _schedule[dayKey] ?? [];
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildTeachingSchedule(scheduleState.unifiedSchedule),
+          _buildAvailabilityManager(scheduleState.isLoading),
+        ],
+      ),
+    );
+  }
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+  Widget _buildTeachingSchedule(List<UnifiedScheduleItem> items) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text('Chưa có lịch dạy nào sắp tới', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return _buildScheduleCard(item);
+      },
+    );
+  }
+
+  Widget _buildScheduleCard(UnifiedScheduleItem item) {
+    final bool isGroup = item.type == ScheduleType.group;
+    final bool isCompleted = item.status?.toLowerCase() == 'completed';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: isCompleted ? Colors.grey[200]! : (isGroup ? Colors.orange.withOpacity(0.1) : EduTheme.primary.withOpacity(0.1)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (isGroup ? Colors.orange : EduTheme.primary).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isGroup ? Icons.group : Icons.person,
+                  color: isGroup ? Colors.orange : EduTheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      item.subtitle ?? (isGroup ? 'Lớp học nhóm' : 'Dạy kèm 1-1'),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isGroup ? Colors.orange : _getStatusColor(item.status ?? '')).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isGroup ? 'Lớp nhóm' : _getStatusText(item.status ?? 'upcoming'),
+                  style: TextStyle(
+                    color: isGroup ? Colors.orange : _getStatusColor(item.status ?? ''),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(),
+          ),
+          if (item.studentName != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text('Học viên: ${item.studentName}', style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
+              const Icon(Icons.calendar_month, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                DateFormat('dd/MM/yyyy').format(item.startTime),
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(width: 16),
+              const Icon(Icons.access_time, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                '${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          if (item.location != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.location!,
+                    style: const TextStyle(fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-            child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                title: Text(
-                  dayName, 
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2D3142))
-                ),
-                subtitle: Text(
-                  currentSlots.isEmpty ? 'Chưa có lịch' : '${currentSlots.length} ca dạy đã chọn',
-                  style: TextStyle(
-                    color: currentSlots.isEmpty ? Colors.grey[500] : const Color(0xFF4F5D75),
-                    fontSize: 14
-                  ),
-                ),
-                leading: CircleAvatar(
-                  backgroundColor: currentSlots.isEmpty ? Colors.grey[100] : const Color(0xFFE5E9FF),
-                  child: Icon(
-                    Icons.calendar_view_day_rounded, 
-                    color: currentSlots.isEmpty ? Colors.grey[400] : const Color(0xFF4D6AFF),
-                    size: 20,
-                  ),
-                ),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Divider(height: 1),
-                        const SizedBox(height: 16),
-                        
-                        // Section 1: Selected Slots
-                        if (currentSlots.isNotEmpty) ...[
-                          Row(
-                            children: [
-                              const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
-                              const SizedBox(width: 8),
-                              const Text('Đã chọn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF4F5D75))),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: currentSlots.map((slot) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF4D6AFF).withOpacity(0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: InputChip(
-                                  label: Text(slot),
-                                  labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                  backgroundColor: const Color(0xFF4D6AFF),
-                                  deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white70),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide.none),
-                                  onDeleted: () {
-                                    setState(() {
-                                      _schedule[dayKey]!.remove(slot);
-                                    });
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                // Show details
+              },
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: isGroup ? Colors.orange : EduTheme.primary),
+                foregroundColor: isGroup ? Colors.orange : EduTheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Chi tiết buổi học'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                        // Section 2: Suggested Slots
-                        Row(
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'upcoming':
+      case 'confirmed':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'upcoming':
+      case 'confirmed':
+        return 'Sắp tới';
+      case 'completed':
+        return 'Hoàn thành';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  }
+
+  Widget _buildAvailabilityManager(bool isLoading) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      itemCount: _dayLabels.length,
+      itemBuilder: (context, index) {
+        final dayKey = _dayLabels.keys.elementAt(index);
+        final dayName = _dayLabels[dayKey]!;
+        final currentSlots = _schedule[dayKey] ?? [];
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: Text(dayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF2D3142))),
+              subtitle: Text(
+                currentSlots.isEmpty ? 'Chưa có lịch' : '${currentSlots.length} ca dạy đã chọn',
+                style: TextStyle(color: currentSlots.isEmpty ? Colors.grey[500] : const Color(0xFF4F5D75), fontSize: 14),
+              ),
+              leading: CircleAvatar(
+                backgroundColor: currentSlots.isEmpty ? Colors.grey[100] : const Color(0xFFE5E9FF),
+                child: Icon(
+                  Icons.calendar_view_day_rounded,
+                  color: currentSlots.isEmpty ? Colors.grey[400] : const Color(0xFF4D6AFF),
+                  size: 20,
+                ),
+              ),
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Divider(height: 1),
+                      const SizedBox(height: 16),
+                      if (currentSlots.isNotEmpty) ...[
+                        const Row(
                           children: [
-                            const Icon(Icons.lightbulb_outline, size: 16, color: Colors.amber),
-                            const SizedBox(width: 8),
-                            const Text('Gợi ý', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF4F5D75))),
+                            Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                            SizedBox(width: 8),
+                            Text('Đã chọn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF4F5D75))),
                           ],
                         ),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
-                          children: _timeSlots.where((slot) => !currentSlots.contains(slot)).map((slot) {
-                            return ActionChip(
+                          children: currentSlots.map((slot) {
+                            return InputChip(
                               label: Text(slot),
-                              labelStyle: const TextStyle(color: Color(0xFF2D3142), fontSize: 13),
-                              backgroundColor: const Color(0xFFF0F2F5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: Colors.grey[300]!, width: 1),
-                              ),
-                              onPressed: () {
+                              labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              backgroundColor: const Color(0xFF4D6AFF),
+                              deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white70),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide.none),
+                              onDeleted: () {
                                 setState(() {
-                                  _schedule[dayKey]!.add(slot);
-                                  _schedule[dayKey]!.sort(); 
+                                  _schedule[dayKey]!.remove(slot);
                                 });
                               },
                             );
                           }).toList(),
                         ),
-                        
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(height: 1),
-                        ),
-
-                        // Section 3: Add Custom Slot
-                        Center(
-                          child: InkWell(
-                            onTap: () => _showCustomTimePicker(dayKey),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF4D6AFF).withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF4D6AFF).withOpacity(0.2)),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.more_time_rounded, size: 20, color: Color(0xFF4D6AFF)),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Thêm khung giờ khác',
-                                    style: TextStyle(
-                                      color: Color(0xFF4D6AFF),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        const SizedBox(height: 20),
+                      ],
+                      const Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline, size: 16, color: Colors.amber),
+                          SizedBox(width: 8),
+                          Text('Gợi ý', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF4F5D75))),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _timeSlots.where((slot) => !currentSlots.contains(slot)).map((slot) {
+                          return ActionChip(
+                            label: Text(slot),
+                            labelStyle: const TextStyle(color: Color(0xFF2D3142), fontSize: 13),
+                            backgroundColor: const Color(0xFFF0F2F5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Colors.grey[300]!, width: 1),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _schedule[dayKey]!.add(slot);
+                                _schedule[dayKey]!.sort();
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(height: 1),
+                      ),
+                      Center(
+                        child: InkWell(
+                          onTap: () => _showCustomTimePicker(dayKey),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4D6AFF).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF4D6AFF).withOpacity(0.2)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.more_time_rounded, size: 20, color: Color(0xFF4D6AFF)),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Thêm khung giờ khác',
+                                  style: TextStyle(color: Color(0xFF4D6AFF), fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

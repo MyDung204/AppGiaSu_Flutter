@@ -157,6 +157,8 @@ class SharedLearningRepository {
         'description': req.description,
         'location': req.location,
         'price': req.pricePerSession,
+        'expected_opening_time': req.expectedOpeningTime?.toIso8601String(),
+        'quiz_id': req.quizId,
       });
       if (response != null) { // Assuming response is the JSON Map
          return GroupRequest.fromJson(response);
@@ -366,6 +368,8 @@ class SharedLearningRepository {
     try {
       await _client.post('/study-groups/$id/join');
       return true;
+    } on ApiException {
+      rethrow;
     } catch (e) {
       print('Error joining group: $e');
       return false;
@@ -396,6 +400,8 @@ class SharedLearningRepository {
     try {
       await _client.post('/study-groups/$id/leave');
       return true;
+    } on ApiException {
+      rethrow;
     } catch (e) {
       print('Error leaving group: $e');
       return false;
@@ -409,6 +415,18 @@ class SharedLearningRepository {
       return [];
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<bool> payGroupTuition(String groupId) async {
+    try {
+      await _client.post('/study-groups/$groupId/pay');
+      return true;
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      print('Error paying group tuition: $e');
+      return false;
     }
   }
 

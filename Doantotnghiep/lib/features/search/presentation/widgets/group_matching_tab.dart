@@ -39,6 +39,7 @@ class GroupMatchingTab extends ConsumerWidget {
 
     return Column(
       children: [
+        if (currentUser?.role == 'tutor')
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: SizedBox(
@@ -223,12 +224,32 @@ class GroupMatchingTab extends ConsumerWidget {
                     icon: const Icon(Icons.settings),
                     label: const Text('Kiểm tra nhóm'),
                   )
-                // Member status: Approved (already joined)
-                : isApproved
-                    ? const FilledButton(onPressed: null, child: Text('Đã tham gia'))
-                // Member status: Pending (waiting for approval)
-                : isPending
-                    ? const FilledButton.tonal(onPressed: null, child: Text('Đang chờ duyệt'))
+                // Member status: Approved (already joined) or Pending (waiting for approval)
+                : (isApproved || isPending)
+                    ? OutlinedButton.icon(
+                        onPressed: () {
+                          // Check 12 hour rule: "học viên có thể rời nhóm trước 12 giờ kể từ khi tham gia nhóm"
+                          final joinedAt = req.joinedAt;
+                          if (joinedAt != null && DateTime.now().difference(joinedAt).inHours >= 12) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Đã quá 12 giờ kể từ khi tham gia, bạn không thể rời nhóm này.'),
+                                backgroundColor: Colors.red.shade700,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+                          _showLeaveConfirmation(context, req, ref);
+                        },
+                        icon: const Icon(Icons.logout, size: 18),
+                        label: Text(isApproved ? 'Rời nhóm' : 'Hủy yêu cầu'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      )
                 // Member status: Rejected (request was rejected)
                 : isRejected
                      ? OutlinedButton(
@@ -334,5 +355,55 @@ class GroupMatchingTab extends ConsumerWidget {
   /// - Delete group
   void _showGroupManagement(BuildContext context, GroupRequest req) {
        context.push('/group-management', extra: req);
+  }
+
+  /// Show leave group confirmation dialog
+  void _showLeaveConfirmation(BuildContext context, GroupRequest req, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận rời nhóm'),
+        content: Text('Bạn có chắc chắn muốn rời khỏi nhóm "${req.subject}" không?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final repo = ref.read(sharedLearningRepositoryProvider);
+              try {
+                final success = await repo.leaveGroup(req.id);
+                if (success) {
+                    ref.invalidate(groupRequestsProvider);
+                    ref.invalidate(myAllGroupsProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã rời nhóm thành công!')),
+                      );
+                    }
+                } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Rời nhóm thất bại. Vui lòng thử lại.')),
+                      );
+                    }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text('Lỗi: $e')),
+                   );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Rời nhóm'),
+          ),
+        ],
+      ),
+    );
   }
 }

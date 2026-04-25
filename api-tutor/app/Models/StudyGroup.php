@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 class StudyGroup extends Model
 {
     use HasFactory;
-    protected $fillable = ['creator_id', 'topic', 'subject', 'grade_level', 'max_members', 'current_members', 'description', 'status', 'location', 'price'];
+    protected $fillable = ['creator_id', 'topic', 'subject', 'grade_level', 'max_members', 'current_members', 'description', 'status', 'location', 'price', 'expected_opening_time', 'payment_deadline'];
 
     public function creator()
     {

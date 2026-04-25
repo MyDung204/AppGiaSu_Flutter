@@ -17,6 +17,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 import 'package:doantotnghiep/features/notification/presentation/providers/notification_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_statistics_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_schedule_provider.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/domain/models/unified_schedule_item.dart';
 
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
 
@@ -154,7 +157,8 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     final bookingsAsync = ref.watch(bookingProvider);
     final user = ref.watch(authRepositoryProvider).currentUser;
 
-    final rating = user?.tutorProfile != null ? (user!.tutorProfile!['rating'] ?? 0.0).toString() : '0.0';
+    final statsAsync = ref.watch(tutorStatisticsProvider);
+    final stats = statsAsync.valueOrNull ?? {};
 
     return Scaffold(
       backgroundColor: EduTheme.background,
@@ -170,13 +174,14 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             ref.invalidate(tutorClassProvider);
             ref.invalidate(tutorRequestsProvider);
             ref.invalidate(bookingProvider);
+            ref.invalidate(tutorStatisticsProvider);
             ref.invalidate(authRepositoryProvider); // Refresh user profile (rating)
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(), // Ensure scroll even if content is short
             slivers: [
               // Enhanced Header
-              SliverToBoxAdapter(child: _buildEnhancedHeader(context, user, rating)),
+              SliverToBoxAdapter(child: _buildEnhancedHeader(context, user, rating, stats)),
               
               // Main Content
               SliverPadding(
@@ -184,7 +189,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     // Stats Grid (2x3)
-                    _buildStatsGrid(rating),
+                    _buildStatsGrid(rating, statsAsync),
                     const SizedBox(height: 24),
                     
                     // Booking Requests (NEW)
@@ -196,7 +201,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                     const SizedBox(height: 28),
                     
                     // Today's Schedule
-                    _buildTodaySchedule(context, classesAsync),
+                    _buildTodaySchedule(context, ref.watch(tutorScheduleProvider)),
                     const SizedBox(height: 28),
                     
                     // Performance Insights
@@ -221,7 +226,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
   }
 
   /// Enhanced Header with Avatar, Rating, Location
-  Widget _buildEnhancedHeader(BuildContext context, dynamic user, String rating) {
+  Widget _buildEnhancedHeader(BuildContext context, dynamic user, String rating, Map<String, dynamic> stats) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: BoxDecoration(
@@ -278,7 +283,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Xin chào, Gia sư!',
+                      'Chào mừng trở lại,',
                       style: TextStyle(fontSize: 13, color: Colors.white70),
                     ),
                     const SizedBox(height: 2),
@@ -304,7 +309,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                               const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
                               const SizedBox(width: 4),
                               Text(rating, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                              const Text(' (28)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              Text(' (${stats['review_count'] ?? 0})', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                             ],
                           ),
                         ),
@@ -315,11 +320,11 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.location_on_rounded, size: 12, color: Colors.white70),
-                              SizedBox(width: 2),
-                              Text('Hà Nội', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              const Icon(Icons.location_on_rounded, size: 12, color: Colors.white70),
+                              const SizedBox(width: 2),
+                              Text(stats['location'] ?? 'N/A', style: const TextStyle(color: Colors.white, fontSize: 11)),
                             ],
                           ),
                         ),
@@ -397,60 +402,62 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
   }
 
   /// Stats Grid 2x3
-  Widget _buildStatsGrid(String rating) {
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 0.85,
-      children: [
-        _buildStatCard(
-          icon: Icons.account_balance_wallet_rounded,
-          iconColor: EduTheme.success,
-          title: 'Thu nhập',
-          value: '2.5M đ',
-          subtitle: '↑ +15%',
-          trend: true,
-        ),
-        _buildStatCard(
-          icon: Icons.school_rounded,
-          iconColor: EduTheme.primary,
-          title: 'Lớp đang dạy',
-          value: '3',
-          subtitle: 'Đang hoạt động',
-        ),
-        _buildStatCard(
-          icon: Icons.people_rounded,
-          iconColor: EduTheme.secondary,
-          title: 'Học viên',
-          value: '15',
-          subtitle: 'Hiện tại',
-        ),
-        _buildStatCard(
-          icon: Icons.star_rounded,
-          iconColor: Colors.amber,
-          title: 'Đánh giá',
-          value: rating,
-          subtitle: '(28 reviews)',
-        ),
-        _buildStatCard(
-          icon: Icons.access_time_rounded,
-          iconColor: EduTheme.purple,
-          title: 'Giờ dạy',
-          value: '24h',
-          subtitle: 'Tháng này',
-        ),
-        _buildStatCard(
-          icon: Icons.trending_up_rounded,
-          iconColor: Colors.teal,
-          title: 'Tỉ lệ đặt',
-          value: '85%',
-          subtitle: '↑ +5%',
-          trend: true,
-        ),
-      ],
+  Widget _buildStatsGrid(String rating, AsyncValue<Map<String, dynamic>> statsAsync) {
+    return statsAsync.when(
+      data: (stats) => GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
+        children: [
+          _buildStatCard(
+            icon: Icons.account_balance_wallet_rounded,
+            iconColor: EduTheme.success,
+            title: 'Thu nhập',
+            value: NumberFormat.compactCurrency(locale: 'vi_VN', symbol: 'đ').format(stats['total_revenue'] ?? 0),
+            subtitle: 'Tổng cộng',
+          ),
+          _buildStatCard(
+            icon: Icons.school_rounded,
+            iconColor: EduTheme.primary,
+            title: 'Lớp đang dạy',
+            value: '${stats['active_classes'] ?? 0}',
+            subtitle: 'Đang hoạt động',
+          ),
+          _buildStatCard(
+            icon: Icons.people_rounded,
+            iconColor: EduTheme.secondary,
+            title: 'Học viên',
+            value: '${stats['total_students'] ?? 0}',
+            subtitle: 'Tất cả',
+          ),
+          _buildStatCard(
+            icon: Icons.star_rounded,
+            iconColor: Colors.amber,
+            title: 'Đánh giá',
+            value: rating,
+            subtitle: '(${stats['review_count'] ?? 0} reviews)',
+          ),
+          _buildStatCard(
+            icon: Icons.task_alt_rounded,
+            iconColor: EduTheme.purple,
+            title: 'Buổi dạy',
+            value: '${stats['completed_sessions'] ?? 0}',
+            subtitle: 'Đã hoàn thành',
+          ),
+          _buildStatCard(
+            icon: Icons.trending_up_rounded,
+            iconColor: Colors.teal,
+            title: 'Tỉ lệ đặt',
+            value: '${stats['booking_rate'] ?? 0}%',
+            subtitle: 'Duy trì tốt',
+          ),
+        ],
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => const SizedBox.shrink(),
     );
   }
 
@@ -765,16 +772,16 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             _buildQuickActionButton(
               context,
               icon: Icons.bar_chart_rounded,
-              label: 'Thống kê',
+              label: 'Ví & Thống kê',
               gradient: [Colors.pink, Colors.pinkAccent],
-              onTap: () => context.push('/tutor-dashboard/statistics'),
+              onTap: () => context.push('/tutor-dashboard/statistics?tab=0'),
             ),
             _buildQuickActionButton(
               context,
               icon: Icons.account_balance_wallet_rounded,
-              label: 'Học phí',
+              label: 'Thu nhập',
               gradient: [EduTheme.success, const Color(0xFF34D399)],
-              onTap: () => context.push('/tutor-dashboard/tuition'),
+              onTap: () => context.push('/tutor-dashboard/statistics?tab=1'),
             ),
           ],
         ),
@@ -860,213 +867,208 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     );
   }
 
-  /// Today's Schedule
-  Widget _buildTodaySchedule(BuildContext context, AsyncValue classesAsync) {
+  /// Today's Schedule - Merged 1-1 and Group Classes
+  Widget _buildTodaySchedule(BuildContext context, TutorScheduleState scheduleState) {
+    // Filter for today's items
+    final todayItems = scheduleState.unifiedSchedule.where((item) => item.isToday()).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: EduTheme.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.event_note_rounded, size: 18, color: EduTheme.primary),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: EduTheme.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.event_note_rounded, size: 18, color: EduTheme.primary),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Lịch dạy hôm nay',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EduTheme.textPrimary),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: EduMarquee(
-                text: 'Lớp học sắp tới hoặc lớp học hôm nay',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EduTheme.textPrimary),
-              ),
+            TextButton(
+              onPressed: () => context.push('/tutor-schedule-management'),
+              child: const Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13)),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        classesAsync.when(
-          skipLoadingOnRefresh: true,
-          data: (classes) {
-            if (classes.isEmpty) {
+        
+        if (scheduleState.isLoading)
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+        else if (todayItems.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: EduTheme.cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withOpacity(0.1)),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.free_breakfast_rounded, size: 40, color: EduTheme.textSecondary.withOpacity(0.5)),
+                  const SizedBox(height: 8),
+                  Text('Hôm nay bạn không có lịch dạy', style: TextStyle(color: EduTheme.textSecondary)),
+                ],
+              ),
+            ),
+          )
+        else
+          Column(
+            children: todayItems.map<Widget>((item) {
+              final isGroup = item.type == ScheduleType.group;
+              
               return Container(
-                padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: EduTheme.cardBg,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: (isGroup ? Colors.orange : EduTheme.primary).withOpacity(0.1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.free_breakfast_rounded, size: 40, color: EduTheme.textSecondary.withValues(alpha: 0.5)),
-                      const SizedBox(height: 8),
-                      Text('Không có lớp học hôm nay', style: TextStyle(color: EduTheme.textSecondary)),
-                    ],
+                child: InkWell(
+                  onTap: () {
+                    if (isGroup) {
+                      context.push('/class-detail', extra: item.originalItem);
+                    } else {
+                      // Handle booking detail
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: (isGroup ? Colors.orange : EduTheme.primary).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isGroup ? Icons.group_rounded : Icons.person_rounded,
+                                color: isGroup ? Colors.orange : EduTheme.primary,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: EduTheme.textPrimary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.access_time_rounded, size: 14, color: EduTheme.textSecondary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
+                                        style: TextStyle(color: EduTheme.textSecondary, fontSize: 13),
+                                      ),
+                                      if (isGroup) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'Lớp nhóm',
+                                            style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            if (item.studentName != null) ...[
+                              const Icon(Icons.person_outline, size: 14, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text(
+                                item.studentName!,
+                                style: TextStyle(color: EduTheme.textSecondary, fontSize: 12),
+                              ),
+                            ] else if (isGroup) ...[
+                              const Icon(Icons.people_outline, size: 14, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${(item.originalItem as Course).students.length} học viên',
+                                style: TextStyle(color: EduTheme.textSecondary, fontSize: 12),
+                              ),
+                            ],
+                            const Spacer(),
+                            // Action Buttons
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  // Video call logic
+                                  context.push('/video-call', extra: item.id);
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: isGroup 
+                                        ? [Colors.orange, Colors.orangeAccent]
+                                        : [EduTheme.success, const Color(0xFF34D399)]
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                                      SizedBox(width: 4),
+                                      Text('Bắt đầu', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
-            }
-            
-            // Take first 2 classes for demo
-            return Column(
-              children: classes.take(2).map<Widget>((cls) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: EduTheme.cardBg,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _getSubjectColor(cls.subject).withValues(alpha: 0.2)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: InkWell(
-                    onTap: () => context.push('/class-detail', extra: cls),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: _getSubjectColor(cls.subject).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(_getSubjectIcon(cls.subject), color: _getSubjectColor(cls.subject), size: 24),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      cls.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: EduTheme.textPrimary),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.access_time_rounded, size: 14, color: EduTheme.textSecondary),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '14:00 - 16:00',
-                                          style: TextStyle(color: EduTheme.textSecondary, fontSize: 13),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              // Student avatars
-                              SizedBox(
-                                height: 24,
-                                width: (cls.students.length > 3 ? 3 : cls.students.length) * 16.0 + 12.0,
-                                child: Stack(
-                                  children: List.generate(
-                                    (cls.students.length > 3 ? 3 : cls.students.length),
-                                    (index) => Positioned(
-                                      left: index * 12.0,
-                                      child: CircleAvatar(
-                                        radius: 12,
-                                        backgroundColor: EduTheme.primary.withValues(alpha: 0.2),
-                                        child: Text(
-                                          (cls.students[index]['name'] ?? 'H')[0].toUpperCase(),
-                                          style: const TextStyle(fontSize: 10, color: EduTheme.primary, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${cls.students.length} học viên',
-                                style: TextStyle(color: EduTheme.textSecondary, fontSize: 12),
-                              ),
-                              const Spacer(),
-                              // Action Buttons
-                              Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        content: const Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            CircularProgressIndicator(),
-                                            SizedBox(height: 16),
-                                            Text('Đang khởi tạo phòng học...'),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                    Future.delayed(const Duration(seconds: 2), () {
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                        context.push('/video-call', extra: cls.id);
-                                      }
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(colors: [EduTheme.success, Color(0xFF34D399)]),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Row(
-                                      children: [
-                                        Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
-                                        SizedBox(width: 4),
-                                        Text('Bắt đầu', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => context.push('/tutor-dashboard/messages'),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: EduTheme.primary.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(Icons.chat_bubble_rounded, color: EduTheme.primary, size: 16),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator(color: EduTheme.primary)),
-          error: (err, stack) => const SizedBox.shrink(),
-        ),
+            }).toList(),
+          ),
       ],
     );
   }

@@ -16,6 +16,7 @@ import 'package:doantotnghiep/core/network/api_constants.dart';
 import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/search/domain/models/search_filter.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Provider for TutorRepository
@@ -63,6 +64,15 @@ abstract class TutorRepository {
 
   /// Get Tutor Tuitions (Bookings)
   Future<List<Map<String, dynamic>>> getMyTuitions();
+
+  /// Get Tutor Materials
+  Future<List<Map<String, dynamic>>> getMyMaterials();
+
+  /// Upload Tutor Material
+  Future<Map<String, dynamic>> uploadMaterial(String filePath);
+
+  /// Delete Tutor Material
+  Future<bool> deleteMaterial(String id);
 }
 
 /// Implementation of TutorRepository
@@ -309,6 +319,50 @@ class TutorRepositoryImpl implements TutorRepository {
     } catch (e) {
       print('Error fetching tutor tuitions: $e');
       return [];
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getMyMaterials() async {
+    try {
+      final response = await _apiClient.get('/tutors/materials');
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(response);
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching tutor materials: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> uploadMaterial(String filePath) async {
+    try {
+      String fileName = filePath.split('/').last;
+      FormData formData = FormData.fromMap({
+        "material": await MultipartFile.fromFile(filePath, filename: fileName),
+      });
+      
+      final response = await _apiClient.post('/tutors/upload-material', data: formData);
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+      throw Exception('Invalid response format');
+    } catch (e) {
+      print('Error uploading material: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> deleteMaterial(String id) async {
+    try {
+      await _apiClient.delete('/tutors/materials/$id');
+      return true;
+    } catch (e) {
+      print('Error deleting material: $id, $e');
+      return false;
     }
   }
 }

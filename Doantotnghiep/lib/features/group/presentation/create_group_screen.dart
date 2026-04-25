@@ -3,7 +3,11 @@ import 'package:doantotnghiep/features/group/data/shared_learning_repository.dar
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:doantotnghiep/features/profile/presentation/view_models/profile_view_model.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:doantotnghiep/features/quiz/domain/models/quiz.dart' as quiz_model;
+import 'package:doantotnghiep/features/quiz/domain/controllers/quiz_controller.dart';
 
 class CreateGroupScreen extends ConsumerStatefulWidget {
   final GroupRequest? group;
@@ -22,18 +26,41 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _maxMembersController = TextEditingController(text: '3');
+  DateTime? _selectedOpeningTime;
+  int? _selectedQuizId;
+  String? _selectedQuizTitle;
+  final NumberFormat _currencyFormatter = NumberFormat.decimalPattern('vi_VN');
 
   @override
   void initState() {
     super.initState();
+    _priceController.addListener(_onPriceChanged);
     if (widget.group != null) {
       _topicController.text = widget.group!.topic;
       _subjectController.text = widget.group!.subject;
       _gradeController.text = widget.group!.gradeLevel;
       _locationController.text = widget.group!.location;
-      _priceController.text = widget.group!.pricePerSession.toInt().toString();
+      _priceController.text = _currencyFormatter.format(widget.group!.pricePerSession);
       _descController.text = widget.group!.description;
       _maxMembersController.text = widget.group!.maxMembers.toString();
+      _selectedOpeningTime = widget.group!.expectedOpeningTime;
+      _selectedQuizId = int.tryParse(widget.group!.quizId ?? '');
+    }
+  }
+
+  void _onPriceChanged() {
+    String text = _priceController.text.replaceAll('.', '');
+    if (text.isEmpty) return;
+    
+    double? value = double.tryParse(text);
+    if (value != null) {
+      String formatted = _currencyFormatter.format(value);
+      if (formatted != _priceController.text) {
+        _priceController.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      }
     }
   }
 
@@ -51,17 +78,36 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(profileViewModelProvider);
+    final isTutor = userAsync.value?.role == 'tutor';
+
+    if (!isTutor && widget.group == null) {
+       return Scaffold(
+         appBar: AppBar(title: const Text('Thông báo')),
+         body: const Center(
+           child: Padding(
+             padding: EdgeInsets.all(24.0),
+             child: Text(
+               'Chỉ Gia sư mới có quyền tạo lớp học nhóm. Vui lòng nâng cấp tài khoản hoặc liên hệ Admin.',
+               textAlign: TextAlign.center,
+               style: TextStyle(fontSize: 16),
+             ),
+           ),
+         ),
+       );
+    }
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.group != null ? 'Chỉnh sửa nhóm' : 'Tạo nhóm học mới', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.group != null ? 'Chỉnh sửa lớp nhóm' : 'Tạo lớp học nhóm mới', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.purple.withOpacity(0.1), Colors.blue.withOpacity(0.1)],
+              colors: [Colors.purple.withValues(alpha: 0.1), Colors.blue.withValues(alpha: 0.1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -84,11 +130,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -154,11 +200,44 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _descController,
-                      label: 'Mô tả thêm',
-                      hint: 'Yêu cầu về giáo viên, lịch học mong muốn, mục tiêu khóa học...',
+                      label: 'Mô tả lớp học',
+                      hint: 'Mô tả chi tiết nội dung, lộ trình học...',
                       icon: Icons.description_outlined,
                       maxLines: 3,
                       required: false,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildQuizPicker(context),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.calendar_today, color: Colors.blueAccent),
+                      title: const Text('Thời gian mở lớp dự kiến'),
+                      subtitle: Text(_selectedOpeningTime == null 
+                        ? 'Chưa chọn' 
+                        : DateFormat('dd/MM/yyyy HH:mm').format(_selectedOpeningTime!)),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedOpeningTime ?? DateTime.now().add(const Duration(days: 7)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null && mounted) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(_selectedOpeningTime ?? DateTime.now()),
+                            );
+                            if (time != null) {
+                              setState(() => _selectedOpeningTime = DateTime(
+                                date.year, date.month, date.day, time.hour, time.minute
+                              ));
+                            }
+                          }
+                        },
+                        child: const Text('Chọn thời gian'),
+                      ),
                     ),
                     const SizedBox(height: 32),
                     
@@ -173,7 +252,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                           elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: Text(widget.group != null ? 'Cập nhật nhóm' : 'Đăng tin tìm bạn học', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text(widget.group != null ? 'Cập nhật lớp học' : 'Tạo lớp học nhóm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -193,6 +272,87 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         title,
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
       ),
+    );
+  }
+
+  Widget _buildQuizPicker(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Bài kiểm tra đầu vào', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final quizzes = await ref.read(quizListProvider(null).future);
+            if (!mounted) return;
+            final selected = await showModalBottomSheet<quiz_model.Quiz>(
+              context: context,
+              builder: (context) => Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Chọn bài kiểm tra', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    if (quizzes.isEmpty)
+                      const Text('Bạn chưa tạo bài kiểm tra nào')
+                    else
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: quizzes.length,
+                          itemBuilder: (context, index) {
+                            final q = quizzes[index];
+                            return ListTile(
+                              title: Text(q.title),
+                              onTap: () => Navigator.pop(context, q),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+            if (selected != null) {
+              setState(() {
+                _selectedQuizId = selected.id;
+                _selectedQuizTitle = selected.title;
+              });
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.quiz_outlined, color: Colors.blueAccent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedQuizTitle ?? (_selectedQuizId != null ? 'Đã chọn ID: $_selectedQuizId' : 'Chọn bài kiểm tra (tuỳ chọn)'),
+                    style: TextStyle(color: _selectedQuizId != null ? Colors.black87 : Colors.grey.shade600),
+                  ),
+                ),
+                if (_selectedQuizId != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() {
+                      _selectedQuizId = null;
+                      _selectedQuizTitle = null;
+                    }),
+                  )
+                else
+                  const Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -225,8 +385,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   void _submitRequest() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedOpeningTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng chọn thời gian mở lớp dự kiến.')),
+        );
+        return;
+      }
+
       final isEditing = widget.group != null;
-      final price = double.tryParse(_priceController.text) ?? 0;
+      final price = double.tryParse(_priceController.text.replaceAll('.', '')) ?? 0;
       final maxMembers = int.tryParse(_maxMembersController.text) ?? 3;
 
       if (isEditing) {
@@ -240,6 +407,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             'location': _locationController.text,
             'description': _descController.text,
             'max_members': maxMembers,
+            'expected_opening_time': _selectedOpeningTime!.toIso8601String(),
+            'quiz_id': _selectedQuizId,
           }
         );
 
@@ -267,15 +436,18 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           location: _locationController.text,
           description: _descController.text,
           maxMembers: maxMembers,
+          currentMembers: 0, // Mặc định khi tạo nhóm số lượng là 0
           minMembers: 2,
           createdAt: DateTime.now(),
-          startTime: DateTime.now().add(const Duration(days: 3)),
+          startTime: _selectedOpeningTime!,
+          expectedOpeningTime: _selectedOpeningTime,
+          quizId: _selectedQuizId?.toString(),
         );
 
         final newGroup = await ref.read(sharedLearningRepositoryProvider).createStudyGroup(newRequest);
 
         if (newGroup != null && mounted) {
-          ref.refresh(groupRequestsProvider);
+          ref.invalidate(groupRequestsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Đã tạo nhóm thành công!'),

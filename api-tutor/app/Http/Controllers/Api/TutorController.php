@@ -2,7 +2,10 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Tutor;
+use App\Models\TutorMaterial;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class TutorController extends Controller
 {
@@ -91,7 +94,7 @@ class TutorController extends Controller
         $tutors = $query->get();
 
         if ($user = $request->user('sanctum')) {
-            $favoriteTutorIds = \DB::table('user_favorite_tutors')
+            $favoriteTutorIds = DB::table('user_favorite_tutors')
                 ->where('user_id', $user->id)
                 ->pluck('tutor_id')
                 ->toArray();
@@ -119,7 +122,7 @@ class TutorController extends Controller
         $data['is_favorite'] = false;
 
         if ($user = $request->user('sanctum')) {
-            $isFav = \DB::table('user_favorite_tutors')
+            $isFav = DB::table('user_favorite_tutors')
                 ->where('user_id', $user->id)
                 ->where('tutor_id', $id)
                 ->exists();
@@ -214,16 +217,57 @@ class TutorController extends Controller
         return response()->json(['message' => 'Profile updated successfully', 'tutor' => $tutor]);
     }
 
+    public function listMaterials(Request $request)
+    {
+        $user = $request->user();
+        $materials = TutorMaterial::where('tutor_id', $user->id)
+            ->latest()
+            ->get();
+        return response()->json($materials);
+    }
+
     public function uploadMaterial(Request $request)
     {
         $user = $request->user();
-        // Placeholder for material upload logic
-        // In a real app, we would store the file in storage and create a record in a materials table
-        return response()->json([
-            'message' => 'Material uploaded successfully (Mock)',
-            'file_name' => $request->file('material')?->getClientOriginalName() ?? 'unknown.pdf',
-            'uploaded_at' => now()->toDateTimeString(),
+        
+        $request->validate([
+            'material' => 'required|file|max:10240', // 10MB limit
         ]);
+
+        $file = $request->file('material');
+        $path = $file->store('tutor_materials', 'public');
+
+        $material = TutorMaterial::create([
+            'tutor_id' => $user->id,
+            'name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_type' => $file->getClientOriginalExtension(),
+            'file_size' => $this->formatBytes($file->getSize()),
+        ]);
+
+        return response()->json($material);
+    }
+
+    public function deleteMaterial(Request $request, $id)
+    {
+        $user = $request->user();
+        $material = TutorMaterial::where('tutor_id', $user->id)->findOrFail($id);
+
+        // Delete from storage
+        Storage::disk('public')->delete($material->file_path);
+        
+        $material->delete();
+
+        return response()->json(['message' => 'Material deleted successfully']);
+    }
+
+    private function formatBytes($bytes, $precision = 2) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 
     // --- FAVORITES (WISHLIST) ---
@@ -235,16 +279,16 @@ class TutorController extends Controller
         $tutor = Tutor::find($id);
         if (!$tutor) return response()->json(['message' => 'Tutor not found'], 404);
 
-        $existing = \DB::table('user_favorite_tutors')
+        $existing = DB::table('user_favorite_tutors')
             ->where('user_id', $user->id)
             ->where('tutor_id', $id)
             ->first();
 
         if ($existing) {
-            \DB::table('user_favorite_tutors')->where('id', $existing->id)->delete();
+            DB::table('user_favorite_tutors')->where('id', $existing->id)->delete();
             return response()->json(['message' => 'Đã bỏ yêu thích', 'is_favorite' => false]);
         } else {
-            \DB::table('user_favorite_tutors')->insert([
+            DB::table('user_favorite_tutors')->insert([
                 'user_id' => $user->id,
                 'tutor_id' => $id,
                 'created_at' => now(),
@@ -259,7 +303,7 @@ class TutorController extends Controller
         $user = $request->user();
         if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
 
-        $favoriteTutorIds = \DB::table('user_favorite_tutors')
+        $favoriteTutorIds = DB::table('user_favorite_tutors')
             ->where('user_id', $user->id)
             ->pluck('tutor_id')
             ->toArray();
@@ -287,34 +331,50 @@ class TutorController extends Controller
         $tutor = Tutor::where('user_id', $user->id)->first();
         if (!$tutor) return response()->json(['message' => 'Tutor not found'], 404);
 
-        $totalRevenue = \DB::table('bookings')
+        $totalRevenue = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->where('status', 'completed')
             ->sum('total_price');
 
-        $activeClasses = \DB::table('bookings')
+        $activeClasses = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->whereIn('status', ['upcoming', 'confirmed'])
             ->count();
 
-        $totalStudents = \DB::table('bookings')
+        $totalStudents = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->whereIn('status', ['completed', 'upcoming', 'confirmed'])
             ->distinct('user_id')
             ->count('user_id');
 
-        $completedSessions = \DB::table('bookings')
+        $completedSessions = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->where('status', 'completed')
             ->count();
+
+        // Tỉ lệ đặt lịch = (Số lịch được chấp nhận / Tổng số yêu cầu đã xử lý)
+        $totalProcessed = DB::table('bookings')
+            ->where('tutor_id', $tutor->id)
+            ->whereIn('status', ['confirmed', 'completed', 'rejected'])
+            ->count();
+        
+        $accepted = DB::table('bookings')
+            ->where('tutor_id', $tutor->id)
+            ->whereIn('status', ['confirmed', 'completed'])
+            ->count();
+            
+        $bookingRate = $totalProcessed > 0 ? round(($accepted / $totalProcessed) * 100) : 100;
 
         return response()->json([
             'total_revenue' => $totalRevenue,
             'active_classes' => $activeClasses,
             'total_students' => $totalStudents,
             'teaching_hours' => $completedSessions * 1.5, // Giả định mỗi buổi 1.5h
+            'completed_sessions' => $completedSessions,
             'rating' => $tutor->rating,
             'review_count' => $tutor->review_count,
+            'location' => $tutor->location ?? 'Chưa cập nhật',
+            'booking_rate' => $bookingRate,
             'completion_rate' => 95,
             'response_time' => '15p'
         ]);

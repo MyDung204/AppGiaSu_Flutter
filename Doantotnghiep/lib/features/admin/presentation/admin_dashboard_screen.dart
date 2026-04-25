@@ -46,8 +46,29 @@ class AdminDashboardScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await ref.read(authViewModelProvider.notifier).logout();
-              if (context.mounted) context.go('/login');
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Xác nhận thoát'),
+                  content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Quản trị không?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Đăng xuất'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await ref.read(authViewModelProvider.notifier).logout();
+                if (context.mounted) context.go('/login');
+              }
             },
             tooltip: 'Đăng xuất',
           ),

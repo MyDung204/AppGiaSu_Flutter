@@ -22,6 +22,8 @@ class Quiz {
     this.tutor,
   });
 
+  int get questionsCount => questions.length;
+
   factory Quiz.fromJson(Map<String, dynamic> json) {
     return Quiz(
       id: json['id'],

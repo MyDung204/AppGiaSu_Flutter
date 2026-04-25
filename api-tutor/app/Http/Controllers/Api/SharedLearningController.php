@@ -4,6 +4,10 @@ use App\Http\Controllers\Controller;
 use App\Models\StudyGroup;
 use App\Models\Course;
 use Illuminate\Http\Request;
+use App\Models\Wallet;
+use App\Models\Transaction;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class SharedLearningController extends Controller
 {
@@ -17,31 +21,42 @@ class SharedLearningController extends Controller
     // Get all Study Groups (Học ghép)
     public function indexGroups(Request $request)
     {
-        \Log::info('indexGroups called');
+        Log::info('indexGroups called');
         $query = StudyGroup::with('creator')->where('status', '!=', 'closed')->latest();
         $groups = $query->get();
 
         if ($user = $request->user('sanctum')) {
-            \Log::info('User authenticated: ' . $user->id);
-            $memberStatus = \DB::table('study_group_members')
+            Log::info('User authenticated: ' . $user->id);
+            $memberStatus = DB::table('study_group_members')
                 ->where('user_id', $user->id)
-                ->pluck('status', 'study_group_id');
+                ->pluck('status', 'study_group_id')
+                ->toArray();
 
-            \Log::info('MemberStatus: ' . $memberStatus);
+            $userPaymentStatus = DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->pluck('payment_status', 'study_group_id')
+                ->toArray();
 
-            $groups = $groups->map(function ($group) use ($memberStatus, $user) {
+            $joinedAt = DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->pluck('created_at', 'study_group_id')
+                ->toArray();
+
+            Log::info('MemberStatus: ' . json_encode($memberStatus));
+
+            $groups = $groups->map(function ($group) use ($memberStatus, $userPaymentStatus, $joinedAt, $user) {
                 $data = $group->toArray();
                 $data['membership_status'] = $memberStatus[$group->id] ?? null;
+                $data['payment_status'] = $userPaymentStatus[$group->id] ?? 'pending';
+                $data['joined_at'] = $joinedAt[$group->id] ?? null;
                 
-                // Calculate confirmed members count
-                $approvedCount = \DB::table('study_group_members')
+                // Calculate confirmed members count (excluding creator)
+                $approvedCount = DB::table('study_group_members')
                     ->where('study_group_id', $group->id)
                     ->where('status', 'approved')
+                    ->where('user_id', '!=', $group->creator_id)
                     ->count();
-                // Add creator if not already in members table (usually is, but for safety)
-                // Actually creator should be in members table as 'approved' or 'creator'
                 
-                $data['current_members'] = $APPROVED_COUNT_LOGIC_HERE ?? $approvedCount; // Let's just use the query result
                 $data['current_members'] = $approvedCount;
 
                 // --- NEW: Add Notification Logic ---
@@ -50,18 +65,17 @@ class SharedLearningController extends Controller
 
                 // Logic: If user is creator, count pending requests
                 if ($group->creator_id == $user->id) {
-                     $pendingCount = \DB::table('study_group_members')
+                     $pendingCount = DB::table('study_group_members')
                         ->where('study_group_id', $group->id)
                         ->where('status', 'pending')
                         ->count();
                      $data['pending_requests_count'] = $pendingCount;
                 }
                 
-                \Log::info("Group {$group->id} status: " . ($data['membership_status'] ?? 'null'));
                 return $data;
             });
         } else {
-            \Log::info('User NOT authenticated');
+            Log::info('User NOT authenticated');
         }
 
         return $groups;
@@ -87,7 +101,7 @@ class SharedLearningController extends Controller
 
         if ($user) {
             // Get detailed enrollment data
-            $enrollments = \DB::table('course_students')
+            $enrollments = DB::table('course_students')
                 ->where('user_id', $user->id)
                 ->where('status', 'approved')
                 ->get()
@@ -117,7 +131,7 @@ class SharedLearningController extends Controller
                 }
 
                 if ($course->tutor_id == $user->id) {
-                    $students = \DB::table('course_students')
+                    $students = DB::table('course_students')
                         ->join('users', 'course_students.user_id', '=', 'users.id')
                         ->where('course_students.course_id', $course->id)
                         ->where('course_students.status', 'approved')
@@ -127,7 +141,7 @@ class SharedLearningController extends Controller
 
                     $data['students'] = $students;
                 } else {
-                    $studentCount = \DB::table('course_students')
+                    $studentCount = DB::table('course_students')
                         ->where('course_id', $course->id)
                         ->where('status', 'approved')
                         ->count();
@@ -141,7 +155,7 @@ class SharedLearningController extends Controller
         } else {
             $courses = $courses->map(function ($course) {
                 $data = $course->toArray();
-                $studentCount = \DB::table('course_students')
+                $studentCount = DB::table('course_students')
                     ->where('course_id', $course->id)
                     ->where('status', 'approved')
                     ->count();
@@ -161,7 +175,7 @@ class SharedLearningController extends Controller
     {
         $user = $request->user();
         
-        $enrollment = \DB::table('course_students')
+        $enrollment = DB::table('course_students')
             ->where('course_id', $courseId)
             ->where('user_id', $user->id)
             ->first();
@@ -177,7 +191,7 @@ class SharedLearningController extends Controller
         // Trigger 3-day countdown
         $graceEnds = now()->addDays(3);
 
-        \DB::table('course_students')
+        DB::table('course_students')
             ->where('id', $enrollment->id)
             ->update([
                 'payment_status' => 'grace_period',
@@ -242,25 +256,35 @@ class SharedLearningController extends Controller
     // Create a Study Group
     public function storeGroup(Request $request)
     {
+        $user = $request->user();
+        
+        // Only Tutors (teachers) can create groups
+        if ($user->role !== 'teacher') {
+            return response()->json(['message' => 'Chỉ gia sư mới có quyền tạo lớp học nhóm.'], 403);
+        }
+
         $validated = $request->validate([
             'topic' => 'required|string',
             'subject' => 'required|string',
             'grade_level' => 'required|string',
             'max_members' => 'required|integer',
             'description' => 'required|string',
+            'price' => 'nullable|numeric',
+            'location' => 'nullable|string',
+            'expected_opening_time' => 'nullable|date',
         ]);
 
         $group = StudyGroup::create([
-            'creator_id' => $request->user()->id,
+            'creator_id' => $user->id,
             ...$validated,
-            'current_members' => 1,
+            'current_members' => 0,
             'status' => 'open'
         ]);
 
         // Add creator as member
-        \DB::table('study_group_members')->insert([
+        DB::table('study_group_members')->insert([
             'study_group_id' => $group->id,
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -314,7 +338,7 @@ class SharedLearningController extends Controller
         }
 
         // Check if already a member
-        $existing = \DB::table('study_group_members')
+        $existing = DB::table('study_group_members')
             ->where('study_group_id', $id)
             ->where('user_id', $user->id)
             ->first();
@@ -326,61 +350,168 @@ class SharedLearningController extends Controller
                      return response()->json(['message' => 'Nhóm đã đủ thành viên.'], 400);
                 }
 
-                \DB::table('study_group_members')
+                $creator = \App\Models\User::find($group->creator_id);
+                $isTutorGroup = $creator && $creator->role === 'teacher';
+
+                DB::table('study_group_members')
                     ->where('id', $existing->id)
                     ->update([
-                        'status' => 'pending',
+                        'status' => $isTutorGroup ? 'approved' : 'pending',
                         'updated_at' => now(),
                     ]);
 
-                    // Notify Creator
-            try {
-                \Log::info("Sending Re-join Notification to Creator: {$group->creator_id}");
-                $this->notificationService->sendToUser(
-                    $group->creator_id,
-                    'Yêu cầu tham gia lại',
-                    "{$user->name} muốn tham gia lại nhóm '{$group->topic}'",
-                    'group_request',
-                    ['group_id' => $id]
-                );
-            } catch (\Exception $e) {
-                \Log::error("Failed to send notification in joinGroup (re-join): " . $e->getMessage());
+                if ($isTutorGroup) {
+                    $group->increment('current_members');
+                    if ($group->current_members >= $group->max_members) {
+                        $group->update([
+                            'status' => 'full',
+                            'payment_deadline' => now()->addHours(24)
+                        ]);
+                    }
+                    return response()->json(['message' => 'Đã tham gia nhóm thành công.']);
+                }
+
+                // Notify Creator (for non-tutor groups if any exist, though restricted now)
+                try {
+                    $this->notificationService->sendToUser(
+                        $group->creator_id,
+                        'Yêu cầu tham gia lại',
+                        "{$user->name} muốn tham gia lại nhóm '{$group->topic}'",
+                        'group_request',
+                        ['group_id' => $id]
+                    );
+                } catch (\Exception $e) {}
+
+                return response()->json(['message' => 'Đã gửi lại yêu cầu tham gia. Chờ duyệt.']);
             }
-
-            return response()->json(['message' => 'Đã gửi lại yêu cầu tham gia. Chờ duyệt.']);
+            return response()->json(['message' => 'Bạn đã tham gia hoặc đang chờ duyệt.'], 400);
         }
-        return response()->json(['message' => 'Bạn đã tham gia hoặc đang chờ duyệt.'], 400);
+
+        if ($group->current_members >= $group->max_members) {
+            return response()->json(['message' => 'Nhóm đã đủ thành viên.'], 400);
+        }
+
+        // Check if Tutor Group for Auto-Approval
+        $creator = \App\Models\User::find($group->creator_id);
+        $isTutorGroup = $creator && $creator->role === 'teacher';
+
+        // Add to members table
+        DB::table('study_group_members')->insert([
+            'study_group_id' => $id,
+            'user_id' => $user->id,
+            'status' => $isTutorGroup ? 'approved' : 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($isTutorGroup) {
+            $group->increment('current_members');
+            if ($group->current_members >= $group->max_members) {
+                $group->update([
+                    'status' => 'full',
+                    'payment_deadline' => now()->addHours(24)
+                ]);
+            }
+            return response()->json(['message' => 'Đã tham gia nhóm thành công.']);
+        }
+
+        // Notify Creator
+        try {
+            $this->notificationService->sendToUser(
+                $group->creator_id,
+                'Yêu cầu tham gia nhóm',
+                "{$user->name} muốn tham gia nhóm '{$group->topic}'",
+                'group_request',
+                ['group_id' => $id]
+            );
+        } catch (\Exception $e) {}
+
+        return response()->json(['message' => 'Đã gửi yêu cầu tham gia. Chờ trưởng nhóm duyệt.']);
     }
 
-    if ($group->current_members >= $group->max_members) {
-        return response()->json(['message' => 'Nhóm đã đủ thành viên.'], 400);
+    /**
+     * Pay tuition for a Study Group using Wallet balance
+     */
+    public function payGroupTuition(Request $request, $id)
+    {
+        $user = $request->user();
+        $group = StudyGroup::findOrFail($id);
+
+        // 1. Check if member
+        $member = DB::table('study_group_members')
+            ->where('study_group_id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$member || $member->status !== 'approved') {
+            return response()->json(['message' => 'Bạn không phải là thành viên chính thức của nhóm này.'], 403);
+        }
+
+        // 2. Check if already paid
+        if ($member->payment_status === 'paid') {
+            return response()->json(['message' => 'Bạn đã thanh toán học phí cho nhóm này rồi.'], 400);
+        }
+
+        // 3. Check if group is full (payment only allowed when group is full)
+        if ($group->status !== 'full') {
+            return response()->json(['message' => 'Chỉ có thể thanh toán khi nhóm đã đủ thành viên.'], 400);
+        }
+
+        // 4. Process Payment
+        $price = $group->price_per_session;
+        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
+
+        if ($wallet->balance < $price) {
+            return response()->json(['message' => 'Số dư ví không đủ. Vui lòng nạp thêm tiền.'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Deduct from student wallet
+            $wallet->decrement('balance', $price);
+
+            // Create Transaction record for Student
+            Transaction::create([
+                'wallet_id' => $wallet->id,
+                'amount' => -$price,
+                'type' => 'payment',
+                'description' => "Thanh toán học phí nhóm: {$group->topic}",
+                'reference_id' => $group->id,
+                'status' => 'success'
+            ]);
+
+            // Update Member Payment Status
+            DB::table('study_group_members')
+                ->where('id', $member->id)
+                ->update(['payment_status' => 'paid', 'updated_at' => now()]);
+
+            // Credit Tutor (Creator) wallet
+            $creatorWallet = Wallet::firstOrCreate(['user_id' => $group->creator_id]);
+            $creatorWallet->increment('balance', $price);
+
+            // Create Transaction record for Tutor
+            Transaction::create([
+                'wallet_id' => $creatorWallet->id,
+                'amount' => $price,
+                'type' => 'earning',
+                'description' => "Học phí từ {$user->name} cho nhóm: {$group->topic}",
+                'reference_id' => $group->id,
+                'status' => 'success'
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Thanh toán thành công.',
+                'balance' => $wallet->balance
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Study Group Payment Error: " . $e->getMessage());
+            return response()->json(['message' => 'Lỗi hệ thống khi xử lý thanh toán.'], 500);
+        }
     }
-
-    // Add to members table as pending
-    \DB::table('study_group_members')->insert([
-        'study_group_id' => $id,
-        'user_id' => $user->id,
-        'status' => 'pending',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-
-    // Notify Creator
-    try {
-        \Log::info("Sending Join Notification to Creator: {$group->creator_id}");
-        $this->notificationService->sendToUser(
-            $group->creator_id,
-            'Yêu cầu tham gia nhóm',
-            "{$user->name} muốn tham gia nhóm '{$group->topic}'",
-            'group_request',
-            ['group_id' => $id]
-        );
-    } catch (\Exception $e) {
-         \Log::error("Failed to send notification in joinGroup: " . $e->getMessage());
-    }
-
-    return response()->json(['message' => 'Đã gửi yêu cầu tham gia. Chờ trưởng nhóm duyệt.']);
-}
 
 // Approve Member (Creator Only)
 public function approveMember(Request $request, $groupId, $userId)
@@ -395,7 +526,7 @@ public function approveMember(Request $request, $groupId, $userId)
             return response()->json(['message' => 'Nhóm đã đầy.'], 400);
         }
 
-        $member = \DB::table('study_group_members')
+        $member = DB::table('study_group_members')
             ->where('study_group_id', $groupId)
             ->where('user_id', $userId)
             ->first();
@@ -404,7 +535,7 @@ public function approveMember(Request $request, $groupId, $userId)
             return response()->json(['message' => 'Member not found'], 404);
         }
 
-        \DB::table('study_group_members')
+        DB::table('study_group_members')
             ->where('id', $member->id)
             ->update(['status' => 'approved']);
 
@@ -426,7 +557,7 @@ public function approveMember(Request $request, $groupId, $userId)
                 ['group_id' => $groupId]
             );
         } catch (\Exception $e) {
-            \Log::error("Failed to notify approveMember: " . $e->getMessage());
+            Log::error("Failed to notify approveMember: " . $e->getMessage());
         }
 
         return response()->json(['message' => 'Đã duyệt thành viên.']);
@@ -441,7 +572,7 @@ public function approveMember(Request $request, $groupId, $userId)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $member = \DB::table('study_group_members')
+        $member = DB::table('study_group_members')
             ->where('study_group_id', $groupId)
             ->where('user_id', $userId)
             ->first();
@@ -451,7 +582,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Update status to rejected
-        \DB::table('study_group_members')
+        DB::table('study_group_members')
             ->where('id', $member->id)
             ->update(['status' => 'rejected']);
 
@@ -465,7 +596,7 @@ public function approveMember(Request $request, $groupId, $userId)
                 ['group_id' => $groupId]
             );
         } catch (\Exception $e) {
-             \Log::error("Failed to notify rejectMember: " . $e->getMessage());
+             Log::error("Failed to notify rejectMember: " . $e->getMessage());
         }
 
         return response()->json(['message' => 'Đã từ chối thành viên.']);
@@ -481,7 +612,7 @@ public function approveMember(Request $request, $groupId, $userId)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $member = \DB::table('study_group_members')
+        $member = DB::table('study_group_members')
             ->where('study_group_id', $groupId)
             ->where('user_id', $userId)
             ->first();
@@ -491,7 +622,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Delete member
-        \DB::table('study_group_members')
+        DB::table('study_group_members')
             ->where('id', $member->id)
             ->delete();
 
@@ -511,7 +642,7 @@ public function approveMember(Request $request, $groupId, $userId)
                 ['group_id' => $groupId]
             );
         } catch (\Exception $e) {
-            \Log::error("Failed to notify removeMember: " . $e->getMessage());
+            Log::error("Failed to notify removeMember: " . $e->getMessage());
         }
 
         return response()->json(['message' => 'Đã xóa thành viên khỏi nhóm.']);
@@ -523,16 +654,26 @@ public function approveMember(Request $request, $groupId, $userId)
         $user = $request->user();
         $group = StudyGroup::findOrFail($id);
 
-        // Check if user was approved before deleting
-        $member = \DB::table('study_group_members')
+        // Creator cannot leave (they must delete or close)
+        if ($group->creator_id === $user->id) {
+            return response()->json(['message' => 'Trưởng nhóm không thể rời nhóm. Hãy đóng hoặc xóa nhóm.'], 400);
+        }
+
+        $member = DB::table('study_group_members')
             ->where('study_group_id', $id)
             ->where('user_id', $user->id)
             ->first();
 
         if ($member) {
+            // Check 12-hour limit: "học viên có thể rời nhóm trước 12 giờ kể từ khi tham gia nhóm"
+            $joinedAt = \Carbon\Carbon::parse($member->created_at);
+            if ($joinedAt->diffInHours(now()) >= 12) {
+                return response()->json(['message' => 'Bạn chỉ có thể rời nhóm trong vòng 12 giờ kể từ khi tham gia.'], 400);
+            }
+
             $wasApproved = $member->status === 'approved';
 
-            \DB::table('study_group_members')->where('id', $member->id)->delete();
+            DB::table('study_group_members')->where('id', $member->id)->delete();
 
             if ($wasApproved) {
                 $group->decrement('current_members');
@@ -546,10 +687,10 @@ public function approveMember(Request $request, $groupId, $userId)
     // Get Members
     public function getGroupMembers($id)
     {
-        $members = \DB::table('study_group_members')
+        $members = DB::table('study_group_members')
             ->join('users', 'study_group_members.user_id', '=', 'users.id')
             ->where('study_group_id', $id)
-            ->select('users.id', 'users.name', 'users.phone_number', 'study_group_members.status', 'study_group_members.joined_at')
+            ->select('users.id', 'users.name', 'users.phone_number', 'study_group_members.status', 'study_group_members.payment_status', 'study_group_members.joined_at')
             ->get();
 
         return response()->json($members);
@@ -566,7 +707,7 @@ public function approveMember(Request $request, $groupId, $userId)
 
         try {
             // Get study groups where user is a member
-            $groupIds = \DB::table('study_group_members')
+            $groupIds = DB::table('study_group_members')
                 ->where('user_id', $user->id)
                 ->whereIn('status', ['approved', 'pending'])
                 ->pluck('study_group_id')
@@ -588,9 +729,19 @@ public function approveMember(Request $request, $groupId, $userId)
             }
 
             // Get membership status
-            $memberStatus = \DB::table('study_group_members')
+            $memberStatus = DB::table('study_group_members')
                 ->where('user_id', $user->id)
                 ->pluck('status', 'study_group_id')
+                ->toArray();
+
+            $userPaymentStatus = DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->pluck('payment_status', 'study_group_id')
+                ->toArray();
+
+            $joinedAt = DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->pluck('created_at', 'study_group_id')
                 ->toArray();
 
             // Map groups to array format
@@ -604,9 +755,11 @@ public function approveMember(Request $request, $groupId, $userId)
 
                 // Add membership status
                 $data['membership_status'] = $memberStatus[$group->id] ?? null;
+                $data['payment_status'] = $userPaymentStatus[$group->id] ?? 'pending';
+                $data['joined_at'] = $joinedAt[$group->id] ?? null;
 
                 // Calculate confirmed members count
-                $approvedCount = \DB::table('study_group_members')
+                $approvedCount = DB::table('study_group_members')
                     ->where('study_group_id', $group->id)
                     ->where('status', 'approved')
                     ->count();
@@ -618,7 +771,7 @@ public function approveMember(Request $request, $groupId, $userId)
 
                 // Logic: If user is creator, count pending requests
                 if ($group->creator_id == $user->id) {
-                     $pendingCount = \DB::table('study_group_members')
+                     $pendingCount = DB::table('study_group_members')
                         ->where('study_group_id', $group->id)
                         ->where('status', 'pending')
                         ->count();
@@ -650,8 +803,8 @@ public function approveMember(Request $request, $groupId, $userId)
 
             return response()->json($result);
         } catch (\Exception $e) {
-            \Log::error('Error in myStudyGroups: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error in myStudyGroups: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'message' => 'Lỗi khi lấy danh sách nhóm học tập của bạn.',
                 'error' => $e->getMessage()
@@ -690,7 +843,7 @@ public function approveMember(Request $request, $groupId, $userId)
         $course = Course::findOrFail($id);
 
         // Kiểm tra xem user đã đăng ký chưa
-        $existing = \DB::table('course_students')
+        $existing = DB::table('course_students')
             ->where('course_id', $id)
             ->where('user_id', $user->id)
             ->first();
@@ -700,7 +853,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Kiểm tra số lượng học viên hiện tại
-        $currentStudents = \DB::table('course_students')
+        $currentStudents = DB::table('course_students')
             ->where('course_id', $id)
             ->where('status', 'approved')
             ->count();
@@ -720,7 +873,7 @@ public function approveMember(Request $request, $groupId, $userId)
         $paymentStatus = $price > 0 ? 'trial' : 'paid';
         $nextPaymentDue = $price > 0 ? now()->addDays(7) : null;
 
-        \DB::table('course_students')->insert([
+        DB::table('course_students')->insert([
             'course_id' => $id,
             'user_id' => $user->id,
             'status' => 'approved',
@@ -762,7 +915,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Xóa record trong bảng course_students
-        $deleted = \DB::table('course_students')
+        $deleted = DB::table('course_students')
             ->where('course_id', $id)
             ->where('user_id', $user->id)
             ->delete();
@@ -826,7 +979,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Check student existence
-        $studentRecord = \DB::table('course_students')
+        $studentRecord = DB::table('course_students')
             ->where('course_id', $id)
             ->where('user_id', $studentId)
             ->first();
@@ -879,7 +1032,7 @@ public function approveMember(Request $request, $groupId, $userId)
         }
 
         // Remove from course
-        \DB::table('course_students')
+        DB::table('course_students')
             ->where('id', $studentRecord->id)
             ->delete();
 
@@ -898,7 +1051,7 @@ public function approveMember(Request $request, $groupId, $userId)
                 ['course_id' => $id]
             );
         } catch (\Exception $e) {
-            \Log::error("Failed to notify kicked student: " . $e->getMessage());
+            Log::error("Failed to notify kicked student: " . $e->getMessage());
         }
 
         return response()->json(['message' => $message]);
@@ -922,7 +1075,7 @@ public function approveMember(Request $request, $groupId, $userId)
 
         try {
             // Lấy course IDs mà user đã đăng ký (với status approved)
-            $enrolledCourseIds = \DB::table('course_students')
+            $enrolledCourseIds = DB::table('course_students')
                 ->where('user_id', $user->id)
                 ->where('status', 'approved')
                 ->pluck('course_id')

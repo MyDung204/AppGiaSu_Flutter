@@ -27,14 +27,20 @@ class _EkycUpdateScreenState extends ConsumerState<EkycUpdateScreen> {
   Future<void> _pickImage(Function(File) onPicked) async {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Wrap(
-            children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Tải ảnh lên từ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Chụp ảnh'),
+              leading: const Icon(Icons.camera_alt, color: Colors.blue),
+              title: const Text('Chụp ảnh mới'),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -48,8 +54,8 @@ class _EkycUpdateScreenState extends ConsumerState<EkycUpdateScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Chọn từ thư viện'),
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('Chọn từ thư viện ảnh'),
               onTap: () async {
                 Navigator.pop(ctx);
                 try {
@@ -62,8 +68,8 @@ class _EkycUpdateScreenState extends ConsumerState<EkycUpdateScreen> {
                 }
               },
             ),
+            const SizedBox(height: 16),
           ],
-          ),
         ),
       ),
     );
@@ -74,6 +80,16 @@ class _EkycUpdateScreenState extends ConsumerState<EkycUpdateScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Xác thực danh tính (eKYC)'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/profile');
+            }
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

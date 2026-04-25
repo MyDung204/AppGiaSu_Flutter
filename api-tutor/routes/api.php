@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->post('/study-groups/{id}/members/{userId}/app
 Route::middleware('auth:sanctum')->post('/study-groups/{id}/members/{userId}/reject', [SharedLearningController::class, 'rejectMember']);
 Route::middleware('auth:sanctum')->delete('/study-groups/{id}/members/{userId}', [SharedLearningController::class, 'removeMember']);
 Route::middleware('auth:sanctum')->post('/study-groups/{id}/leave', [SharedLearningController::class, 'leaveGroup']);
+Route::middleware('auth:sanctum')->post('/study-groups/{id}/pay', [SharedLearningController::class, 'payGroupTuition']);
 Route::get('/study-groups/{id}/members', [SharedLearningController::class, 'getGroupMembers']);
 
 Route::get('/tutors', [TutorController::class, 'index']);
@@ -133,7 +134,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet/pin/verify', [App\Http\Controllers\Api\WalletController::class, 'verifyPin']);
 
     Route::post('/tutors/update-profile', [TutorController::class, 'updateProfile']);
+    Route::get('/tutors/materials', [TutorController::class, 'listMaterials']);
     Route::post('/tutors/upload-material', [TutorController::class, 'uploadMaterial']);
+    Route::delete('/tutors/materials/{id}', [TutorController::class, 'deleteMaterial']);
 });
 
 // Tutor Requests

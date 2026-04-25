@@ -473,7 +473,10 @@ class AppRouter {
               ),
               GoRoute(
                  path: 'statistics',
-                 builder: (context, state) => const TutorStatisticsScreen(),
+                 builder: (context, state) {
+                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    return TutorStatisticsScreen(initialTab: tab);
+                 },
               ),
               GoRoute(
                  path: 'blog',

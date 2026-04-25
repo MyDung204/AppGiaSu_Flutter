@@ -8,12 +8,19 @@ class QuizRepository {
 
   QuizRepository(this._apiClient);
 
-  Future<List<Quiz>> getQuizzes({int? tutorId}) async {
+  Future<List<Quiz>> getQuizzes({int? tutorId, int? courseId}) async {
+    final Map<String, dynamic> params = {};
+    if (tutorId != null) params['tutor_id'] = tutorId;
+    if (courseId != null) params['course_id'] = courseId;
+    
     final response = await _apiClient.get(
       '/quizzes',
-      queryParameters: tutorId != null ? {'tutor_id': tutorId} : null,
+      queryParameters: params.isEmpty ? null : params,
     );
-    return (response.data as List).map((e) => Quiz.fromJson(e)).toList();
+    
+    // Note: Some API responses return the list directly, others wrap in a data field
+    final List listData = response is List ? response : (response['data'] ?? []);
+    return listData.map((e) => Quiz.fromJson(e)).toList();
   }
 
   Future<Quiz> getQuizDetail(int id) async {

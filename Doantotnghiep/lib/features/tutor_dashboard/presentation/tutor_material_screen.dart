@@ -1,32 +1,18 @@
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_material_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class TutorMaterialScreen extends StatefulWidget {
+class TutorMaterialScreen extends ConsumerStatefulWidget {
   const TutorMaterialScreen({super.key});
 
   @override
-  State<TutorMaterialScreen> createState() => _TutorMaterialScreenState();
+  ConsumerState<TutorMaterialScreen> createState() => _TutorMaterialScreenState();
 }
 
-class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
-  // Mock data for materials
-  final List<Map<String, dynamic>> _materials = [
-    {
-      'name': 'Giao_trinh_Toan_10_Nang_cao.pdf',
-      'type': 'PDF',
-      'size': '2.4 MB',
-      'date': DateTime.now().subtract(const Duration(days: 2)),
-    },
-    {
-      'name': 'Bai_tap_on_tap_chuong_1.docx',
-      'type': 'DOCX',
-      'size': '850 KB',
-      'date': DateTime.now().subtract(const Duration(days: 5)),
-    },
-  ];
-
+class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
   Future<void> _pickFile() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -35,7 +21,8 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
       );
 
       if (result != null) {
-        PlatformFile file = result.files.first;
+        String? filePath = result.files.single.path;
+        if (filePath == null) return;
         
         // Show loading
         if (mounted) {
@@ -46,22 +33,20 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
           );
         }
 
-        // Simulate upload
-        await Future.delayed(const Duration(seconds: 2));
+        // Upload using provider
+        final success = await ref.read(tutorMaterialsProvider.notifier).uploadMaterial(filePath);
 
         if (mounted) {
           Navigator.pop(context); // Close loading
-          setState(() {
-            _materials.insert(0, {
-              'name': file.name,
-              'type': file.extension?.toUpperCase() ?? 'FILE',
-              'size': '${(file.size / 1024).toStringAsFixed(1)} KB',
-              'date': DateTime.now(),
-            });
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tải lên tài liệu thành công!'), backgroundColor: Colors.green),
-          );
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Tải lên tài liệu thành công!'), backgroundColor: Colors.green),
+            );
+          } else {
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Lỗi tải lên tài liệu'), backgroundColor: Colors.red),
+            );
+          }
         }
       }
     } catch (e) {
@@ -71,38 +56,83 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
     }
   }
 
+  Future<void> _deleteMaterial(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc chắn muốn xóa tài liệu này không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final success = await ref.read(tutorMaterialsProvider.notifier).deleteMaterial(id);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Đã xóa tài liệu')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lỗi khi xóa tài liệu'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final materialsAsync = ref.watch(tutorMaterialsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quản lý tài liệu'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.read(tutorMaterialsProvider.notifier).fetchMaterials(),
+          ),
+        ],
       ),
-      body: _materials.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_open_outlined, size: 60, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('Chưa có tài liệu nào', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _pickFile,
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('Tải lên ngay'),
-                  ),
-                ],
+      body: materialsAsync.when(
+        data: (materials) => materials.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.folder_open_outlined, size: 60, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text('Chưa có tài liệu nào', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _pickFile,
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Tải lên ngay'),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: materials.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final material = materials[index];
+                  return _buildMaterialCard(material);
+                },
               ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _materials.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final material = _materials[index];
-                return _buildMaterialCard(material);
-              },
-            ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Lỗi: $e')),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _pickFile,
         label: const Text('Thêm tài liệu'),
@@ -116,8 +146,10 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
   Widget _buildMaterialCard(Map<String, dynamic> material) {
     IconData iconData;
     Color iconColor;
+    
+    final type = (material['file_type'] ?? '').toUpperCase();
 
-    switch (material['type']) {
+    switch (type) {
       case 'PDF':
         iconData = Icons.picture_as_pdf;
         iconColor = Colors.red;
@@ -126,6 +158,11 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
       case 'DOC':
         iconData = Icons.description;
         iconColor = Colors.blue;
+        break;
+      case 'PPTX':
+      case 'PPT':
+        iconData = Icons.slideshow_rounded;
+        iconColor = Colors.orange;
         break;
       default:
         iconData = Icons.insert_drive_file;
@@ -164,17 +201,31 @@ class _TutorMaterialScreenState extends State<TutorMaterialScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${material['size']} • ${DateFormat('dd/MM/yyyy').format(material['date'])}',
+                  '${material['file_size']} • ${DateFormat('dd/MM/yyyy').format(DateTime.parse(material['created_at']))}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 ),
               ],
             ),
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.grey),
-            onPressed: () {
-              // Show options: Delete, Rename, etc.
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deleteMaterial(material['id'].toString());
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    SizedBox(width: 8),
+                    Text('Xóa', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

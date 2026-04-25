@@ -10,6 +10,7 @@ import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/chat/data/firebase_chat_repository.dart'; // Added
 import 'package:doantotnghiep/features/chat/presentation/group_chat_screen.dart'; // Added
 import 'package:cloud_firestore/cloud_firestore.dart'; // Added
+import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 
 class GroupDetailScreen extends ConsumerStatefulWidget {
   final GroupRequest group;
@@ -75,7 +76,62 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     // For now, we rely on the passed object or could fetch by ID if API supported it
   }
 
+  Future<void> _joinGroup() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tham gia nhóm?'),
+        content: const Text('Bạn có chắc chắn muốn đăng ký tham gia nhóm học tập này không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Đăng ký'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final success = await ref.read(sharedLearningRepositoryProvider).joinGroup(_group.id);
+        if (success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gửi yêu cầu tham gia thành công')));
+            ref.invalidate(groupRequestsProvider);
+            context.pop(true);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          String message = 'Lỗi khi tham gia nhóm';
+          if (e is ApiException) message = e.userMessage;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Future<void> _leaveGroup() async {
+    final now = DateTime.now();
+    final joinedAt = _group.joinedAt;
+    
+    if (joinedAt != null) {
+      final hoursJoined = now.difference(joinedAt).inHours;
+      if (hoursJoined >= 12) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bạn chỉ có thể rời nhóm trong vòng 12 giờ kể từ khi tham gia.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -109,13 +165,57 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           if (mounted) {
              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã rời nhóm thành công')));
              ref.invalidate(myJoinedGroupsProvider); // Refresh list
-             context.pop();
+             context.pop(true);
           }
-        } else {
-           if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi rời nhóm')));
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        if (mounted) {
+          String message = 'Lỗi khi rời nhóm';
+          if (e is ApiException) message = e.userMessage;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _payTuition() async {
+    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Thanh toán học phí'),
+        content: Text('Bạn sẽ thanh toán ${currencyFormat.format(_group.pricePerSession)} từ ví cá nhân. Tiếp tục?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Thanh toán'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final success = await ref.read(sharedLearningRepositoryProvider).payGroupTuition(_group.id);
+        if (success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thanh toán thành công!')));
+            setState(() {
+              _group = _group.copyWith(paymentStatus: 'paid');
+            });
+            ref.invalidate(myJoinedGroupsProvider);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          String message = 'Lỗi khi thanh toán';
+          if (e is ApiException) message = e.userMessage;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -142,8 +242,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                     ref.invalidate(groupRequestsProvider); // Ensure the list also refreshes
                  }
               },
+            )
+          else if (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member' || _group.membershipStatus == 'pending')
+            IconButton(
+              icon: const Icon(Icons.exit_to_app, color: Colors.red),
+              onPressed: _isLoading ? null : _leaveGroup,
+              tooltip: 'Rời nhóm',
             ),
-          // Note: Members cannot leave - only creator can remove them via management
         ],
       ),
       body: SingleChildScrollView(
@@ -178,6 +283,18 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   ),
                   const Divider(height: 24),
                   _buildInfoRow(Icons.calendar_today, 'Ngày bắt đầu:', DateFormat('dd/MM/yyyy').format(_group.startTime)),
+                  if (_group.expectedOpeningTime != null) ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(Icons.timer_outlined, 'Dự kiến mở:', DateFormat('dd/MM/yyyy HH:mm').format(_group.expectedOpeningTime!)),
+                  ],
+                  if (_group.quizId != null) ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(Icons.quiz_outlined, 'Bài kiểm tra:', 'Yêu cầu hoàn thành đầu vào', valueColor: Colors.blue),
+                  ],
+                  if (_group.paymentDeadline != null && (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member') && _group.paymentStatus == 'pending') ...[
+                    const SizedBox(height: 12),
+                    _buildPaymentDeadlineRow(),
+                  ],
                   const SizedBox(height: 12),
                   _buildInfoRow(Icons.location_on_outlined, 'Địa điểm:', _group.location),
                   const SizedBox(height: 12),
@@ -221,19 +338,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: !isCreator && (_group.membershipStatus == null || _group.membershipStatus == 'rejected') 
-          ? Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)]),
-              child: ElevatedButton(
-                onPressed: () {
-                  // Join Request Logic (Reuse existing flow)
-                },
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: EduTheme.primary),
-                child: const Text('Tham gia nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            )
-          : null,
+      bottomNavigationBar: _buildBottomBar(isCreator),
       // Floating Chat Bubble
       floatingActionButton: (isCreator || _group.membershipStatus == 'approved' || _group.membershipStatus == 'member')
           ? FloatingActionButton.extended(
@@ -273,14 +378,99 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildBottomBar(bool isCreator) {
+    if (isCreator) return const SizedBox.shrink();
+
+    // 1. Not a member or rejected
+    if (_group.membershipStatus == null || _group.membershipStatus == 'rejected') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)]),
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _joinGroup,
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: EduTheme.primary),
+          child: const Text('Tham gia nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
+
+    // 2. Member but group is full and hasn't paid
+    if (_group.status == 'full' && (_group.membershipStatus == 'approved' || _group.membershipStatus == 'member') && _group.paymentStatus == 'pending') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)]),
+        child: ElevatedButton.icon(
+          onPressed: _isLoading ? null : _payTuition,
+          icon: const Icon(Icons.payment, color: Colors.white),
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: Colors.green),
+          label: const Text('Thanh toán học phí', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
+
+    // 3. Already paid
+    if (_group.paymentStatus == 'paid') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)]),
+        child: OutlinedButton.icon(
+          onPressed: null,
+          icon: const Icon(Icons.check_circle, color: Colors.green),
+          label: const Text('Đã thanh toán', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildPaymentDeadlineRow() {
+    final now = DateTime.now();
+    final deadline = _group.paymentDeadline!;
+    final difference = deadline.difference(now);
+    
+    String timeStr;
+    if (difference.isNegative) {
+      timeStr = "Đã quá hạn";
+    } else {
+      final hours = difference.inHours;
+      final minutes = difference.inMinutes % 60;
+      timeStr = "Còn $hours giờ $minutes phút";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade100),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.timer_outlined, color: Colors.red, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Hạn thanh toán học phí', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 13)),
+                Text(timeStr, style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value, {Color? valueColor}) {
     return Row(
       children: [
         Icon(icon, size: 20, color: Colors.grey[600]),
         const SizedBox(width: 8),
         Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
         const SizedBox(width: 8),
-        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15))),
+        Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15, color: valueColor))),
       ],
     );
   }

@@ -12,6 +12,7 @@ class Quiz extends Model
 
     protected $fillable = [
         'tutor_id',
+        'course_id',
         'title',
         'description',
         'time_limit_minutes',
@@ -21,11 +22,17 @@ class Quiz extends Model
     protected $casts = [
         'is_published' => 'boolean',
         'time_limit_minutes' => 'integer',
+        'course_id' => 'integer',
     ];
 
     public function tutor()
     {
         return $this->belongsTo(User::class, 'tutor_id');
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class);
     }
 
     public function questions()

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_announcements_tab.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_assignments_tab.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/widgets/class_quiz_tab.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -49,7 +50,7 @@ class ClassDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: _EduTheme.background,
       body: DefaultTabController(
-        length: 4,
+        length: 5,
         child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
@@ -86,6 +87,7 @@ class ClassDetailScreen extends ConsumerWidget {
                     Tab(text: "Tổng quan"),
                     Tab(text: "Bảng tin"),
                     Tab(text: "Bài tập"),
+                    Tab(text: "Trắc nghiệm"),
                     Tab(text: "Mọi người"),
                   ],
                 ),
@@ -134,7 +136,12 @@ class ClassDetailScreen extends ConsumerWidget {
                         ? _buildRestrictedAccessView()
                         : ClassAssignmentsTab(course: course, isTutor: isTutor),
                   
-                    // 4. People Tab
+                    // 4. Quiz Tab
+                    shouldBlockAccess && !isTutor
+                        ? _buildRestrictedAccessView()
+                        : ClassQuizTab(course: course, isTutor: isTutor),
+
+                    // 5. People Tab
                     SingleChildScrollView(
                        padding: const EdgeInsets.all(20),
                        child: Column(
