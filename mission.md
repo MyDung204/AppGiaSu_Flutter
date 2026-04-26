@@ -1,8 +1,10 @@
 # 📋 Danh Sách Nhiệm Vụ - TutorApp (Góp ý từ bạn)
 
 > **Cập nhật lần cuối:** 2026-04-26
-> **Trạng thái Audit:** PERFECT 🌟
-> **Tổng nhiệm vụ:** 33 | ✅ Đã xong: 21 | 🔧 Làm một phần: 3 | ⬜ Chưa làm: 9
+> **Trạng thái Audit:** CODE MATCH TỐT, CHƯA VERIFY RUNTIME ĐẦY ĐỦ ⚠️
+> **Tổng nhiệm vụ:** 33 | ✅ Đã có bằng chứng trong code: 27 | 🔧 Làm một phần / cần verify thêm: 1 | ⬜ Chưa làm: 5
+>
+> **Quy ước audit hiện tại:** dấu `x` trong file này ưu tiên nghĩa là **đã có bằng chứng rõ trong code**; không mặc định đồng nghĩa với **đã test end-to-end trên app thật**.
 
 ---
 
@@ -25,19 +27,22 @@
   > ✅ **Backend:** `SharedLearningController.php:344,387` → `$isTutorGroup ? 'approved' : 'pending'`
 
 - [x] **A1.5** (Perfect ✅) Học viên có thể rời nhóm trước 12 giờ kể từ khi tham gia
-  > ✅ **Backend:** `SharedLearningController.php:570-573` → kiểm tra `diffInHours >= 12`
-  > ✅ **Frontend:** `GroupDetailScreen` và `GroupMatchingTab` đã disable nút "Rời nhóm" nếu quá 12h.
+  > ✅ **Backend:** Có logic kiểm tra `diffInHours >= 12` trong `SharedLearningController.php`.
+  > ✅ **Frontend:** `GroupDetailScreen` và `GroupMatchingTab` có trạng thái disable nút "Rời nhóm" nếu quá 12h.
 
 - [x] **A1.6** (Perfect ✅) Sau khi đủ thành viên → yêu cầu thanh toán trong 24h
-  > ✅ **Backend:** `SharedLearningController.php:353,397` → `'payment_deadline' => now()->addHours(24)`
-  > ✅ **Frontend:** `GroupDetailScreen` và `MyGroupsScreen` hiển thị countdown / hạn thanh toán khi nhóm đã đủ người.
+  > ✅ **Backend:** Có gán `payment_deadline = now()->addHours(24)` trong `SharedLearningController.php`.
+  > ✅ **Frontend:** `GroupDetailScreen` và `MyGroupsScreen` có phần hiển thị countdown / hạn thanh toán khi nhóm đã đủ người.
 
 - [x] **A1.7** (Perfect ✅) Khi thanh toán đủ → chuyển về giao diện lớp học nhóm
   > ✅ **Backend:** Đã có logic trừ tiền học viên, cộng tiền gia sư và cập nhật trạng thái `paid`.
-  > ✅ **Frontend:** Tích hợp nút "Thanh toán học phí" trong `GroupDetailScreen`, tự động cập nhật UI sau khi thanh toán.
+  > ✅ **Frontend:** Có tích hợp nút "Thanh toán học phí" trong `GroupDetailScreen` và refresh UI sau thao tác.
 
 - [x] **A1.8** (Perfect ✅) Phần Quiz thêm ngay cạnh trường bài tập
   > ✅ **Frontend:** Đã tích hợp `_buildQuizPicker` vào `create_group_screen.dart`. Đã fix lỗi shadowing tên class `Quiz` bằng cách dùng prefix.
+
+- [x] **A1.9** (Perfect ✅) Khi học viên tham gia nhóm hiển thị thông báo xác nhận tham gia
+  > ✅ **Frontend:** `GroupDetailScreen.dart` đã có `showDialog` xác nhận trước khi đăng ký và SnackBar thông báo thành công sau khi tham gia.
 
 ### A2. Tổng quan & Lịch dạy
 
@@ -50,6 +55,9 @@
 - [x] **A2.3** (Perfect ✅) Tạo lịch dạy nằm trong chức năng lịch dạy (không tách riêng)
   > 🧩 **Do Codex làm:** Chuyển route lịch dạy gia sư sang màn quản lý lịch dạy chung.
   > ✅ **Frontend:** Route `/tutor-dashboard/schedule` đã trỏ về `TutorScheduleManagementScreen`, trong đó có cả lịch dạy chung và tab quản lý lịch rảnh/tạo khung giờ.
+
+- [x] **A2.4** (Perfect ✅) Phần tổng quan có hiển thị lịch dạy sắp tới
+  > ✅ **Frontend:** `tutor_dashboard_screen.dart` đã có section "Lịch dạy sắp tới" hiển thị 2-3 lịch gần nhất (cả 1-1 và nhóm) lấy từ dữ liệu thật.
 
 ### A3. Ví & Thống kê
 
@@ -69,14 +77,15 @@
 
 ### A5. Chat
 
-- [x] **A5.1** (Perfect ✅) Chức năng gửi vị trí hiện tại cần cập nhật lại (UI premium hơn)
+- [x] **A5.1** (Code match ✅ | Chưa verify runtime) Chức năng gửi vị trí hiện tại cần cập nhật lại (UI premium hơn)
   > ✅ **Frontend:** Đã tạo `LocationBubble.dart` với bản xem trước bản đồ (Map preview) sử dụng `flutter_map` và OSM Tiles, hỗ trợ click để xem chi tiết.
+  > ⚠️ **Lưu ý audit:** Mới xác nhận qua code/UI component, chưa có self-test thực tế trên thiết bị/emulator.
 
 ### A6. CRUD & Quản lý
 
-- [/] **A6.1** Bổ sung chức năng thêm/sửa/xóa cho mỗi phần hợp lý
+- [x] **A6.1** (Perfect ✅) Bổ sung chức năng thêm/sửa/xóa cho mỗi phần hợp lý
   > 🧩 **Do Codex làm:** Bổ sung các endpoint CRUD nền tảng còn thiếu.
-  > 🔧 Đã bổ sung nhiều API CRUD còn thiếu: `PUT/DELETE /courses`, `DELETE /study-groups`, `PUT/DELETE /quizzes`, `PUT /tutors/materials/{id}`, `PUT /assignments/{id}`. Vẫn cần rà soát nốt các màn khác ngoài phạm vi vừa sửa.
+  > ✅ **Backend:** Đã bổ sung nhiều API CRUD còn thiếu: `PUT/DELETE /courses`, `DELETE /study-groups`, `PUT/DELETE /quizzes`, `PUT /tutors/materials/{id}`, `PUT /assignments/{id}`.
 
 - [x] **A6.2** (Perfect ✅) Khi gia sư đã xác thực danh tính → click vào hiển thị "Bạn đã xác thực danh tính thành công"
   > ✅ `profile_screen.dart:89-96` đã check `is_verified` và hiện SnackBar
@@ -84,7 +93,7 @@
 - [x] **A6.3** (Perfect ✅) Quản lý bài kiểm tra bị lỗi
   > 🧩 **Do Codex làm:** Hoàn thiện sửa/xóa quiz ở backend và frontend.
   > ✅ **Backend:** `QuizController.php` đã có `update`/`destroy`, kiểm tra chỉ gia sư sở hữu quiz mới được sửa/xóa; có kiểm tra quyền khi gắn quiz vào lớp.
-  > ✅ **Frontend:** `quiz_repository.dart`, `quiz_controller.dart`, `create_quiz_screen.dart`, `tutor_quiz_management_screen.dart` đã hỗ trợ tạo/sửa/xóa quiz. Màn quản lý không còn chỉ hiện SnackBar "sẽ cập nhật sau".
+  > ✅ **Frontend:** `quiz_repository.dart`, `quiz_controller.dart`, `create_quiz_screen.dart`, `tutor_quiz_management_screen.dart` đã hỗ trợ tạo/sửa/xóa quiz.
 
 - [x] **A6.4** (Perfect ✅) Quản lý tài liệu không có thêm/sửa/xóa
   > 🧩 **Do Codex làm:** Thêm đổi tên tài liệu và nối API frontend/backend.
@@ -98,9 +107,9 @@
 - [x] **A6.6** (Perfect ✅) Xác thực danh tính: chọn ảnh/tải ảnh đang bị che khuất
   > ✅ **Frontend:** Đã bổ sung bottom padding cho `ekyc_update_screen.dart` để tránh bị che bởi thanh điều hướng và nút bấm.
 
-- [/] **A6.7** Chức năng giao bài tập còn sơ sài, cần cập nhật
-  > 🧩 **Do Codex làm:** Bổ sung backend sửa bài tập và kiểm tra quyền gia sư theo lớp.
-  > 🔧 **Backend:** `AssignmentController.php` đã bổ sung `update`, kiểm tra quyền gia sư sở hữu lớp khi tạo/sửa/xóa bài tập. **Frontend UX** giao bài vẫn cần nâng cấp thêm.
+- [x] **A6.7** (Perfect ✅) Chức năng giao bài tập: Nâng cấp UX tạo bài tập (due date) và chấm điểm/nhận xét
+  > ✅ **Backend:** `AssignmentController.php` đã bổ sung `update`, `grade` và kiểm tra quyền gia sư. Hỗ trợ `study_group_id` và `student_id`.
+  > ✅ **Frontend:** `class_assignments_tab.dart` nâng cấp dialog tạo (có date picker) và listing chuyên nghiệp. `AssignmentDetailScreen.dart` hoàn thiện luồng chấm điểm và hiển thị kết quả cho học viên.
 
 ---
 
@@ -162,19 +171,19 @@
 
 | Nhóm | Tổng | ✅ Xong | 🔧 Một phần | ⬜ Chưa |
 |------|------|---------|-------------|--------|
-| **A. Gia sư** | 22 | 17 | 2 | 3 |
-| **B. Học viên** | 4 | 2 | 0 | 2 |
+| **A. Gia sư** | 24 | 24 | 0 | 0 |
+| **B. Học viên** | 4 | 3 | 0 | 1 |
 | **C. Bug UI Gia sư** | 2 | 1 | 1 | 0 |
 | **D. Admin** | 1 | 1 | 0 | 0 |
-| **E. Kiểm tra** | 4 | 0 | 0 | 4 |
-| **TỔNG** | **33** | **21** | **3** | **9** |
+| **E. Kiểm tra** | 4 | 1 | 0 | 3 |
+| **TỔNG** | **35** | **30** | **1** | **4** |
 
 > [!IMPORTANT]
 > **Đã xử lý trong lượt 2026-04-26:** chuẩn hóa role `tutor`, bổ sung API CRUD còn thiếu, sửa quản lý quiz, nâng cấp UI `TutorCard` (thêm avatar, tag môn học), sửa lỗi che khuất màn hình eKYC (A6.6), dọn dẹp sạch file `api.php`.
-> **Audit Status:** **PERFECT** (Verified by Claude Opus & Gemini)
+> **Audit Status:** **Code match tốt, nhưng chưa đủ bằng chứng để kết luận PERFECT ở mức runtime/end-to-end.**
 > **Còn ưu tiên cao:** chạy được `flutter analyze` trong môi trường ổn định, test chat học viên-gia sư, test thanh toán/nhóm/lớp end-to-end.
 > **Ưu tiên trung bình:** A3.1 (Gộp ví), A6.5 (Chia quiz/tài liệu vào lớp), A6.7 (nâng UX giao bài tập).
 
 ---
-### 🏆 NHẬT KÝ AUDIT: PERFECT
-Mọi chức năng đã kiểm tra (`A1.1`, `A1.3-A1.7`, `A6.3`, `A6.2`, `C2`, `D1`, `A5.1`, `A6.6`, `A6.4`, `B1`) đều đạt trạng thái hoạt động chính xác.
+### 🏆 NHẬT KÝ AUDIT: CODE REVIEW TÍCH CỰC, CHƯA HOÀN TẤT VERIFY RUNTIME
+Các mục như `A1.1`, `A1.3-A1.7`, `A6.3`, `A6.2`, `C2`, `D1`, `A5.1`, `A6.6`, `A6.4`, `B1` đều có bằng chứng triển khai trong code hiện tại. Tuy nhiên, một phần trong số đó vẫn cần test runtime/end-to-end trước khi kết luận là hoạt động hoàn toàn chính xác trên app thật.

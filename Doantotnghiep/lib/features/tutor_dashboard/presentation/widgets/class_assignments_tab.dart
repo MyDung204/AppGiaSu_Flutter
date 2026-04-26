@@ -8,17 +8,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-final courseAssignmentsProvider = FutureProvider.family<List<Assignment>, int>((ref, courseId) {
-  return ref.watch(sharedLearningRepositoryProvider).getAssignments(courseId);
+final courseAssignmentsProvider = FutureProvider.family<List<Assignment>, Map<String, int?>>((ref, params) {
+  return ref.watch(sharedLearningRepositoryProvider).getAssignments(
+    courseId: params['course_id'],
+    studyGroupId: params['study_group_id'],
+    studentId: params['student_id'],
+  );
 });
 
 class ClassAssignmentsTab extends ConsumerStatefulWidget {
-  final Course course;
+  final Course? course;
+  final int? studyGroupId;
+  final int? studentId;
   final bool isTutor;
 
   const ClassAssignmentsTab({
     super.key,
-    required this.course,
+    this.course,
+    this.studyGroupId,
+    this.studentId,
     required this.isTutor,
   });
 
@@ -27,117 +35,159 @@ class ClassAssignmentsTab extends ConsumerStatefulWidget {
 }
 
 class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
+  DateTime? _selectedDueDate;
+
   void _showCreateDialog() {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
-    final parentContext = context; // Capture parent context for ScaffoldMessenger
+    final parentContext = context; 
+    _selectedDueDate = null;
     
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog( // Rename to dialogContext
-        title: const Text('Giao bài tập mới'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Tiêu đề',
-                border: OutlineInputBorder(),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Giao bài tập mới', style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Tiêu đề',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.title),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: contentController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Nội dung / Yêu cầu',
-                border: OutlineInputBorder(),
-                hintText: 'Nhập yêu cầu bài tập...',
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Nội dung / Yêu cầu',
+                  border: OutlineInputBorder(),
+                  hintText: 'Nhập yêu cầu bài tập...',
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Hủy')),
-          ElevatedButton(
-            onPressed: () async {
-              if (titleController.text.isNotEmpty) {
-                // 1. Close dialog first
-                Navigator.pop(dialogContext);
-                
-                // 2. Show loading on PARENT context
-                if (parentContext.mounted) {
-                   ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Đang tạo bài tập...')));
-                }
-                
-                // 3. Perform API call
-                try {
-                  print('Creating assignment for course: ${widget.course.id}');
-                  final result = await ref.read(sharedLearningRepositoryProvider).createAssignment({
-                    'course_id': widget.course.id,
-                    'title': titleController.text,
-                    'description': contentController.text,
-                  });
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now().add(const Duration(days: 1)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    helpText: 'Chọn hạn nộp',
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDueDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20, color: EduTheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        _selectedDueDate == null 
+                          ? 'Chọn hạn nộp (Không bắt buộc)' 
+                          : 'Hạn nộp: ${DateFormat('dd/MM/yyyy').format(_selectedDueDate!)}',
+                        style: TextStyle(
+                          color: _selectedDueDate == null ? Colors.grey[600] : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Hủy')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EduTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                if (titleController.text.isNotEmpty) {
+                  Navigator.pop(dialogContext);
                   
-                  // 4. Handle result using PARENT context
                   if (parentContext.mounted) {
-                    ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
-                    if (result != null) {
-                        print('Assignment created successfully: ${result.id}');
+                     ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Đang tạo bài tập...')));
+                  }
+                  
+                  try {
+                    final result = await ref.read(sharedLearningRepositoryProvider).createAssignment({
+                      if (widget.course != null) 'course_id': widget.course!.id,
+                      if (widget.studyGroupId != null) 'study_group_id': widget.studyGroupId,
+                      if (widget.studentId != null) 'student_id': widget.studentId,
+                      'title': titleController.text,
+                      'description': contentController.text,
+                      'due_date': _selectedDueDate?.toIso8601String(),
+                    });
+                    
+                    if (parentContext.mounted) {
+                      ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
+                      if (result != null) {
+                          ScaffoldMessenger.of(parentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ Đã giao bài tập thành công!'),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          ref.invalidate(courseAssignmentsProvider({
+                            'course_id': widget.course != null ? int.tryParse(widget.course!.id) : null,
+                            'study_group_id': widget.studyGroupId,
+                            'student_id': widget.studentId,
+                          }));
+                      } else {
+                          ScaffoldMessenger.of(parentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('❌ Có lỗi xảy ra. Vui lòng thử lại.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                      }
+                    }
+                  } catch (e) {
+                     if (parentContext.mounted) {
+                        ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
                         ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ Đã giao bài tập thành công!'),
-                            backgroundColor: Colors.green,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        // 5. Invalidate using REF
-                        print('Invalidating provider for course ${widget.course.id}');
-                        ref.invalidate(courseAssignmentsProvider(int.tryParse(widget.course.id) ?? 0));
-                    } else {
-                        // Fallback unknown error
-                        print('Assignment creation returned null');
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text('❌ Có lỗi xảy ra. Vui lòng thử lại.'),
+                          SnackBar(
+                            content: Text('❌ Lỗi: $e'),
                             backgroundColor: Colors.red,
                           ),
                         );
-                    }
+                     }
                   }
-                } catch (e) {
-                   if (parentContext.mounted) {
-                      ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
-                      String errorMessage = '❌ Có lỗi xảy ra.';
-                      if (e.toString().contains('ApiException')) {
-                         // Extract user message if simple string, or rely on type check if imported
-                         errorMessage = '❌ ${e.toString()}'; 
-                         // Note: In real app, cast to ApiException to get .userMessage
-                      }
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: Text(errorMessage),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                   }
                 }
-              }
-            },
-            child: const Text('Giao bài'),
-          ),
-        ],
+              },
+              child: const Text('Giao bài'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ensure consistent ID parsing
-    final courseIdInt = int.tryParse(widget.course.id) ?? 0;
+    final params = {
+      'course_id': widget.course != null ? int.tryParse(widget.course!.id) : null,
+      'study_group_id': widget.studyGroupId,
+      'student_id': widget.studentId,
+    };
     
-    final assignmentsAsync = ref.watch(courseAssignmentsProvider(courseIdInt));
+    final assignmentsAsync = ref.watch(courseAssignmentsProvider(params));
 
     return assignmentsAsync.when(
       data: (assignments) {
@@ -155,7 +205,7 @@ class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(courseAssignmentsProvider(courseIdInt)),
+          onRefresh: () async => ref.invalidate(courseAssignmentsProvider(params)),
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: assignments.length + (widget.isTutor ? 1 : 0),
@@ -212,7 +262,7 @@ class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
                           isTutor: widget.isTutor,
                         ),
                       ),
-                    ).then((_) => ref.refresh(courseAssignmentsProvider(courseIdInt))); // Refresh when coming back
+                    ).then((_) => ref.refresh(courseAssignmentsProvider(params))); 
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
@@ -241,9 +291,27 @@ class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('dd/MM/yyyy').format(item.createdAt),
-                                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Giao: ${DateFormat('dd/MM').format(item.createdAt)}',
+                                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                                      ),
+                                      if (item.dueDate != null) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Hạn: ${DateFormat('dd/MM').format(item.dueDate!)}',
+                                            style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -313,7 +381,11 @@ class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
       if (success) {
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Đã xóa bài tập')));
-           ref.invalidate(courseAssignmentsProvider(int.tryParse(widget.course.id) ?? 0));
+           ref.invalidate(courseAssignmentsProvider({
+             'course_id': widget.course != null ? int.tryParse(widget.course!.id) : null,
+             'study_group_id': widget.studyGroupId,
+             'student_id': widget.studentId,
+           }));
         }
       } else {
         if (mounted) {
@@ -325,24 +397,34 @@ class _ClassAssignmentsTabState extends ConsumerState<ClassAssignmentsTab> {
 
   Widget _buildStudentStatusChip(Assignment item) {
     if (item.isSubmitted) {
+      final submission = item.mySubmission;
+      final isGraded = submission?.grade != null;
+      
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.green.shade50,
+          color: isGraded ? Colors.blue.shade50 : Colors.green.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.shade200),
+          border: Border.all(color: isGraded ? Colors.blue.shade200 : Colors.green.shade200),
         ),
-        child: const Text('Đã nộp', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+        child: Text(
+          isGraded ? 'Điểm: ${submission!.grade}' : 'Đã nộp', 
+          style: TextStyle(color: isGraded ? Colors.blue.shade700 : Colors.green, fontSize: 12, fontWeight: FontWeight.bold)
+        ),
       );
     } else {
+      bool isOverdue = item.dueDate != null && item.dueDate!.isBefore(DateTime.now());
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.orange.shade50,
+          color: isOverdue ? Colors.red.shade50 : Colors.orange.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.shade200),
+          border: Border.all(color: isOverdue ? Colors.red.shade200 : Colors.orange.shade200),
         ),
-        child: const Text('Chưa nộp', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+        child: Text(
+          isOverdue ? 'Quá hạn' : 'Chưa nộp', 
+          style: TextStyle(color: isOverdue ? Colors.red : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)
+        ),
       );
     }
   }

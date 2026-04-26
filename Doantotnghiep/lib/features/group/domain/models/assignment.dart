@@ -1,7 +1,9 @@
 
 class Assignment {
   final int id;
-  final int courseId;
+  final int? courseId;
+  final int? studyGroupId;
+  final int? studentId;
   final String title;
   final String? description;
   final DateTime? dueDate;
@@ -13,7 +15,9 @@ class Assignment {
 
   Assignment({
     required this.id,
-    required this.courseId,
+    this.courseId,
+    this.studyGroupId,
+    this.studentId,
     required this.title,
     this.description,
     this.dueDate,
@@ -27,8 +31,10 @@ class Assignment {
   factory Assignment.fromJson(Map<String, dynamic> json) {
     return Assignment(
       id: json['id'] is String ? int.parse(json['id']) : json['id'],
-      courseId: json['course_id'] is String ? int.parse(json['course_id']) : json['course_id'],
-      title: json['title'],
+      courseId: json['course_id'] != null ? (json['course_id'] is String ? int.parse(json['course_id']) : json['course_id']) : null,
+      studyGroupId: json['study_group_id'] != null ? (json['study_group_id'] is String ? int.parse(json['study_group_id']) : json['study_group_id']) : null,
+      studentId: json['student_id'] != null ? (json['student_id'] is String ? int.parse(json['student_id']) : json['student_id']) : null,
+      title: json['title'] ?? '',
       description: json['description'],
       dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
       attachmentUrl: json['attachment_url'],

@@ -489,9 +489,14 @@ class SharedLearningRepository {
     }
   }
 
-  Future<List<Assignment>> getAssignments(int courseId) async {
+  Future<List<Assignment>> getAssignments({int? courseId, int? studyGroupId, int? studentId}) async {
     try {
-      final response = await _client.get('/courses/$courseId/assignments');
+      final Map<String, dynamic> queryParams = {};
+      if (courseId != null) queryParams['course_id'] = courseId;
+      if (studyGroupId != null) queryParams['study_group_id'] = studyGroupId;
+      if (studentId != null) queryParams['student_id'] = studentId;
+
+      final response = await _client.get('/assignments', queryParameters: queryParams);
       if (response is List) {
         return response.map((e) => Assignment.fromJson(e)).toList();
       }
@@ -553,6 +558,24 @@ class SharedLearningRepository {
     } catch (e) {
       print('Error fetching submissions: $e');
       return [];
+    }
+  }
+
+  Future<AssignmentSubmission?> gradeAssignment(int submissionId, double grade, String? feedback) async {
+    try {
+      final response = await _client.post('/assignments/submissions/$submissionId/grade', data: {
+        'grade': grade,
+        'feedback': feedback,
+      });
+      if (response != null) {
+        return AssignmentSubmission.fromJson(response);
+      }
+      return null;
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      print('Error grading assignment: $e');
+      return null;
     }
   }
 

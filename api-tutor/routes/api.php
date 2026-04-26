@@ -123,6 +123,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/assignments/{id}', [AssignmentController::class, 'update']);
     Route::post('/assignments/{id}/submit', [AssignmentController::class, 'submit']);
     Route::get('/assignments/{id}/submissions', [AssignmentController::class, 'submissions']);
+    Route::post('/assignments/submissions/{id}/grade', [AssignmentController::class, 'grade']);
     Route::delete('/assignments/{id}', [AssignmentController::class, 'destroy']);
 
     // Quiz System

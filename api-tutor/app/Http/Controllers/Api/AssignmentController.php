@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class AssignmentController extends Controller
 {
-    private function userCanManageCourse(Request $request, $courseId, $studentId = null): bool
+    private function userCanManageCourse(Request $request, $courseId, $studentId = null, $studyGroupId = null): bool
     {
         $user = $request->user();
         if ($user->role === 'admin') {
@@ -19,6 +19,11 @@ class AssignmentController extends Controller
             $course = \App\Models\Course::findOrFail($courseId);
             $tutor = \App\Models\Tutor::where('user_id', $user->id)->first();
             return $user->role === 'tutor' && $tutor && $course->tutor_id == $tutor->id;
+        }
+
+        if ($studyGroupId) {
+            $group = \App\Models\StudyGroup::findOrFail($studyGroupId);
+            return $user->role === 'tutor' && $group->tutor_id == $user->id;
         }
 
         if ($studentId) {
@@ -40,20 +45,21 @@ class AssignmentController extends Controller
             if ($request->has('course_id')) {
                 $query->where('course_id', $request->course_id);
             }
+            if ($request->has('study_group_id')) {
+                $query->where('study_group_id', $request->study_group_id);
+            }
             if ($request->has('student_id')) {
                 $query->where('student_id', $request->student_id);
             }
-            // If no filters, show all by tutor?
-            // Assuming Assignment model has tutor_id if we want that, 
-            // but currently it relies on course_id -> course -> tutor_id.
-            // For 1-1, we might need tutor_id in assignments too.
-            // Let's check if Assignment model has tutor_id.
         } else {
             // Student view
             $courseIds = \Illuminate\Support\Facades\DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
-            $query->where(function($q) use ($user, $courseIds) {
+            $groupIds = \Illuminate\Support\Facades\DB::table('study_group_members')->where('user_id', $user->id)->pluck('study_group_id');
+            
+            $query->where(function($q) use ($user, $courseIds, $groupIds) {
                 $q->where('student_id', $user->id)
-                  ->orWhereIn('course_id', $courseIds);
+                  ->orWhereIn('course_id', $courseIds)
+                  ->orWhereIn('study_group_id', $groupIds);
             });
         }
 
@@ -76,6 +82,7 @@ class AssignmentController extends Controller
     {
         $request->validate([
             'course_id' => 'nullable|exists:courses,id',
+            'study_group_id' => 'nullable|exists:study_groups,id',
             'student_id' => 'nullable|exists:users,id',
             'title' => 'required|string',
             'description' => 'nullable|string',
@@ -83,11 +90,11 @@ class AssignmentController extends Controller
             'attachment_url' => 'nullable|string',
         ]);
 
-        if (!$request->course_id && !$request->student_id) {
+        if (!$request->course_id && !$request->student_id && !$request->study_group_id) {
             return response()->json(['message' => 'Phải chọn lớp học hoặc học viên.'], 422);
         }
 
-        if (!$this->userCanManageCourse($request, $request->course_id, $request->student_id)) {
+        if (!$this->userCanManageCourse($request, $request->course_id, $request->student_id, $request->study_group_id)) {
             return response()->json(['message' => 'Bạn không có quyền giao bài tập này.'], 403);
         }
 
@@ -100,7 +107,7 @@ class AssignmentController extends Controller
     {
         $assignment = \App\Models\Assignment::findOrFail($id);
 
-        if (!$this->userCanManageCourse($request, $assignment->course_id)) {
+        if (!$this->userCanManageCourse($request, $assignment->course_id, $assignment->student_id, $assignment->study_group_id)) {
             return response()->json(['message' => 'Bạn không có quyền sửa bài tập này.'], 403);
         }
 
@@ -152,13 +159,35 @@ class AssignmentController extends Controller
         return response()->json($submissions);
     }
 
+    public function grade(Request $request, $id)
+    {
+        $submission = \App\Models\AssignmentSubmission::findOrFail($id);
+        $assignment = $submission->assignment;
+
+        if (!$this->userCanManageCourse($request, $assignment->course_id, $assignment->student_id, $assignment->study_group_id)) {
+            return response()->json(['message' => 'Bạn không có quyền chấm điểm bài nộp này.'], 403);
+        }
+
+        $request->validate([
+            'grade' => 'required|numeric|min:0|max:100',
+            'feedback' => 'nullable|string',
+        ]);
+
+        $submission->update([
+            'grade' => $request->grade,
+            'feedback' => $request->feedback,
+        ]);
+
+        return response()->json($submission->fresh());
+    }
+
     public function destroy(Request $request, $id)
     {
         $assignment = \App\Models\Assignment::find($id);
         if (!$assignment) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        if (!$this->userCanManageCourse($request, $assignment->course_id)) {
+        if (!$this->userCanManageCourse($request, $assignment->course_id, $assignment->student_id, $assignment->study_group_id)) {
             return response()->json(['message' => 'Bạn không có quyền xóa bài tập này.'], 403);
         }
         $assignment->delete();

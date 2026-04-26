@@ -8,6 +8,8 @@ class Assignment extends Model
 {
     protected $fillable = [
         'course_id',
+        'study_group_id',
+        'student_id',
         'title',
         'description',
         'due_date',
@@ -17,5 +19,10 @@ class Assignment extends Model
     public function submissions()
     {
         return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    public function studyGroup()
+    {
+        return $this->belongsTo(StudyGroup::class);
     }
 }

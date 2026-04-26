@@ -161,6 +161,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
     final submission = widget.assignment.mySubmission;
 
     if (hasSubmitted && submission != null) {
+      final isGraded = submission.grade != null;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -191,6 +193,49 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
             ),
           ),
           const SizedBox(height: 24),
+          if (isGraded) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [EduTheme.primary.withOpacity(0.1), Colors.blue.withOpacity(0.05)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EduTheme.primary.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.stars, color: EduTheme.primary),
+                      const SizedBox(width: 8),
+                      const Text('Kết quả chấm điểm', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: EduTheme.primary)),
+                      const Spacer(),
+                      Text(
+                        '${submission.grade}/100',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: EduTheme.primary),
+                      ),
+                    ],
+                  ),
+                  if (submission.feedback != null && submission.feedback!.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(),
+                    ),
+                    const Text('Nhận xét từ gia sư:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text(
+                      submission.feedback!,
+                      style: TextStyle(color: Colors.grey[800], height: 1.4),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
           const Text('Bài nộp của bạn:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           if (submission.content != null && submission.content!.isNotEmpty)
@@ -214,7 +259,6 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {
-                // TODO: Allow re-submission
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng nộp lại đang phát triển')));
               },
               child: const Text('Nộp lại'),
@@ -223,6 +267,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
         ],
       );
     }
+    // ... rest of student view
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,58 +387,160 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   }
 
   void _showSubmissionDetail(AssignmentSubmission sub) {
+    final gradeController = TextEditingController(text: sub.grade?.toString() ?? '');
+    final feedbackController = TextEditingController(text: sub.feedback ?? '');
+    bool isGrading = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                   CircleAvatar(
-                    backgroundImage: sub.student?.avatarUrl != null ? NetworkImage(sub.student!.avatarUrl!) : null,
-                    radius: 24,
-                    child: sub.student?.avatarUrl == null ? Text(sub.student?.name[0] ?? '?') : null,
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(sub.student?.name ?? 'Unknown', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('Nộp lúc: ${DateFormat('HH:mm dd/MM/yyyy').format(sub.submittedAt)}', style: TextStyle(color: Colors.grey[600])),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text('Nội dung:', style: TextStyle(fontWeight: FontWeight.bold)),
-              if (sub.content != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(sub.content!),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: sub.student?.avatarUrl != null ? NetworkImage(sub.student!.avatarUrl!) : null,
+                      radius: 24,
+                      child: sub.student?.avatarUrl == null ? Text(sub.student?.name[0] ?? '?') : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(sub.student?.name ?? 'Học viên', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text('Nộp lúc: ${DateFormat('HH:mm dd/MM/yyyy').format(sub.submittedAt)}', style: TextStyle(color: Colors.grey[600])),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (sub.grade != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('Đã chấm: ${sub.grade}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                      ),
+                  ],
                 ),
-              if (sub.fileUrl != null)
-                Padding(
-                   padding: const EdgeInsets.symmetric(vertical: 12),
-                   child: ClipRRect(
+                const SizedBox(height: 24),
+                const Text('Nội dung:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (sub.content != null && sub.content!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(sub.content!),
+                    ),
+                  ),
+                if (sub.fileUrl != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: CachedNetworkImage(
                         imageUrl: sub.fileUrl!,
-                        placeholder: (context, url) => const CircularProgressIndicator(),
+                        placeholder: (context, url) => Container(height: 200, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())),
                         errorWidget: (context, url, error) => const Icon(Icons.error),
                       ),
-                   ),
+                    ),
+                  ),
+                const Divider(height: 48),
+                const Text('Chấm điểm & Nhận xét', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: gradeController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Điểm (0-100)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.score),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(flex: 3, child: SizedBox()),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: feedbackController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Nhận xét',
+                    border: OutlineInputBorder(),
+                    hintText: 'Nhập lời nhắn cho học viên...',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: isGrading ? null : () async {
+                      if (gradeController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập điểm.')));
+                        return;
+                      }
+                      final grade = double.tryParse(gradeController.text);
+                      if (grade == null || grade < 0 || grade > 100) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Điểm không hợp lệ (0-100).')));
+                        return;
+                      }
+
+                      setModalState(() => isGrading = true);
+                      try {
+                        final result = await ref.read(sharedLearningRepositoryProvider).gradeAssignment(
+                          sub.id, 
+                          grade, 
+                          feedbackController.text
+                        );
+                        if (result != null) {
+                          if (mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Đã lưu điểm thành công!')));
+                            ref.invalidate(assignmentSubmissionsProvider(widget.assignment.id));
+                          }
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Lỗi: $e')));
+                      } finally {
+                        setModalState(() => isGrading = false);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: EduTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isGrading 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text('Lưu điểm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
