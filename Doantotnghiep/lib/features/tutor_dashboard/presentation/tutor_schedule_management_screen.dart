@@ -64,17 +64,32 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
   };
 
   bool _isLoading = true;
+  String? _lastSyncedAvailabilitySignature;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabChanged);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _availabilitySignature(List<Map<String, dynamic>> availabilities) {
+    final parts = availabilities
+        .map((item) => '${item['id'] ?? ''}:${item['day_of_week']}:${item['start_time']}:${item['end_time']}')
+        .toList()
+      ..sort();
+    return parts.join('|');
   }
 
   void _syncLocalSchedule(List<Map<String, dynamic>> availabilities) {
@@ -124,7 +139,7 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
     // Pick End Time
     final TimeOfDay? end = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(hour: start.hour + 2, minute: start.minute),
+      initialTime: TimeOfDay(hour: start.hour >= 23 ? 23 : start.hour + 1, minute: start.minute),
       helpText: 'Chọn giờ KẾT THÚC',
     );
     if (end == null) return;
@@ -184,9 +199,13 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
   Widget build(BuildContext context) {
     final scheduleState = ref.watch(tutorScheduleProvider);
     
-    // Sync local schedule when data is loaded
-    if (!scheduleState.isLoading && scheduleState.availability.isNotEmpty) {
-      _syncLocalSchedule(scheduleState.availability);
+    // Sync only when API availability changes. Do not overwrite local edits on every setState.
+    if (!scheduleState.isLoading) {
+      final signature = _availabilitySignature(scheduleState.availability);
+      if (signature != _lastSyncedAvailabilitySignature) {
+        _syncLocalSchedule(scheduleState.availability);
+        _lastSyncedAvailabilitySignature = signature;
+      }
     }
 
     return Scaffold(
@@ -200,14 +219,15 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
           unselectedLabelColor: Colors.grey,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
-            Tab(text: 'Lịch dạy (Bookings)'),
+            Tab(text: 'Lịch sắp tới'),
+            Tab(text: 'Lịch sử dạy'),
             Tab(text: 'Lịch rảnh (Availability)'),
           ],
         ),
         actions: [
           if (scheduleState.isLoading)
              const Padding(padding: EdgeInsets.all(16), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))))
-          else if (_tabController.index == 1)
+          else if (_tabController.index == 2)
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveSchedule,
@@ -217,34 +237,71 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildTeachingSchedule(scheduleState.unifiedSchedule),
+          _buildTeachingSchedule(_upcomingItems(scheduleState.unifiedSchedule), emptyText: 'Chưa có lịch dạy nào sắp tới'),
+          _buildTeachingSchedule(_historyItems(scheduleState.unifiedSchedule), emptyText: 'Chưa có buổi dạy nào đã hoàn thành'),
           _buildAvailabilityManager(scheduleState.isLoading),
         ],
       ),
     );
   }
 
-  Widget _buildTeachingSchedule(List<UnifiedScheduleItem> items) {
+  List<UnifiedScheduleItem> _upcomingItems(List<UnifiedScheduleItem> items) {
+    final now = DateTime.now();
+    return items.where((item) {
+      final status = item.status?.toLowerCase() ?? '';
+      if (status == 'completed' || status == 'cancelled') return false;
+      return item.endTime.isAfter(now);
+    }).toList();
+  }
+
+  List<UnifiedScheduleItem> _historyItems(List<UnifiedScheduleItem> items) {
+    final now = DateTime.now();
+    final history = items.where((item) {
+      final status = item.status?.toLowerCase() ?? '';
+      return status == 'completed' || item.endTime.isBefore(now);
+    }).toList();
+    history.sort((a, b) => b.startTime.compareTo(a.startTime));
+    return history;
+  }
+
+  Widget _buildTeachingSchedule(List<UnifiedScheduleItem> items, {required String emptyText}) {
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        color: EduTheme.primary,
+        onRefresh: () => ref.read(tutorScheduleProvider.notifier).fetchData(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text('Chưa có lịch dạy nào sắp tới', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text(emptyText, style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _buildScheduleCard(item);
-      },
+    return RefreshIndicator(
+      color: EduTheme.primary,
+      onRefresh: () => ref.read(tutorScheduleProvider.notifier).fetchData(),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _buildScheduleCard(item);
+        },
+      ),
     );
   }
 
@@ -418,15 +475,19 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
   }
 
   Widget _buildAvailabilityManager(bool isLoading) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      itemCount: _dayLabels.length,
-      itemBuilder: (context, index) {
-        final dayKey = _dayLabels.keys.elementAt(index);
-        final dayName = _dayLabels[dayKey]!;
-        final currentSlots = _schedule[dayKey] ?? [];
+    return RefreshIndicator(
+      color: EduTheme.primary,
+      onRefresh: () => ref.read(tutorScheduleProvider.notifier).fetchData(),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        itemCount: _dayLabels.length,
+        itemBuilder: (context, index) {
+          final dayKey = _dayLabels.keys.elementAt(index);
+          final dayName = _dayLabels[dayKey]!;
+          final currentSlots = _schedule[dayKey] ?? [];
 
-        return Container(
+          return Container(
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -556,8 +617,9 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
               ],
             ),
           ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

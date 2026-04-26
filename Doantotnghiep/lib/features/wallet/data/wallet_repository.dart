@@ -39,12 +39,13 @@ class WalletRepository {
     }
   }
 
-  Future<bool> withdraw(double amount, String bankName, String accountNumber) async {
+  Future<bool> withdraw(double amount, String bankName, String accountNumber, String accountName) async {
     try {
       await _client.post('/wallet/withdraw', data: {
         'amount': amount,
         'bank_name': bankName,
         'account_number': accountNumber,
+        'account_name': accountName,
       });
       return true;
     } catch (e) {

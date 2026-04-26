@@ -2,6 +2,7 @@ import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doantotnghiep/features/profile/presentation/view_models/profile_view_model.dart';
 import 'package:intl/intl.dart';
@@ -34,7 +35,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   @override
   void initState() {
     super.initState();
-    _priceController.addListener(_onPriceChanged);
+    // _priceController.addListener(_onPriceChanged); // Moved to inputFormatters
     if (widget.group != null) {
       _topicController.text = widget.group!.topic;
       _subjectController.text = widget.group!.subject;
@@ -49,19 +50,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   void _onPriceChanged() {
-    String text = _priceController.text.replaceAll('.', '');
-    if (text.isEmpty) return;
-    
-    double? value = double.tryParse(text);
-    if (value != null) {
-      String formatted = _currencyFormatter.format(value);
-      if (formatted != _priceController.text) {
-        _priceController.value = TextEditingValue(
-          text: formatted,
-          selection: TextSelection.collapsed(offset: formatted.length),
-        );
-      }
-    }
+    // Deprecated: Moving formatting to InputFormatters for better UX
   }
 
   @override
@@ -177,13 +166,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildTextField(
-                            controller: _priceController,
-                            label: 'Học phí dự kiến',
-                            hint: 'VNĐ/buổi',
-                            icon: Icons.attach_money,
-                            keyboardType: TextInputType.number,
-                          ),
+                          child: _buildPriceField(),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -383,6 +366,28 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     );
   }
 
+  Widget _buildPriceField() {
+    return TextFormField(
+      controller: _priceController,
+      keyboardType: const TextInputType.numberWithOptions(decimal: false),
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        ThousandsSeparatorInputFormatter(),
+      ],
+      decoration: InputDecoration(
+        labelText: 'Học phí dự kiến (VNĐ)',
+        hintText: 'VD: 1.500.000',
+        prefixIcon: const Icon(Icons.attach_money, color: Colors.blueAccent),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blueAccent, width: 2)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      validator: (value) => value == null || value.isEmpty ? 'Vui lòng nhập học phí' : null,
+    );
+  }
+
   void _submitRequest() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedOpeningTime == null) {
@@ -463,5 +468,50 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         }
       }
     }
+  }
+}
+
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  static const separator = '.';
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // Nếu xóa hết thì trả về rỗng
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Nếu người dùng đang xóa ký tự separator (dấu chấm)
+    // thì ta xóa luôn ký tự số đứng trước nó
+    String text = newValue.text;
+    if (oldValue.text.length > newValue.text.length) {
+       // Đang thực hiện thao tác xóa
+       int selectionIndex = newValue.selection.end;
+       if (oldValue.text.substring(selectionIndex, selectionIndex + 1) == separator) {
+          // Người dùng vừa xóa dấu chấm -> ta cần xóa ký tự số trước đó
+          String left = text.substring(0, selectionIndex - 1);
+          String right = text.substring(selectionIndex);
+          text = left + right;
+       }
+    }
+
+    // Chỉ lấy các ký tự số
+    String baseText = text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (baseText.isEmpty) return const TextEditingValue(text: '');
+
+    final formatter = NumberFormat.decimalPattern('vi_VN');
+    int value = int.parse(baseText);
+    String formattedText = formatter.format(value);
+
+    // Tính toán lại vị trí con trỏ
+    int cursorOffset = formattedText.length;
+    
+    // Nếu không phải đang ở cuối chuỗi, ta cố gắng giữ vị trí tương đối (tạm thời để ở cuối cho đơn giản nhưng chắc chắn)
+    // Thực tế việc ép về cuối chuỗi là cách ổn định nhất để tránh lỗi nhảy con trỏ khi có dấu phân cách động
+    
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: cursorOffset),
+    );
   }
 }

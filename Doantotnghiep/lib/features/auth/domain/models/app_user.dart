@@ -4,6 +4,7 @@ class AppUser {
   final String email;
   final String role;
   final String? avatarUrl;
+  final String? identityVerifiedAt;
   final Map<String, dynamic>? tutorProfile;
 
   AppUser({
@@ -12,6 +13,7 @@ class AppUser {
     required this.email,
     required this.role,
     this.avatarUrl,
+    this.identityVerifiedAt,
     this.tutorProfile,
   });
 
@@ -22,6 +24,7 @@ class AppUser {
       email: json['email'] ?? '',
       role: json['role'] ?? 'student',
       avatarUrl: json['avatar_url'],
+      identityVerifiedAt: json['identity_verified_at'],
       tutorProfile: json['tutor_profile'],
     );
   }
@@ -33,6 +36,7 @@ class AppUser {
       'email': email,
       'role': role,
       'avatar_url': avatarUrl,
+      'identity_verified_at': identityVerifiedAt,
       'tutor_profile': tutorProfile,
     };
   }

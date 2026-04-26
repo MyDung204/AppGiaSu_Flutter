@@ -94,10 +94,7 @@ class AppRouter {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
@@ -108,10 +105,7 @@ class AppRouter {
           return ScaffoldWithNavBar(navigationShell: child);
         },
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const HomeScreen(),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
           GoRoute(
             path: '/search',
             builder: (context, state) {
@@ -123,20 +117,23 @@ class AppRouter {
               } else if (tabName == 'classes') {
                 initialTab = 2;
               }
-              return SearchScreen(initialSubject: subject, initialTab: initialTab);
+              return SearchScreen(
+                initialSubject: subject,
+                initialTab: initialTab,
+              );
             },
           ),
           GoRoute(
-             path: '/schedule',
-             builder: (context, state) => const ScheduleScreen(),
+            path: '/schedule',
+            builder: (context, state) => const ScheduleScreen(),
           ),
           GoRoute(
-             path: '/history',
-             builder: (context, state) => const ScheduleScreen(initialIndex: 1),
+            path: '/history',
+            builder: (context, state) => const ScheduleScreen(initialIndex: 1),
           ),
           GoRoute(
-             path: '/messages',
-             builder: (context, state) => const ChatListScreen(),
+            path: '/messages',
+            builder: (context, state) => const ChatListScreen(),
           ),
           GoRoute(
             path: '/profile',
@@ -155,26 +152,27 @@ class AppRouter {
             builder: (context, state) => const WalletScreen(),
           ),
           GoRoute(
-             path: '/ekyc',
-             builder: (context, state) {
-               final isTutor = state.uri.queryParameters['isTutor'] == 'true';
-               return EkycUpdateScreen(isTutor: isTutor);
-             },
+            path: '/notifications',
+            builder: (context, state) => const NotificationScreen(),
           ),
-           GoRoute(
-             path: '/notifications',
-             builder: (context, state) => const NotificationScreen(),
-           ),
         ],
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
-         path: '/create-tutor-request',
-         builder: (context, state) {
-            final isTutor = state.uri.queryParameters['isTutor'] == 'true';
-            final type = state.uri.queryParameters['type'] ?? '1-1';
-            return CreateTutorRequestScreen(isTutor: isTutor, requestType: type);
-         },
+        path: '/ekyc',
+        builder: (context, state) {
+          final isTutor = state.uri.queryParameters['isTutor'] == 'true';
+          return EkycUpdateScreen(isTutor: isTutor);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/create-tutor-request',
+        builder: (context, state) {
+          final isTutor = state.uri.queryParameters['isTutor'] == 'true';
+          final type = state.uri.queryParameters['type'] ?? '1-1';
+          return CreateTutorRequestScreen(isTutor: isTutor, requestType: type);
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -195,32 +193,32 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/group-detail',
         builder: (context, state) {
-           final group = state.extra as GroupRequest;
-           return GroupDetailScreen(group: group);
+          final group = state.extra as GroupRequest;
+          return GroupDetailScreen(group: group);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
-         path: '/my-request-detail',
-         builder: (context, state) {
-            final request = state.extra as TutorRequest;
-            return MyRequestDetailScreen(request: request);
-         },
+        path: '/my-request-detail',
+        builder: (context, state) {
+          final request = state.extra as TutorRequest;
+          return MyRequestDetailScreen(request: request);
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/tutor-detail',
         builder: (context, state) {
-           final tutor = state.extra as Tutor;
-           return TutorDetailScreen(tutor: tutor);
+          final tutor = state.extra as Tutor;
+          return TutorDetailScreen(tutor: tutor);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/booking',
         builder: (context, state) {
-           final tutor = state.extra as Tutor;
-           return BookingScreen(tutor: tutor);
+          final tutor = state.extra as Tutor;
+          return BookingScreen(tutor: tutor);
         },
       ),
       GoRoute(
@@ -234,11 +232,12 @@ class AppRouter {
           final timeSlot = extra['timeSlot'] as String?;
           final totalPrice = extra['totalPrice'] as double;
           final bookingType = extra['bookingType'] as String? ?? 'single';
-          
+
           final durationMonths = extra['durationMonths'] as int?;
           final selectedDays = extra['selectedDays'] as List<int>?;
           final learningMode = extra['learningMode'] as String?;
-          final longTermSchedule = extra['longTermSchedule'] as Map<int, List<String>>?;
+          final longTermSchedule =
+              extra['longTermSchedule'] as Map<int, List<String>>?;
 
           return BookingReviewScreen(
             tutor: tutor,
@@ -257,56 +256,57 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/video-call',
         builder: (context, state) {
-           final bookingId = state.extra as String? ?? '';
-           return VideoCallScreen(bookingId: bookingId);
+          final bookingId = state.extra as String? ?? '';
+          return VideoCallScreen(bookingId: bookingId);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/report',
         builder: (context, state) {
-           return const CreateReportScreen();
+          return const CreateReportScreen();
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/create-group',
         builder: (context, state) {
-           final group = state.extra as GroupRequest?;
-           return CreateGroupScreen(group: group);
+          final group = state.extra as GroupRequest?;
+          return CreateGroupScreen(group: group);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/group-management',
         builder: (context, state) {
-           final group = state.extra as GroupRequest;
-           return GroupManagementScreen(group: group);
+          final group = state.extra as GroupRequest;
+          return GroupManagementScreen(group: group);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/create-class',
         builder: (context, state) {
-           final classToEdit = state.extra as Course?;
-           final isGroup = state.uri.queryParameters['isGroup'] == 'true';
-           return CreateClassScreen(classToEdit: classToEdit, isGroup: isGroup);
+          final classToEdit = state.extra as Course?;
+          final isGroup = state.uri.queryParameters['isGroup'] == 'true';
+          return CreateClassScreen(classToEdit: classToEdit, isGroup: isGroup);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/class-detail',
         builder: (context, state) {
-           final course = state.extra as Course;
-           return ClassDetailScreen(course: course);
+          final course = state.extra as Course;
+          return ClassDetailScreen(course: course);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/my-classes',
         builder: (context, state) {
-           final index = int.tryParse(state.uri.queryParameters['index'] ?? '0') ?? 0;
-           return MyClassesScreen(initialIndex: index);
+          final index =
+              int.tryParse(state.uri.queryParameters['index'] ?? '0') ?? 0;
+          return MyClassesScreen(initialIndex: index);
         },
       ),
       GoRoute(
@@ -332,27 +332,40 @@ class AppRouter {
               // Construct Tutor from Partner Info (Chat History)
               tutor = Tutor(
                 id: map['partner_id']?.toString() ?? '0',
-                userId: map['partner_id']?.toString() ?? '0', // Critical for Chat Target
+                userId:
+                    map['partner_id']?.toString() ??
+                    '0', // Critical for Chat Target
                 name: map['partner_name'] ?? 'Chat Partner',
                 avatarUrl: map['partner_avatar'] ?? '',
                 // Dummy Data for Required Fields
-                rating: 0, reviewCount: 0, hourlyRate: 0, subjects: [], bio: '', 
-                location: '', gender: 'Khác', teachingMode: [], address: '', weeklySchedule: {},
+                rating: 0,
+                reviewCount: 0,
+                hourlyRate: 0,
+                subjects: [],
+                bio: '',
+                location: '',
+                gender: 'Khác',
+                teachingMode: [],
+                address: '',
+                weeklySchedule: {},
               );
             }
           }
 
-          if (tutor == null) return const Scaffold(body: Center(child: Text("Lỗi: Không tìm thấy thông tin")));
+          if (tutor == null)
+            return const Scaffold(
+              body: Center(child: Text("Lỗi: Không tìm thấy thông tin")),
+            );
 
-           return ChatScreen(tutor: tutor, initialRequest: initialRequest);
+          return ChatScreen(tutor: tutor, initialRequest: initialRequest);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/tutor-reviews',
         builder: (context, state) {
-           final tutor = state.extra as Tutor;
-           return TutorReviewsScreen(tutor: tutor);
+          final tutor = state.extra as Tutor;
+          return TutorReviewsScreen(tutor: tutor);
         },
       ),
       ShellRoute(
@@ -361,33 +374,35 @@ class AppRouter {
         },
         routes: [
           // Smart Match
-        GoRoute(
-          path: '/smart-match',
-          builder: (context, state) => const LearningStyleQuizScreen(),
-          routes: [
-            GoRoute(
-              path: 'results',
-              builder: (context, state) {
-                final tags = state.extra as List<String>? ?? [];
-                return MatchedTutorsScreen(tags: tags);
-              },
-            ),
-          ],
-        ),
-        // Community
-        GoRoute(
-          path: '/community',
-          builder: (context, state) => const CommunityScreen(),
-        ),
-        GoRoute(
-          path: '/activity', // Existing
-          builder: (context, state) => const AdminUserActivityScreen(userId: 0), // Placeholder if needed or verified usage
-        ),
+          GoRoute(
+            path: '/smart-match',
+            builder: (context, state) => const LearningStyleQuizScreen(),
+            routes: [
+              GoRoute(
+                path: 'results',
+                builder: (context, state) {
+                  final tags = state.extra as List<String>? ?? [];
+                  return MatchedTutorsScreen(tags: tags);
+                },
+              ),
+            ],
+          ),
+          // Community
+          GoRoute(
+            path: '/community',
+            builder: (context, state) => const CommunityScreen(),
+          ),
+          GoRoute(
+            path: '/activity', // Existing
+            builder: (context, state) => const AdminUserActivityScreen(
+              userId: 0,
+            ), // Placeholder if needed or verified usage
+          ),
           GoRoute(
             path: '/admin',
             builder: (context, state) => const AdminDashboardScreen(),
             routes: [
-               GoRoute(
+              GoRoute(
                 path: 'users',
                 builder: (context, state) => const AdminUsersScreen(),
                 routes: [
@@ -467,50 +482,57 @@ class AppRouter {
             builder: (context, state) => const TutorDashboardScreen(),
             routes: [
               GoRoute(
-                 path: 'find-students',
-                 builder: (context, state) {
-                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
-                    return StudentRequestListScreen(initialTab: tab);
-                 },
+                path: 'find-students',
+                builder: (context, state) {
+                  final tab =
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                      0;
+                  return StudentRequestListScreen(initialTab: tab);
+                },
               ),
               GoRoute(
-                 path: 'booking-requests',
-                 builder: (context, state) => const BookingRequestListScreen(),
+                path: 'booking-requests',
+                builder: (context, state) => const BookingRequestListScreen(),
               ),
               GoRoute(
-                 path: 'schedule',
-                 builder: (context, state) => const TutorScheduleManagementScreen(),
+                path: 'schedule',
+                builder: (context, state) =>
+                    const TutorScheduleManagementScreen(),
               ),
               GoRoute(
-                 path: 'history',
-                 builder: (context, state) => const ScheduleScreen(initialIndex: 1),
+                path: 'history',
+                builder: (context, state) =>
+                    const ScheduleScreen(initialIndex: 1),
               ),
               GoRoute(
-                 path: 'messages',
-                 builder: (context, state) => const ChatListScreen(),
-              ),
-               GoRoute(
-                 path: 'profile',
-                 builder: (context, state) => const ProfileScreen(), // Reusing Profile
+                path: 'messages',
+                builder: (context, state) => const ChatListScreen(),
               ),
               GoRoute(
-                 path: 'statistics',
-                 builder: (context, state) {
-                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
-                    return TutorStatisticsScreen(initialTab: tab);
-                 },
+                path: 'profile',
+                builder: (context, state) =>
+                    const ProfileScreen(), // Reusing Profile
               ),
               GoRoute(
-                 path: 'blog',
-                 builder: (context, state) => const BlogListScreen(),
+                path: 'statistics',
+                builder: (context, state) {
+                  final tab =
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                      0;
+                  return TutorStatisticsScreen(initialTab: tab);
+                },
               ),
               GoRoute(
-                 path: 'tuition',
-                 builder: (context, state) => const TutorTuitionScreen(),
+                path: 'blog',
+                builder: (context, state) => const BlogListScreen(),
               ),
               GoRoute(
-                 path: 'recommended-requests',
-                 builder: (context, state) => const RecommendedRequestsScreen(),
+                path: 'tuition',
+                builder: (context, state) => const TutorTuitionScreen(),
+              ),
+              GoRoute(
+                path: 'recommended-requests',
+                builder: (context, state) => const RecommendedRequestsScreen(),
               ),
             ],
           ),
@@ -559,7 +581,9 @@ class AppRouter {
         path: '/tutor-profile-edit',
         builder: (context, state) {
           final extra = state.extra;
-          final tutor = extra is Tutor ? extra : Tutor.fromJson(extra as Map<String, dynamic>);
+          final tutor = extra is Tutor
+              ? extra
+              : Tutor.fromJson(extra as Map<String, dynamic>);
           return TutorProfileEditScreen(tutor: tutor);
         },
       ),
@@ -590,7 +614,10 @@ class AppRouter {
           if (extra is Map<String, dynamic>) {
             return CreateQuizScreen(
               quizToEdit: extra['quiz'] as Quiz?,
-              courseId: extra['courseId'] as int?,
+              courseId: (extra['courseId'] ?? extra['course_id']) as int?,
+              studentId: (extra['studentId'] ?? extra['student_id']) as int?,
+              studyGroupId:
+                  (extra['studyGroupId'] ?? extra['study_group_id']) as int?,
             );
           }
           return const CreateQuizScreen();
@@ -605,25 +632,29 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/quiz-detail/:id',
         builder: (context, state) {
-           final quiz = state.extra as Quiz?;
-           final quizId = int.parse(state.pathParameters['id']!);
-           return QuizDetailScreen(quizId: quizId, initialData: quiz);
+          final quiz = state.extra as Quiz?;
+          final quizId = int.parse(state.pathParameters['id']!);
+          return QuizDetailScreen(quizId: quizId, initialData: quiz);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/quiz-taking/:id',
         builder: (context, state) {
-           final quiz = state.extra as Quiz;
-           return QuizTakingScreen(quizId: quiz.id, quiz: quiz);
+          final quiz = state.extra as Quiz;
+          return QuizTakingScreen(quizId: quiz.id, quiz: quiz);
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/quiz-result',
         builder: (context, state) {
-           final extra = state.extra as Map<String, dynamic>;
-           return QuizResultScreen(quiz: extra['quiz'] as Quiz, result: extra['result']);
+          final extra = state.extra as Map<String, dynamic>;
+          return QuizResultScreen(
+            quiz: extra['quiz'] as Quiz,
+            result: extra['result'],
+            returnToClass: extra['returnToClass'] == true,
+          );
         },
       ),
       GoRoute(
@@ -643,8 +674,8 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/student-booking-detail',
         builder: (context, state) {
-           final student = state.extra as AppUser;
-           return StudentBookingDetailScreen(student: student);
+          final student = state.extra as AppUser;
+          return StudentBookingDetailScreen(student: student);
         },
       ),
     ],
@@ -652,8 +683,9 @@ class AppRouter {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
       final role = prefs.getString('user_role');
-      
-      final loggingIn = state.uri.path == '/login' || state.uri.path == '/register';
+
+      final loggingIn =
+          state.uri.path == '/login' || state.uri.path == '/register';
 
       // 1. Not logged in
       if (token == null) {
@@ -665,7 +697,7 @@ class AppRouter {
         if (role == 'admin') {
           return '/admin';
         } else if (role == 'tutor') {
-           return '/tutor-dashboard';
+          return '/tutor-dashboard';
         } else {
           return '/';
         }
@@ -679,11 +711,9 @@ class AppRouter {
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();
-    _subscription = stream.asBroadcastStream().listen(
-      (dynamic _) { 
-        notifyListeners(); 
-      },
-    );
+    _subscription = stream.asBroadcastStream().listen((dynamic _) {
+      notifyListeners();
+    });
   }
 
   late final StreamSubscription<dynamic> _subscription;

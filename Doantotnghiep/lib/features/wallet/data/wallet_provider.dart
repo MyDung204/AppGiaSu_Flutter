@@ -20,9 +20,10 @@ class WalletNotifier extends AsyncNotifier<WalletState> {
       if (success) refresh();
   }
 
-  Future<void> withdraw(double amount, String bankName, String accountNumber) async {
-      final success = await ref.read(walletRepositoryProvider).withdraw(amount, bankName, accountNumber);
-      if (success) refresh();
+  Future<bool> withdraw(double amount, String bankName, String accountNumber, String accountName) async {
+      final success = await ref.read(walletRepositoryProvider).withdraw(amount, bankName, accountNumber, accountName);
+      if (success) await refresh();
+      return success;
   }
 
   Future<void> simulateDeposit(double amount, int userId) async {

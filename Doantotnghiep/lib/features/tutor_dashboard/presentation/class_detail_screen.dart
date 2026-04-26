@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/group/data/course_provider.dart';
 import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
@@ -35,13 +36,19 @@ class ClassDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authRepositoryProvider).currentUser;
     // Fix: Use isTutor from model or compare with tutorUserId if available, fallback to legacy check
-    final isTutor = course.isTutor || 
-                    (course.tutorUserId != null && user?.id.toString() == course.tutorUserId) ||
-                    (user?.role == 'tutor' && user?.id.toString() == course.tutorId);
+    final isTutor =
+        course.isTutor ||
+        (course.tutorUserId != null &&
+            user?.id.toString() == course.tutorUserId) ||
+        (user?.role == 'tutor' && user?.id.toString() == course.tutorId);
 
     final isEnrolled = course.isEnrolled;
-    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
-    
+    final currencyFormat = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'đ',
+      decimalDigits: 0,
+    );
+
     // Payment Status Check
     final isPaymentDue = course.paymentStatus == 'due';
     final isGracePeriod = course.paymentStatus == 'grace_period';
@@ -60,19 +67,29 @@ class ClassDetailScreen extends ConsumerWidget {
                 pinned: true,
                 backgroundColor: _EduTheme.primary,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                  ),
                   onPressed: () => context.pop(),
                 ),
                 actions: [
                   if (isTutor) ...[
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                      onPressed: () => context.push('/create-class', extra: course),
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        color: Colors.white,
+                      ),
+                      onPressed: () =>
+                          context.push('/create-class', extra: course),
                     ),
                     IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.white),
-                        onPressed: () => _confirmDelete(context, ref),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.white,
                       ),
+                      onPressed: () => _confirmDelete(context, ref),
+                    ),
                   ],
                 ],
                 flexibleSpace: FlexibleSpaceBar(
@@ -99,11 +116,11 @@ class ClassDetailScreen extends ConsumerWidget {
           },
           body: Column(
             children: [
-               if (isEnrolled && (isPaymentDue || isGracePeriod || isOverdue))
-                 _buildPaymentBanner(context, ref),
-               
-               Expanded(
-                 child: TabBarView(
+              if (isEnrolled && (isPaymentDue || isGracePeriod || isOverdue))
+                _buildPaymentBanner(context, ref),
+
+              Expanded(
+                child: TabBarView(
                   children: [
                     // 1. Overview Tab (Always Visible)
                     RefreshIndicator(
@@ -114,63 +131,82 @@ class ClassDetailScreen extends ConsumerWidget {
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(20),
                         child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                             if (isTutor) _buildStatsGrid(currencyFormat),
-                             if (isTutor) const SizedBox(height: 20),
-                             _buildInfoCard(),
-                             const SizedBox(height: 20),
-                             _buildTutorInfoCard(context, ref),
-                             const SizedBox(height: 20),
-                             _buildDescriptionCard(),
-                             const SizedBox(height: 80), // Padding for FAB
-                           ],
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (isTutor) _buildStatsGrid(currencyFormat),
+                            if (isTutor) const SizedBox(height: 20),
+                            _buildInfoCard(),
+                            const SizedBox(height: 20),
+                            if (!isTutor && isEnrolled) ...[
+                              _buildCourseTuitionCard(
+                                context,
+                                ref,
+                                currencyFormat,
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+                            _buildTutorInfoCard(context, ref),
+                            const SizedBox(height: 20),
+                            _buildDescriptionCard(),
+                            const SizedBox(height: 80), // Padding for FAB
+                          ],
                         ),
                       ),
                     ),
-                    
+
                     // 2. Announcements Tab
                     shouldBlockAccess && !isTutor
-                        ? _buildRestrictedAccessView() 
-                        : ClassAnnouncementsTab(course: course, isTutor: isTutor),
-                  
+                        ? _buildRestrictedAccessView()
+                        : ClassAnnouncementsTab(
+                            course: course,
+                            isTutor: isTutor,
+                          ),
+
                     // 3. Assignments Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
                         : ClassAssignmentsTab(course: course, isTutor: isTutor),
-                  
+
                     // 4. Materials Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
-                        : ClassMaterialsTab(courseId: int.tryParse(course.id) ?? 0, isTutor: isTutor),
+                        : ClassMaterialsTab(
+                            courseId: int.tryParse(course.id) ?? 0,
+                            isTutor: isTutor,
+                          ),
 
                     // 5. Quiz Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
-                        : ClassQuizTab(courseId: int.tryParse(course.id) ?? 0, isTutor: isTutor),
+                        : ClassQuizTab(
+                            courseId: int.tryParse(course.id) ?? 0,
+                            isTutor: isTutor,
+                          ),
 
                     // 5. People Tab
                     SingleChildScrollView(
-                       padding: const EdgeInsets.all(20),
-                       child: Column(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
                         children: [
                           if (course.students.isNotEmpty)
                             _buildStudentsCard(context, ref, isTutor)
-                          else 
-                            const Center(child: Text("Chưa có học viên nào tham gia")),
+                          else
+                            const Center(
+                              child: Text("Chưa có học viên nào tham gia"),
+                            ),
                           const SizedBox(height: 80),
                         ],
-                       ),
+                      ),
                     ),
                   ],
-                               ),
-               ),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      floatingActionButton: shouldBlockAccess && !isTutor 
-          ? null 
+      floatingActionButton: shouldBlockAccess && !isTutor
+          ? null
           : _buildFloatingActions(context, ref, isTutor, isEnrolled, user),
     );
   }
@@ -187,77 +223,151 @@ class ClassDetailScreen extends ConsumerWidget {
             const Expanded(
               child: Text(
                 'Bạn đã quá hạn thanh toán. Vui lòng liên hệ Admin.',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
       );
     }
-    
+
     if (course.paymentStatus == 'grace_period') {
-       return _GracePeriodBanner(
-         endTime: course.gracePeriodEndsAt, 
-         remainingSeconds: course.graceRemainingSeconds
-       );
+      return _GracePeriodBanner(
+        endTime: course.gracePeriodEndsAt,
+        remainingSeconds: course.graceRemainingSeconds,
+        onPayNow: () => _handlePayCourseTuition(context, ref),
+      );
     }
 
     // Due
     return Container(
-        padding: const EdgeInsets.all(12),
-        color: Colors.orange[50],
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Học phí đã đến hạn',
-                        style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.all(12),
+      color: Colors.orange[50],
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Học phí đã đến hạn',
+                      style: TextStyle(
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Text(
-                        'Vui lòng thanh toán để tiếp tục học.',
-                        style: TextStyle(color: Colors.orange[800], fontSize: 12),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      'Vui lòng thanh toán để tiếp tục học.',
+                      style: TextStyle(color: Colors.orange[800], fontSize: 12),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                 TextButton(
-                   onPressed: () => _handleRefuseTuition(context, ref),
-                   child: const Text('Xin gia hạn (3 ngày)', style: TextStyle(color: Colors.grey)),
-                 ),
-                 const SizedBox(width: 8),
-                 ElevatedButton(
-                   onPressed: () {
-                     // Navigate to Payment
-                     context.push('/wallet'); // Or specific payment flow
-                   },
-                   style: ElevatedButton.styleFrom(
-                     backgroundColor: Colors.deepOrange,
-                     foregroundColor: Colors.white,
-                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                     visualDensity: VisualDensity.compact,
-                   ),
-                   child: const Text('Thanh toán'),
-                 ),
-              ],
-            )
-          ],
-        ),
-      );
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => _handleRefuseTuition(context, ref),
+                child: const Text(
+                  'Xin gia hạn (3 ngày)',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => _handlePayCourseTuition(context, ref),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 0,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: const Text('Thanh toán'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
-  
+
+  Future<void> _handlePayCourseTuition(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final currencyFormat = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'đ',
+      decimalDigits: 0,
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Thanh toán học phí'),
+        content: Text(
+          'Bạn sẽ thanh toán ${currencyFormat.format(course.price)} từ ví cá nhân. Tiếp tục?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Thanh toán'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final success = await ref
+          .read(sharedLearningRepositoryProvider)
+          .payCourseTuition(course.id);
+
+      if (!context.mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thanh toán học phí thành công!')),
+        );
+        ref.invalidate(coursesProvider);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thanh toán học phí thất bại. Vui lòng thử lại.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+
+      final message = e is ApiException
+          ? e.userMessage
+          : 'Thanh toán học phí thất bại. Vui lòng thử lại.';
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Widget _buildRestrictedAccessView() {
     return Center(
       child: Column(
@@ -267,7 +377,11 @@ class ClassDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(
             'Truy cập bị hạn chế',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
           ),
           const SizedBox(height: 8),
           const Padding(
@@ -288,60 +402,86 @@ class ClassDetailScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xin gia hạn đóng học phí?'),
-        content: const Text('Bạn sẽ có thêm 3 ngày để truy cập lớp học nhóm trước khi bị hạn chế hoàn toàn. Bạn có chắc chắn muốn gia hạn không?'),
+        content: const Text(
+          'Bạn sẽ có thêm 3 ngày để truy cập lớp học nhóm trước khi bị hạn chế hoàn toàn. Bạn có chắc chắn muốn gia hạn không?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Đồng ý')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Đồng ý'),
+          ),
         ],
       ),
     );
 
     if (confirmed == true) {
-       // Call API
-       final repo = ref.read(sharedLearningRepositoryProvider);
-       final result = await repo.refuseTuition(course.id);
-       if (result != null) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã gia hạn thành công!')));
-          ref.invalidate(coursesProvider);
-          // Small delay to allow refresh
-          await Future.delayed(const Duration(milliseconds: 500));
-       } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại.')));
-       }
+      // Call API
+      final repo = ref.read(sharedLearningRepositoryProvider);
+      final result = await repo.refuseTuition(course.id);
+      if (result != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã gia hạn thành công!')));
+        ref.invalidate(coursesProvider);
+        // Small delay to allow refresh
+        await Future.delayed(const Duration(milliseconds: 500));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại.')),
+        );
+      }
     }
   }
 
-  Widget? _buildFloatingActions(BuildContext context, WidgetRef ref, bool isTutor, bool isEnrolled, user) {
+  Widget? _buildFloatingActions(
+    BuildContext context,
+    WidgetRef ref,
+    bool isTutor,
+    bool isEnrolled,
+    user,
+  ) {
     // Chat bubble for enrolled students and course tutor
     if (isEnrolled || isTutor) {
       if (course.mode == 'Online') {
-         return Column(
+        return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-             // Meet Button
+            // Meet Button
             FloatingActionButton.small(
               heroTag: 'meet_fab',
               onPressed: () => _handleMeetAction(context, ref, isTutor),
               backgroundColor: _EduTheme.primary,
-              child: const Icon(Icons.video_camera_front, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.video_camera_front,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
             const SizedBox(height: 16),
             // Chat button
             FloatingActionButton.small(
               heroTag: 'chat_fab',
               onPressed: () {
-                 if (isEnrolled || isTutor) {
-                   context.push('/class-chat', extra: course);
-                 }
+                if (isEnrolled || isTutor) {
+                  context.push('/class-chat', extra: course);
+                }
               },
               backgroundColor: Colors.green,
-              child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.chat_bubble_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ],
         );
       }
-      
+
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -349,27 +489,31 @@ class ClassDetailScreen extends ConsumerWidget {
           FloatingActionButton.small(
             heroTag: 'chat_fab',
             onPressed: () {
-               if (isEnrolled || isTutor) {
-                 context.push('/class-chat', extra: course);
-               }
+              if (isEnrolled || isTutor) {
+                context.push('/class-chat', extra: course);
+              }
             },
             backgroundColor: Colors.green,
-            child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.chat_bubble_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ],
       );
     }
-    
+
     // Register button for non-enrolled students
     if (!isTutor && user?.role == 'student' && !isEnrolled) {
       return FloatingActionButton.extended(
-        onPressed: () => _confirmJoin(context, ref),
-        backgroundColor: _EduTheme.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Đăng ký ngay'),
+        onPressed: course.isFull ? null : () => _confirmJoin(context, ref),
+        backgroundColor: course.isFull ? Colors.grey : _EduTheme.primary,
+        icon: Icon(course.isFull ? Icons.group_off_outlined : Icons.add),
+        label: Text(course.isFull ? 'Full' : 'Đăng ký ngay'),
       );
     }
-    
+
     return null;
   }
 
@@ -398,7 +542,11 @@ class ClassDetailScreen extends ConsumerWidget {
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.school, size: 32, color: Colors.white),
+                    child: const Icon(
+                      Icons.school,
+                      size: 32,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -417,13 +565,23 @@ class ClassDetailScreen extends ConsumerWidget {
                         Row(
                           children: [
                             _buildBadge(
-                              course.status == 'open' ? 'Đang tuyển' : 'Đã đóng',
-                              course.status == 'open' ? _EduTheme.success : Colors.grey,
+                              course.isFull
+                                  ? 'Full'
+                                  : (course.status == 'open'
+                                        ? 'Đang tuyển'
+                                        : 'Đã đóng'),
+                              course.isFull
+                                  ? _EduTheme.rose
+                                  : (course.status == 'open'
+                                        ? _EduTheme.success
+                                        : Colors.grey),
                             ),
                             const SizedBox(width: 8),
                             _buildBadge(
                               course.mode,
-                              course.mode == 'Online' ? _EduTheme.secondary : Colors.blueAccent,
+                              course.mode == 'Online'
+                                  ? _EduTheme.secondary
+                                  : Colors.blueAccent,
                             ),
                           ],
                         ),
@@ -438,7 +596,9 @@ class ClassDetailScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -448,7 +608,10 @@ class ClassDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Học phí',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -466,7 +629,10 @@ class ClassDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Học viên',
-                          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -510,7 +676,7 @@ class ClassDetailScreen extends ConsumerWidget {
   Widget _buildStatsGrid(NumberFormat currencyFormat) {
     final revenue = course.price * course.students.length;
     final remainingSlots = course.maxStudents - course.students.length;
-    
+
     return Row(
       children: [
         Expanded(
@@ -644,7 +810,160 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildModernInfoRow(IconData icon, String label, String value, Color color) {
+  Widget _buildCourseTuitionCard(
+    BuildContext context,
+    WidgetRef ref,
+    NumberFormat currencyFormat,
+  ) {
+    final paymentStatus = course.paymentStatus ?? 'trial';
+    final isPaid = paymentStatus == 'paid';
+    final isFree = course.price <= 0;
+
+    final statusData = switch (paymentStatus) {
+      'paid' => (
+        text: 'Đã thanh toán',
+        color: _EduTheme.success,
+        icon: Icons.check_circle_outline,
+      ),
+      'due' => (
+        text: 'Đến hạn thanh toán',
+        color: _EduTheme.secondary,
+        icon: Icons.warning_amber_rounded,
+      ),
+      'grace_period' => (
+        text: 'Đang gia hạn thanh toán',
+        color: _EduTheme.secondary,
+        icon: Icons.timer_outlined,
+      ),
+      'overdue' => (
+        text: 'Quá hạn thanh toán',
+        color: _EduTheme.rose,
+        icon: Icons.error_outline,
+      ),
+      _ => (
+        text: 'Đang học thử 7 ngày',
+        color: _EduTheme.primary,
+        icon: Icons.school_outlined,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _EduTheme.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _EduTheme.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.payments_outlined,
+                  color: _EduTheme.success,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Học phí lớp học nhóm',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _EduTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Icon(statusData.icon, color: statusData.color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  statusData.text,
+                  style: TextStyle(
+                    color: statusData.color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                isFree ? 'Miễn phí' : currencyFormat.format(course.price),
+                style: const TextStyle(
+                  color: _EduTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          if (course.gracePeriodEndsAt != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Hạn gia hạn: ${DateFormat('dd/MM/yyyy HH:mm').format(course.gracePeriodEndsAt!)}',
+              style: const TextStyle(
+                color: _EduTheme.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: isFree
+                ? OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Lớp miễn phí'),
+                  )
+                : isPaid
+                ? OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Đã thanh toán'),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () => _handlePayCourseTuition(context, ref),
+                    icon: const Icon(Icons.account_balance_wallet_outlined),
+                    label: const Text('Thanh toán học phí'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _EduTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInfoRow(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Row(
       children: [
         Container(
@@ -743,7 +1062,6 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
-
   Widget _buildTutorInfoCard(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -769,11 +1087,7 @@ class ClassDetailScreen extends ConsumerWidget {
                   color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
-                  Icons.person,
-                  color: Colors.blue,
-                  size: 20,
-                ),
+                child: const Icon(Icons.person, color: Colors.blue, size: 20),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -789,64 +1103,87 @@ class ClassDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-               const CircleAvatar(
-                 radius: 20,
-                 backgroundColor: Colors.blue,
-                 child: Icon(Icons.person, color: Colors.white),
-               ),
-               const SizedBox(width: 12),
-               Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                   Row(
-                     children: [
-                       Text(
-                         course.tutorName,
-                         style: const TextStyle(
-                           fontWeight: FontWeight.bold,
-                           fontSize: 16,
-                         ),
-                       ),
-                       const SizedBox(width: 6),
-                       const Icon(Icons.verified, color: Colors.blue, size: 16),
-                       const SizedBox(width: 4),
-                       const Text('Gia sư', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
-                     ],
-                   ),
-                   if (course.tutorPhone != null)
-                     Text(
-                       'SĐT: ${course.tutorPhone}',
-                       style: const TextStyle(
-                         color: Colors.grey,
-                         fontSize: 14,
-                       ),
-                     ),
-                 ],
-               ),
-             ),
-             Row(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                 IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-                  onPressed: () {
-                     // Check access
-                     final isTutor = ref.read(authRepositoryProvider).currentUser?.role == 'tutor';
-                     final isGracePeriod = course.paymentStatus == 'grace_period';
-                     final isOverdue = course.paymentStatus == 'overdue';
-                     
-                     if (!isTutor && (isGracePeriod || isOverdue)) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng thanh toán học phí để chat')));
+              const CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.person, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          course.tutorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.verified,
+                          color: Colors.blue,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Gia sư',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (course.tutorPhone != null)
+                      Text(
+                        'SĐT: ${course.tutorPhone}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.chat_bubble_outline,
+                      color: Colors.blue,
+                    ),
+                    onPressed: () {
+                      // Check access
+                      final isTutor =
+                          ref.read(authRepositoryProvider).currentUser?.role ==
+                          'tutor';
+                      final isGracePeriod =
+                          course.paymentStatus == 'grace_period';
+                      final isOverdue = course.paymentStatus == 'overdue';
+
+                      if (!isTutor && (isGracePeriod || isOverdue)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Vui lòng thanh toán học phí để chat',
+                            ),
+                          ),
+                        );
                         return;
-                     }
-                     context.push('/class-chat', extra: course);
-                  },
-                 ),
-                 if (course.tutorPhone != null)
-                   IconButton(
-                     icon: const Icon(Icons.phone, color: Colors.green),
-                     onPressed: () async {
+                      }
+                      context.push('/class-chat', extra: course);
+                    },
+                  ),
+                  if (course.tutorPhone != null)
+                    IconButton(
+                      icon: const Icon(Icons.phone, color: Colors.green),
+                      onPressed: () async {
                         final Uri launchUri = Uri(
                           scheme: 'tel',
                           path: course.tutorPhone,
@@ -854,10 +1191,10 @@ class ClassDetailScreen extends ConsumerWidget {
                         if (await canLaunchUrl(launchUri)) {
                           await launchUrl(launchUri);
                         }
-                     },
-                   ),
-               ],
-             ),
+                      },
+                    ),
+                ],
+              ),
             ],
           ),
         ],
@@ -919,7 +1256,10 @@ class ClassDetailScreen extends ConsumerWidget {
                 onTap: () => _showStudentDetails(context, s),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 4.0,
+                  ),
                   child: Row(
                     children: [
                       CircleAvatar(
@@ -958,8 +1298,11 @@ class ClassDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                         icon: const Icon(Icons.info_outline, color: Colors.grey),
-                         onPressed: () => _showStudentDetails(context, s),
+                        icon: const Icon(
+                          Icons.info_outline,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => _showStudentDetails(context, s),
                       ),
                       if (isTutor)
                         IconButton(
@@ -1008,11 +1351,13 @@ class ClassDetailScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-           children: [
-             CircleAvatar(child: Text((student['name'] ?? 'U')[0].toUpperCase())),
-             const SizedBox(width: 10),
-             Expanded(child: Text(student['name'] ?? 'Học viên')),
-           ],
+          children: [
+            CircleAvatar(
+              child: Text((student['name'] ?? 'U')[0].toUpperCase()),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(student['name'] ?? 'Học viên')),
+          ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1020,13 +1365,24 @@ class ClassDetailScreen extends ConsumerWidget {
           children: [
             _detailRow(Icons.email, 'Email', student['email'] ?? 'Không có'),
             const SizedBox(height: 10),
-            _detailRow(Icons.phone, 'SĐT', student['phone_number'] ?? 'Không có'),
+            _detailRow(
+              Icons.phone,
+              'SĐT',
+              student['phone_number'] ?? 'Không có',
+            ),
             const SizedBox(height: 10),
-            _detailRow(Icons.calendar_today, 'Tham gia', _formatDate(student['enrolled_at'])),
+            _detailRow(
+              Icons.calendar_today,
+              'Tham gia',
+              _formatDate(student['enrolled_at']),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
         ],
       ),
     );
@@ -1037,32 +1393,43 @@ class ClassDetailScreen extends ConsumerWidget {
       children: [
         Icon(icon, size: 18, color: Colors.grey),
         const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          '$label: ',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
         Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
       ],
     );
   }
 
- // End of custom methods, keeping _confirmDelete below unused if duplicated or merged
+  // End of custom methods, keeping _confirmDelete below unused if duplicated or merged
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận đóng lớp'),
-        content: const Text('Bạn có chắc muốn đóng/hủy lớp học này không? Hành động này không thể hoàn tác.'),
+        content: const Text(
+          'Bạn có chắc muốn đóng/hủy lớp học này không? Hành động này không thể hoàn tác.',
+        ),
         actions: [
           TextButton(onPressed: () => ctx.pop(), child: const Text('Hủy')),
           TextButton(
             onPressed: () async {
               ctx.pop();
-              final success = await ref.read(sharedLearningRepositoryProvider).deleteCourse(course.id);
+              final success = await ref
+                  .read(sharedLearningRepositoryProvider)
+                  .deleteCourse(course.id);
               if (context.mounted) {
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa lớp học thành công')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã xóa lớp học thành công')),
+                  );
                   ref.invalidate(coursesProvider);
                   context.pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi xóa lớp')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lỗi khi xóa lớp')),
+                  );
                 }
               }
             },
@@ -1077,16 +1444,25 @@ class ClassDetailScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Đăng ký lớp học', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Đăng ký lớp học',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Bạn cần thanh toán học phí để tham gia lớp học này.'),
             const SizedBox(height: 16),
-            Text('Học phí: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(course.price)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              'Học phí: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(course.price)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
-            const Text('Chọn phương thức thanh toán:', style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Chọn phương thức thanh toán:',
+              style: TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -1097,7 +1473,9 @@ class ClassDetailScreen extends ConsumerWidget {
               ctx.pop();
               _processJoin(context, ref, 'part');
             },
-            child: Text('Thanh toán 50% (${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(course.price / 2)})'),
+            child: Text(
+              'Thanh toán 50% (${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(course.price / 2)})',
+            ),
           ),
           FilledButton(
             onPressed: () async {
@@ -1111,15 +1489,27 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _processJoin(BuildContext context, WidgetRef ref, String paymentType) async {
-    final success = await ref.read(sharedLearningRepositoryProvider).joinCourse(course.id, paymentType: paymentType);
+  Future<void> _processJoin(
+    BuildContext context,
+    WidgetRef ref,
+    String paymentType,
+  ) async {
+    final success = await ref
+        .read(sharedLearningRepositoryProvider)
+        .joinCourse(course.id, paymentType: paymentType);
     if (context.mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng ký lớp học thành công!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đăng ký lớp học thành công!')),
+        );
         ref.invalidate(coursesProvider);
         // ref.refresh(courseDetailProvider(course.id)); // If details are cached separately
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng ký thất bại. Vui lòng kiểm tra số dư ví.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng ký thất bại. Vui lòng kiểm tra số dư ví.'),
+          ),
+        );
       }
     }
   }
@@ -1135,14 +1525,20 @@ class ClassDetailScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               ctx.pop();
-              final success = await ref.read(sharedLearningRepositoryProvider).leaveCourse(course.id);
+              final success = await ref
+                  .read(sharedLearningRepositoryProvider)
+                  .leaveCourse(course.id);
               if (context.mounted) {
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã rời lớp học')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã rời lớp học')),
+                  );
                   ref.invalidate(coursesProvider);
                   context.pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi rời lớp')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lỗi khi rời lớp')),
+                  );
                 }
               }
             },
@@ -1153,10 +1549,6 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
-
-
-
-
   void _showSuccessDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -1166,9 +1558,15 @@ class ClassDetailScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 60),
             const SizedBox(height: 16),
-            const Text('Đăng ký thành công!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Đăng ký thành công!',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            const Text('Bạn có thể xem lớp học trong mục "Lớp của tôi".', textAlign: TextAlign.center),
+            const Text(
+              'Bạn có thể xem lớp học trong mục "Lớp của tôi".',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
         actions: [
@@ -1185,48 +1583,61 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleMeetAction(BuildContext context, WidgetRef ref, bool isTutor) async {
-     String meetingUrl = course.meetingLink ?? '';
-     
-     if (isTutor && meetingUrl.isEmpty) {
-        // Auto-create Jitsi link
-        meetingUrl = 'https://meet.jit.si/antigravity-course-${course.id}'; 
-        
-        try {
-           await ref.read(sharedLearningRepositoryProvider).updateCourse(
-             course.id, 
-             {'meeting_link': meetingUrl}
-           );
-           // Invalidate to refresh (optional)
-           // ref.invalidate(courseDetailProvider);
-        } catch (e) {
-           if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tạo phòng: $e')));
-           }
-           return;
+  Future<void> _handleMeetAction(
+    BuildContext context,
+    WidgetRef ref,
+    bool isTutor,
+  ) async {
+    String meetingUrl = course.meetingLink ?? '';
+
+    if (isTutor && meetingUrl.isEmpty) {
+      // Auto-create Jitsi link
+      meetingUrl = 'https://meet.jit.si/antigravity-course-${course.id}';
+
+      try {
+        await ref.read(sharedLearningRepositoryProvider).updateCourse(
+          course.id,
+          {'meeting_link': meetingUrl},
+        );
+        // Invalidate to refresh (optional)
+        // ref.invalidate(courseDetailProvider);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Lỗi tạo phòng: $e')));
         }
-     }
+        return;
+      }
+    }
 
-     if (meetingUrl.isEmpty) {
-       if (context.mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chờ gia sư mở phòng...')));
-       }
-       return;
-     }
+    if (meetingUrl.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Chờ gia sư mở phòng...')));
+      }
+      return;
+    }
 
-     final Uri url = Uri.parse(meetingUrl);
-     if (await canLaunchUrl(url)) {
-       await launchUrl(url, mode: LaunchMode.externalApplication);
-     } else {
-       if (context.mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Không thể mở cuộc họp')),
-         );
-       }
-     }
+    final Uri url = Uri.parse(meetingUrl);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Không thể mở cuộc họp')));
+      }
+    }
   }
 
-  void _confirmKick(BuildContext context, WidgetRef ref, String studentId, String studentName) {
+  void _confirmKick(
+    BuildContext context,
+    WidgetRef ref,
+    String studentId,
+    String studentName,
+  ) {
     final sessionsController = TextEditingController();
     final totalController = TextEditingController(text: '10');
     final reasonController = TextEditingController();
@@ -1239,7 +1650,9 @@ class ClassDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Hành động này sẽ xóa học viên khỏi lớp và hoàn tiền dựa trên số buổi chưa học.'),
+              const Text(
+                'Hành động này sẽ xóa học viên khỏi lớp và hoàn tiền dựa trên số buổi chưa học.',
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: reasonController,
@@ -1273,37 +1686,49 @@ class ClassDetailScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _EduTheme.rose),
             onPressed: () async {
               if (reasonController.text.trim().isEmpty) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('Vui lòng nhập lý do xóa học viên')),
-                 );
-                 return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vui lòng nhập lý do xóa học viên'),
+                  ),
+                );
+                return;
               }
 
               final sessions = int.tryParse(sessionsController.text) ?? 0;
               final total = int.tryParse(totalController.text) ?? 10;
               final reason = reasonController.text.trim();
-              
+
               Navigator.pop(ctx);
-              
+
               // Show loading
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đang xử lý...')));
-              
-              final result = await ref.read(sharedLearningRepositoryProvider).kickStudent(
-                course.id, 
-                studentId, 
-                sessions, 
-                totalSessions: total,
-                reason: reason,
-              );
-              
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Đang xử lý...')));
+
+              final result = await ref
+                  .read(sharedLearningRepositoryProvider)
+                  .kickStudent(
+                    course.id,
+                    studentId,
+                    sessions,
+                    totalSessions: total,
+                    reason: reason,
+                  );
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                _showKickResultValues(context, result ?? 'Đã xóa học viên (Không có chi tiết)');
+                _showKickResultValues(
+                  context,
+                  result ?? 'Đã xóa học viên (Không có chi tiết)',
+                );
                 ref.invalidate(coursesProvider); // Refresh
               }
             },
@@ -1321,7 +1746,10 @@ class ClassDetailScreen extends ConsumerWidget {
         title: const Text('Kết quả xử lý'),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
         ],
       ),
     );
@@ -1331,8 +1759,13 @@ class ClassDetailScreen extends ConsumerWidget {
 class _GracePeriodBanner extends StatefulWidget {
   final DateTime? endTime;
   final int? remainingSeconds;
+  final VoidCallback onPayNow;
 
-  const _GracePeriodBanner({this.endTime, this.remainingSeconds});
+  const _GracePeriodBanner({
+    this.endTime,
+    this.remainingSeconds,
+    required this.onPayNow,
+  });
 
   @override
   State<_GracePeriodBanner> createState() => _GracePeriodBannerState();
@@ -1345,9 +1778,12 @@ class _GracePeriodBannerState extends State<_GracePeriodBanner> {
   @override
   void initState() {
     super.initState();
-    _secondsLeft = widget.remainingSeconds ?? 
-        (widget.endTime != null ? widget.endTime!.difference(DateTime.now()).inSeconds : 0);
-    
+    _secondsLeft =
+        widget.remainingSeconds ??
+        (widget.endTime != null
+            ? widget.endTime!.difference(DateTime.now()).inSeconds
+            : 0);
+
     if (_secondsLeft > 0) {
       _startTimer();
     }
@@ -1398,7 +1834,10 @@ class _GracePeriodBannerState extends State<_GracePeriodBanner> {
                   children: [
                     const Text(
                       'Truy cập bị hạn chế (Gia hạn)',
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Vui lòng thanh toán trong thời gian còn lại để tránh bị xóa khỏi lớp.',
@@ -1426,17 +1865,15 @@ class _GracePeriodBannerState extends State<_GracePeriodBanner> {
               ),
             ),
           ),
-           const SizedBox(height: 8),
-           ElevatedButton(
-             onPressed: () {
-               context.push('/wallet'); // Or correct path
-             },
-             style: ElevatedButton.styleFrom(
-               backgroundColor: Colors.red[700],
-               foregroundColor: Colors.white,
-             ),
-             child: const Text('Thanh toán ngay'),
-           ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: widget.onPayNow,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Thanh toán ngay'),
+          ),
         ],
       ),
     );

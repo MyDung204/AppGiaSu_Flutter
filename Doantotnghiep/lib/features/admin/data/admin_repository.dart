@@ -171,9 +171,11 @@ class AdminRepository {
     }
   }
 
-  Future<bool> rejectTutor(int tutorId) async {
+  Future<bool> rejectTutor(int tutorId, {String? reason}) async {
     try {
-      await _client.post('/admin/tutors/$tutorId/reject', data: {});
+      await _client.post('/admin/tutors/$tutorId/reject', data: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      });
       return true;
     } catch (e) {
       print('Error rejecting tutor: $e');
@@ -260,7 +262,7 @@ class AdminRepository {
       return [];
     } catch (e) {
       print('Error fetching verification requests: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -339,4 +341,3 @@ class AdminRepository {
     }
   }
 }
-

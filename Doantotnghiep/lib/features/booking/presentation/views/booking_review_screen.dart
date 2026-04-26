@@ -355,14 +355,25 @@ class BookingReviewScreen extends ConsumerWidget {
                     child: ElevatedButton(
                       onPressed: () async {
                         // 1. Check Wallet PIN Status
-                        final walletState = ref.read(walletProvider).value;
+                        var walletState = ref.read(walletProvider).valueOrNull;
                         if (walletState == null) {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đang tải thông tin ví...')));
-                           return;
+                          try {
+                            walletState = await ref.read(walletProvider.future);
+                          } catch (_) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Không thể tải thông tin ví. Vui lòng thử lại.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
                         }
+                        final loadedWalletState = walletState!;
 
                         // 2. If no PIN setup, prompt user
-                        if (!walletState.hasPaymentPin) {
+                        if (!loadedWalletState.hasPaymentPin) {
                            ScaffoldMessenger.of(context).showSnackBar(
                              const SnackBar(content: Text('Vui lòng thiết lập mã PIN thanh toán trong Ví trước khi đặt lịch.'), backgroundColor: Colors.orange)
                            );
@@ -383,13 +394,12 @@ class BookingReviewScreen extends ConsumerWidget {
                         );
 
                         if (pin != null && pin.isNotEmpty) {
-                            // 4. Proceed with Booking
-                            if (context.mounted) context.pop(); // Pop review screen
-                            
-                            final viewModel = ref.read(
-                              bookingViewModelProvider(tutor).notifier,
-                            );
-                            viewModel.confirmBooking(paymentPin: pin);
+                            final viewModel = ref.read(bookingViewModelProvider(tutor).notifier);
+                            final success = await viewModel.confirmBooking(paymentPin: pin);
+
+                            if (success && context.mounted) {
+                              context.pop();
+                            }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -467,4 +477,3 @@ class BookingReviewScreen extends ConsumerWidget {
     );
   }
 }
-

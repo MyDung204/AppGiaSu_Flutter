@@ -24,6 +24,10 @@ class Tutor {
   final List<String> certificates;
   final List<Badge> badges;
   final bool isFavorite;
+  final String? verificationStatus;
+  final String? verificationFrontImageUrl;
+  final String? verificationBackImageUrl;
+  final String? verificationNote;
 
   Tutor({
     required this.id,
@@ -49,6 +53,10 @@ class Tutor {
     this.certificates = const [],
     this.badges = const [],
     this.isFavorite = false,
+    this.verificationStatus,
+    this.verificationFrontImageUrl,
+    this.verificationBackImageUrl,
+    this.verificationNote,
   });
 
   factory Tutor.fromJson(Map<String, dynamic> json) {
@@ -85,6 +93,10 @@ class Tutor {
           .toList() ?? 
           [],
       isFavorite: json['is_favorite'] == 1 || json['is_favorite'] == true,
+      verificationStatus: json['verification_request']?['status'],
+      verificationFrontImageUrl: json['verification_request']?['front_image_url'],
+      verificationBackImageUrl: json['verification_request']?['back_image_url'],
+      verificationNote: json['verification_request']?['note'],
     );
   }
   
@@ -112,6 +124,10 @@ class Tutor {
     List<String>? certificates,
     List<Badge>? badges,
     bool? isFavorite,
+    String? verificationStatus,
+    String? verificationFrontImageUrl,
+    String? verificationBackImageUrl,
+    String? verificationNote,
   }) {
     return Tutor(
       id: id ?? this.id,
@@ -137,6 +153,10 @@ class Tutor {
       certificates: certificates ?? this.certificates,
       badges: badges ?? this.badges,
       isFavorite: isFavorite ?? this.isFavorite,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      verificationFrontImageUrl: verificationFrontImageUrl ?? this.verificationFrontImageUrl,
+      verificationBackImageUrl: verificationBackImageUrl ?? this.verificationBackImageUrl,
+      verificationNote: verificationNote ?? this.verificationNote,
     );
   }
 }

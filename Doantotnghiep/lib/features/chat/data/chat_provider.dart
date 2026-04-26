@@ -35,8 +35,9 @@ final conversationsStreamProvider = StreamProvider.autoDispose<List<Conversation
           } else {
              // Map to Conversation model
              final userData = data['user_data'] as Map<String, dynamic>? ?? {};
-             final otherUserId = (data['users'] as List).firstWhere((u) => u != user.id, orElse: () => '');
-             final otherUserMap = userData[otherUserId];
+             final users = (data['users'] as List? ?? []).map((u) => u.toString()).toList();
+             final otherUserId = users.firstWhere((u) => u != user.id, orElse: () => '');
+             final otherUserMap = userData[otherUserId] as Map<String, dynamic>?;
              
              name = otherUserMap?['name'] ?? 'User';
              avatar = otherUserMap?['avatar_url'] ?? '';
@@ -51,7 +52,7 @@ final conversationsStreamProvider = StreamProvider.autoDispose<List<Conversation
             lastMessage: data['last_message'] ?? '',
             lastMessageTime: (data['updated_at'] != null) ? (data['updated_at']).toDate() : DateTime.now(),
             unreadCount: (data['unread_counts']?[user.id] ?? 0),
-            lastSenderId: data['last_sender_id']?.toString() ?? '',
+            lastSenderId: data['last_sender_id']?.toString() == user.id ? 'you' : data['last_sender_id']?.toString() ?? '',
             isGroup: isGroup,
           );
         }).toList();

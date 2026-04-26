@@ -1,4 +1,3 @@
-import 'package:doantotnghiep/features/group/domain/models/course.dart';
 import 'package:doantotnghiep/features/quiz/domain/controllers/quiz_controller.dart';
 import 'package:doantotnghiep/features/quiz/domain/models/quiz.dart';
 import 'package:flutter/material.dart';
@@ -23,20 +22,20 @@ class ClassQuizTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final quizzesAsync = studyGroupId != null
         ? ref.watch(studyGroupQuizzesProvider(studyGroupId!))
-        : studentId != null 
-            ? ref.watch(studentQuizzesProvider(studentId!))
-            : ref.watch(courseQuizzesProvider(courseId ?? 0));
+        : studentId != null
+        ? ref.watch(studentQuizzesProvider(studentId!))
+        : ref.watch(courseQuizzesProvider(courseId ?? 0));
 
     return RefreshIndicator(
       onRefresh: () => studyGroupId != null
           ? ref.refresh(studyGroupQuizzesProvider(studyGroupId!).future)
           : studentId != null
-              ? ref.refresh(studentQuizzesProvider(studentId!).future)
-              : ref.refresh(courseQuizzesProvider(courseId ?? 0).future),
+          ? ref.refresh(studentQuizzesProvider(studentId!).future)
+          : ref.refresh(courseQuizzesProvider(courseId ?? 0).future),
       child: quizzesAsync.when(
         data: (quizzes) {
           if (quizzes.isEmpty) {
-            return _buildEmptyState(context);
+            return _buildEmptyState(context, ref);
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -53,7 +52,29 @@ class ClassQuizTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Future<void> _openCreateQuiz(BuildContext context, WidgetRef ref) async {
+    final Map<String, dynamic> extra = {};
+    if (courseId != null) extra['course_id'] = courseId;
+    if (studentId != null) extra['student_id'] = studentId;
+    if (studyGroupId != null) extra['study_group_id'] = studyGroupId;
+
+    final created = await context.push<bool>(
+      '/tutor-create-quiz',
+      extra: extra,
+    );
+    if (created != true) return;
+
+    if (studyGroupId != null) {
+      ref.invalidate(studyGroupQuizzesProvider(studyGroupId!));
+    } else if (studentId != null) {
+      ref.invalidate(studentQuizzesProvider(studentId!));
+    } else {
+      ref.invalidate(courseQuizzesProvider(courseId ?? 0));
+    }
+    ref.invalidate(quizListProvider(null));
+  }
+
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -67,14 +88,7 @@ class ClassQuizTab extends ConsumerWidget {
           if (isTutor) ...[
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                // Pass either course_id or student_id to creation screen
-                final Map<String, dynamic> extra = {};
-                if (courseId != null) extra['course_id'] = courseId;
-                if (studentId != null) extra['student_id'] = studentId;
-                if (studyGroupId != null) extra['study_group_id'] = studyGroupId;
-                context.push('/tutor-create-quiz', extra: extra);
-              },
+              onPressed: () => _openCreateQuiz(context, ref),
               icon: const Icon(Icons.add),
               label: const Text('Tạo bài trắc nghiệm'),
             ),
@@ -88,7 +102,7 @@ class ClassQuizTab extends ConsumerWidget {
 class _QuizItemCard extends StatelessWidget {
   final Quiz quiz;
   final bool isTutor;
-  
+
   const _QuizItemCard({required this.quiz, required this.isTutor});
 
   @override
@@ -99,14 +113,16 @@ class _QuizItemCard extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: quiz.isPublished ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+          backgroundColor: quiz.isPublished
+              ? Colors.green.withValues(alpha: 0.1)
+              : Colors.orange.withValues(alpha: 0.1),
           child: Icon(
-            Icons.quiz, 
+            Icons.quiz,
             color: quiz.isPublished ? Colors.green : Colors.orange,
           ),
         ),
         title: Text(
-          quiz.title, 
+          quiz.title,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
@@ -122,10 +138,9 @@ class _QuizItemCard extends StatelessWidget {
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
           if (isTutor) {
-             context.push('/quiz-detail/${quiz.id}');
+            context.push('/quiz-detail/${quiz.id}', extra: quiz);
           } else {
-             // Student takes quiz
-             context.push('/quiz-taking/${quiz.id}');
+            context.push('/quiz-detail/${quiz.id}', extra: quiz);
           }
         },
       ),

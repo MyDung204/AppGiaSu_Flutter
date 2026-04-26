@@ -1,11 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
 import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
-import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
-import 'package:doantotnghiep/features/tutor/presentation/widgets/tutor_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +12,6 @@ import 'package:doantotnghiep/features/student/presentation/my_enrolled_classes_
 import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/notification/presentation/providers/notification_provider.dart';
 import 'package:doantotnghiep/features/home/presentation/widgets/scaffold_with_navbar.dart';
-import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 
 final featuredTutorsProvider = FutureProvider<List<Tutor>>((ref) {
@@ -51,47 +48,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           const _HomeHeader(),
-          
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   const _LearningProgressDashboard(),
-                   const SizedBox(height: 20),
-                   const _BannerSection(),
-                   const SizedBox(height: 20),
-                   
-                   // Quick Actions Grid
-                   const _QuickActionsSection(),
-                   const SizedBox(height: 20),
-                   
-                   // Upcoming Schedule
-                   const _UpcomingScheduleSection(),
-                   const SizedBox(height: 20),
-                   
-                   const _CategorySection(),
-                   const SizedBox(height: 20),
-                   
-                   const _FeaturedTutorSection(),
-                   const SizedBox(height: 20),
-                   
-                   const _MyRequestsSection(),
-                   const SizedBox(height: 20),
+                  const _LearningProgressDashboard(),
+                  const SizedBox(height: 20),
+                  const _BannerSection(),
+                  const SizedBox(height: 20),
 
-                   const _MyLearningOverviewSection(),
-                   const SizedBox(height: 20),
+                  // Quick Actions Grid
+                  const _QuickActionsSection(),
+                  const SizedBox(height: 20),
 
-                   const _MyGroupsSection(),
-                   const SizedBox(height: 20),
+                  // Upcoming Schedule
+                  const _UpcomingScheduleSection(),
+                  const SizedBox(height: 20),
 
-                   const _MyClassesSection(),
-                   const SizedBox(height: 20),
-                   
-                   // Study Tips
-                   const _StudyTipsSection(),
-                   const SizedBox(height: 100), // Bottom padding
+                  const _CategorySection(),
+                  const SizedBox(height: 20),
+
+                  const _FeaturedTutorSection(),
+                  const SizedBox(height: 20),
+
+                  const _MyRequestsSection(),
+                  const SizedBox(height: 20),
+
+                  const _MyLearningOverviewSection(),
+                  const SizedBox(height: 20),
+
+                  const _MyGroupsSection(),
+                  const SizedBox(height: 20),
+
+                  const _MyClassesSection(),
+                  const SizedBox(height: 20),
+
+                  // Study Tips
+                  const _StudyTipsSection(),
+                  const SizedBox(height: 100), // Bottom padding
                 ],
               ),
             ),
@@ -141,7 +138,11 @@ class _LearningProgressDashboard extends ConsumerWidget {
               children: [
                 const Text(
                   'Tiến độ học tập',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Icon(Icons.trending_up, color: Colors.white.withOpacity(0.8)),
               ],
@@ -150,11 +151,21 @@ class _LearningProgressDashboard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem(context, 'Tổng số buổi', '24', Icons.calendar_today),
+                _buildStatItem(
+                  context,
+                  'Tổng số buổi',
+                  '24',
+                  Icons.calendar_today,
+                ),
                 _hasDivider(),
                 _buildStatItem(context, 'Điểm TB', '8.5', Icons.star_border),
                 _hasDivider(),
-                _buildStatItem(context, 'Chuyên cần', '95%', Icons.check_circle_outline),
+                _buildStatItem(
+                  context,
+                  'Chuyên cần',
+                  '95%',
+                  Icons.check_circle_outline,
+                ),
               ],
             ),
           ],
@@ -171,14 +182,23 @@ class _LearningProgressDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Column(
       children: [
         Icon(icon, color: Colors.white.withOpacity(0.9), size: 24),
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -189,7 +209,6 @@ class _LearningProgressDashboard extends ConsumerWidget {
     );
   }
 }
-
 
 class _HomeHeader extends ConsumerWidget {
   const _HomeHeader();
@@ -204,9 +223,10 @@ class _HomeHeader extends ConsumerWidget {
       backgroundColor: EduTheme.primary,
       surfaceTintColor: Colors.transparent,
       pinned: true,
-      floating: false, 
-      expandedHeight: 180, 
-      toolbarHeight: 0, // Collapsed height set to 0. Pinned bottom widget remains.
+      floating: false,
+      expandedHeight: 180,
+      toolbarHeight:
+          0, // Collapsed height set to 0. Pinned bottom widget remains.
       leading: const SizedBox.shrink(),
       leadingWidth: 0,
       flexibleSpace: FlexibleSpaceBar(
@@ -219,7 +239,7 @@ class _HomeHeader extends ConsumerWidget {
             ),
           ),
           // Dynamic padding based on safe area
-          padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 60), 
+          padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 60),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center, // Center vertically
             children: [
@@ -232,11 +252,12 @@ class _HomeHeader extends ConsumerWidget {
                 child: CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty 
-                      ? NetworkImage(user.avatarUrl!) 
+                  backgroundImage:
+                      user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                      ? NetworkImage(user.avatarUrl!)
                       : null,
-                  child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty) 
-                      ? const Icon(Icons.person, color: Colors.grey, size: 28) 
+                  child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
+                      ? const Icon(Icons.person, color: Colors.grey, size: 28)
                       : null,
                 ),
               ),
@@ -246,11 +267,18 @@ class _HomeHeader extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Xin chào,', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const Text(
+                      'Xin chào,',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       user?.name ?? 'Bạn học',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -259,26 +287,31 @@ class _HomeHeader extends ConsumerWidget {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2), 
-                  borderRadius: BorderRadius.circular(12)
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Consumer(
                   builder: (context, ref, child) {
-                    final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
+                    final unreadCountAsync = ref.watch(
+                      unreadNotificationCountProvider,
+                    );
                     final count = unreadCountAsync.value ?? 0;
 
                     return IconButton(
                       icon: Badge(
-                         isLabelVisible: count > 0,
-                         smallSize: 10, // Small red dot as requested
-                         backgroundColor: Colors.red,
-                         child: const Icon(Icons.notifications_outlined, color: Colors.white), 
+                        isLabelVisible: count > 0,
+                        smallSize: 10, // Small red dot as requested
+                        backgroundColor: Colors.red,
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                        ),
                       ),
-                      onPressed: () => context.push('/notifications')
+                      onPressed: () => context.push('/notifications'),
                     );
-                  }
+                  },
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -298,16 +331,23 @@ class _HomeHeader extends ConsumerWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Row(
                 children: [
-                   Icon(Icons.search_rounded, color: EduTheme.primary),
-                   const SizedBox(width: 12),
-                   Expanded(
-                     child: Text('Tìm gia sư, lớp học nhóm...', style: TextStyle(color: Colors.grey[500], fontSize: 15)),
-                   ),
+                  Icon(Icons.search_rounded, color: EduTheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Tìm gia sư, lớp học nhóm...',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -333,7 +373,8 @@ class _BannerSectionState extends State<_BannerSection> {
     {
       'title': 'Dạy Kèm 1-1\nChất Lượng Cao',
       'subtitle': 'Đội ngũ giảng viên uy tín\ntừ các trường đại học hàng đầu',
-      'image': 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFF667eea), Color(0xFF764ba2)],
       'action': '/search',
       'buttonText': 'Khám phá ngay',
@@ -341,7 +382,8 @@ class _BannerSectionState extends State<_BannerSection> {
     {
       'title': 'Lớp Học Nhóm\nHiệu quả hơn',
       'subtitle': 'Tham gia lớp học nhóm\nvới bạn bè cùng môn',
-      'image': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFF11998e), Color(0xFF38ef7d)],
       'action': '/my-study-groups',
       'buttonText': 'Tham gia ngay',
@@ -349,10 +391,11 @@ class _BannerSectionState extends State<_BannerSection> {
     {
       'title': 'Đăng ký\nLớp học nhóm',
       'subtitle': 'Khám phá các lớp học nhóm\nphù hợp với bạn',
-      'image': 'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFFf093fb), Color(0xFFf5576c)],
       'action': '/search?tab=classes',
-      'buttonText': 'Xem lớp nhóm',
+      'buttonText': 'Xem lớp học nhóm',
     },
   ];
 
@@ -388,7 +431,8 @@ class _BannerSectionState extends State<_BannerSection> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: (banner['gradient'] as List<Color>)[0].withOpacity(0.4),
+                          color: (banner['gradient'] as List<Color>)[0]
+                              .withOpacity(0.4),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -434,7 +478,10 @@ class _BannerSectionState extends State<_BannerSection> {
                               ),
                               const SizedBox(height: 10),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
@@ -442,7 +489,8 @@ class _BannerSectionState extends State<_BannerSection> {
                                 child: Text(
                                   banner['buttonText'] as String,
                                   style: TextStyle(
-                                    color: (banner['gradient'] as List<Color>)[0],
+                                    color:
+                                        (banner['gradient'] as List<Color>)[0],
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                   ),
@@ -471,7 +519,9 @@ class _BannerSectionState extends State<_BannerSection> {
               height: 8,
               width: _currentPage == index ? 24 : 8,
               decoration: BoxDecoration(
-                color: _currentPage == index ? EduTheme.primary : Colors.grey.shade300,
+                color: _currentPage == index
+                    ? EduTheme.primary
+                    : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -490,10 +540,22 @@ class _CategorySection extends StatelessWidget {
     final categories = [
       {'label': 'Toán', 'icon': Icons.calculate_outlined, 'color': Colors.blue},
       {'label': 'Tiếng Anh', 'icon': Icons.language, 'color': Colors.orange},
-      {'label': 'Vật lý', 'icon': Icons.flash_on_outlined, 'color': Colors.purple},
-      {'label': 'Hóa học', 'icon': Icons.science_outlined, 'color': Colors.green},
+      {
+        'label': 'Vật lý',
+        'icon': Icons.flash_on_outlined,
+        'color': Colors.purple,
+      },
+      {
+        'label': 'Hóa học',
+        'icon': Icons.science_outlined,
+        'color': Colors.green,
+      },
       {'label': 'Văn học', 'icon': Icons.book_outlined, 'color': Colors.red},
-      {'label': 'Piano', 'icon': Icons.music_note_outlined, 'color': Colors.pink},
+      {
+        'label': 'Piano',
+        'icon': Icons.music_note_outlined,
+        'color': Colors.pink,
+      },
     ];
 
     return Column(
@@ -501,11 +563,16 @@ class _CategorySection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Khám phá môn học', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          child: Text(
+            'Khám phá môn học',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 40, 
+          height: 40,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -515,14 +582,35 @@ class _CategorySection extends StatelessWidget {
               return Container(
                 margin: const EdgeInsets.only(right: 10),
                 child: ActionChip(
-                  avatar: Icon(cat['icon'] as IconData, size: 18, color: (cat['color'] as MaterialColor).shade700),
-                  label: Text(cat['label'] as String, style: TextStyle(color: (cat['color'] as MaterialColor).shade900, fontWeight: FontWeight.w600, fontSize: 13)),
+                  avatar: Icon(
+                    cat['icon'] as IconData,
+                    size: 18,
+                    color: (cat['color'] as MaterialColor).shade700,
+                  ),
+                  label: Text(
+                    cat['label'] as String,
+                    style: TextStyle(
+                      color: (cat['color'] as MaterialColor).shade900,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                   backgroundColor: (cat['color'] as Color).withOpacity(0.1),
                   side: BorderSide.none,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 0,
+                  ),
                   onPressed: () {
-                     context.go(Uri(path: '/search', queryParameters: {'subject': cat['label'] as String}).toString());
+                    context.go(
+                      Uri(
+                        path: '/search',
+                        queryParameters: {'subject': cat['label'] as String},
+                      ).toString(),
+                    );
                   },
                 ),
               );
@@ -549,10 +637,22 @@ class _FeaturedTutorSection extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Gia sư nổi bật', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Gia sư nổi bật',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
               GestureDetector(
                 onTap: () => context.go('/search'),
-                child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Xem tất cả',
+                  style: TextStyle(
+                    color: EduTheme.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -563,7 +663,12 @@ class _FeaturedTutorSection extends ConsumerWidget {
           child: tutorsAsyncValue.when(
             data: (tutors) {
               if (tutors.isEmpty) {
-                 return const Center(child: Text('Không có gia sư nổi bật', style: TextStyle(color: Colors.grey)));
+                return const Center(
+                  child: Text(
+                    'Không có gia sư nổi bật',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
               }
               final displayTutors = tutors;
 
@@ -572,79 +677,148 @@ class _FeaturedTutorSection extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: displayTutors.length,
                 itemBuilder: (context, index) {
-                   final tutor = displayTutors[index];
-                   return Container(
-                     width: 180,
-                     margin: const EdgeInsets.only(right: 12, bottom: 10), // Added bottom margin for shadow
-                     decoration: BoxDecoration(
-                       color: Colors.white,
-                       borderRadius: BorderRadius.circular(16),
-                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-                       border: Border.all(color: Colors.grey.shade50)
-                     ),
-                     child: InkWell(
-                        onTap: () => context.push('/tutor-detail', extra: tutor),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                  child: CachedNetworkImage(
-                                    imageUrl: tutor.avatarUrl.isNotEmpty ? tutor.avatarUrl : 'https://via.placeholder.com/150',
-                                    height: 110,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.person)),
+                  final tutor = displayTutors[index];
+                  return Container(
+                    width: 180,
+                    margin: const EdgeInsets.only(
+                      right: 12,
+                      bottom: 10,
+                    ), // Added bottom margin for shadow
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(color: Colors.grey.shade50),
+                    ),
+                    child: InkWell(
+                      onTap: () => context.push('/tutor-detail', extra: tutor),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                                child: CachedNetworkImage(
+                                  imageUrl: tutor.avatarUrl.isNotEmpty
+                                      ? tutor.avatarUrl
+                                      : 'https://via.placeholder.com/150',
+                                  height: 110,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) =>
+                                      Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.person),
+                                      ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: 10,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        '${tutor.rating}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                              ),
+                              if (tutor.tier == 'teacher')
                                 Positioned(
-                                  top: 8, right: 8,
+                                  top: 8,
+                                  left: 8,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.star, color: Colors.amber, size: 10),
-                                        const SizedBox(width: 2),
-                                        Text('${tutor.rating}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                      ],
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueAccent,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Giáo viên',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                if (tutor.tier == 'teacher')
-                                  Positioned(
-                                    top: 8, left: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text('Giáo viên', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                                    ),
-                                  )
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tutor.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  tutor.subjects.join(', '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ/h').format(tutor.hourlyRate)}',
+                                  style: TextStyle(
+                                    color: EduTheme.primary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ],
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(tutor.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  const SizedBox(height: 4),
-                                  Text(tutor.subjects.join(', '), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ/h').format(tutor.hourlyRate)}',
-                                    style: TextStyle(color: EduTheme.primary, fontWeight: FontWeight.w700, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                     ),
-                   );
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
               );
             },
@@ -653,9 +827,13 @@ class _FeaturedTutorSection extends ConsumerWidget {
               itemCount: 3,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemBuilder: (_, __) => Container(
-                width: 180, margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(16)),
-              )
+                width: 180,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
             ),
             error: (err, stack) => Center(child: Text('Lỗi: $err')),
           ),
@@ -676,31 +854,63 @@ class _CommunityBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF2d3436), // Dark trendy color
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-             padding: const EdgeInsets.all(12),
-             decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-             child: const Icon(Icons.forum_outlined, color: Colors.white, size: 28),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.forum_outlined,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Cộng đồng Hỏi Đáp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Cộng đồng Hỏi Đáp',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('Tham gia thảo luận & giải bài tập', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                Text(
+                  'Tham gia thảo luận & giải bài tập',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             onPressed: () => context.push('/community'),
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
-            style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.1)),
-          )
+            icon: const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 16,
+            ),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.1),
+            ),
+          ),
         ],
       ),
     );
@@ -713,7 +923,8 @@ class _MyRequestsSection extends ConsumerWidget {
   IconData _getSubjectIcon(String subject) {
     final s = subject.toLowerCase();
     if (s.contains('toán')) return Icons.calculate_rounded;
-    if (s.contains('anh') || s.contains('english')) return Icons.language_rounded;
+    if (s.contains('anh') || s.contains('english'))
+      return Icons.language_rounded;
     if (s.contains('lý')) return Icons.bolt_rounded;
     if (s.contains('hóa')) return Icons.science_rounded;
     if (s.contains('sinh')) return Icons.biotech_rounded;
@@ -721,7 +932,8 @@ class _MyRequestsSection extends ConsumerWidget {
     if (s.contains('sử')) return Icons.history_edu_rounded;
     if (s.contains('địa')) return Icons.public_rounded;
     if (s.contains('tin')) return Icons.computer_rounded;
-    if (s.contains('nhạc') || s.contains('piano')) return Icons.music_note_rounded;
+    if (s.contains('nhạc') || s.contains('piano'))
+      return Icons.music_note_rounded;
     return Icons.school_rounded;
   }
 
@@ -756,10 +968,22 @@ class _MyRequestsSection extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Yêu cầu tìm dạy kèm 1-1', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Yêu cầu tìm dạy kèm 1-1',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => context.push('/my-requests'),
-                    child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Xem tất cả',
+                      style: TextStyle(
+                        color: EduTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -775,7 +999,7 @@ class _MyRequestsSection extends ConsumerWidget {
                   final req = requests[index];
                   final color = _getSubjectColor(req.subject);
                   final icon = _getSubjectIcon(req.subject);
-                  
+
                   return Container(
                     width: 260,
                     margin: const EdgeInsets.only(right: 12),
@@ -783,12 +1007,19 @@ class _MyRequestsSection extends ConsumerWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: color.withOpacity(0.2)),
-                      boxShadow: [BoxShadow(color: color.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => context.push('/my-request-detail', extra: req),
+                        onTap: () =>
+                            context.push('/my-request-detail', extra: req),
                         borderRadius: BorderRadius.circular(16),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -808,32 +1039,48 @@ class _MyRequestsSection extends ConsumerWidget {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           req.subject,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
                                           req.gradeLevel,
-                                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: req.status == 'open' ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                                      color: req.status == 'open'
+                                          ? Colors.blue.withOpacity(0.1)
+                                          : Colors.grey.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      req.status == 'open' ? 'Đang tìm' : 'Hoàn thành',
+                                      req.status == 'open'
+                                          ? 'Đang tìm'
+                                          : 'Hoàn thành',
                                       style: TextStyle(
-                                        color: req.status == 'open' ? Colors.blue : Colors.grey,
+                                        color: req.status == 'open'
+                                            ? Colors.blue
+                                            : Colors.grey,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -843,19 +1090,36 @@ class _MyRequestsSection extends ConsumerWidget {
                               ),
                               const Spacer(),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.payments_outlined, size: 14, color: Colors.grey[600]),
+                                      Icon(
+                                        Icons.payments_outlined,
+                                        size: 14,
+                                        color: Colors.grey[600],
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(req.minBudget),
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700], fontSize: 13),
+                                        NumberFormat.currency(
+                                          locale: 'vi_VN',
+                                          symbol: 'đ',
+                                          decimalDigits: 0,
+                                        ).format(req.minBudget),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[700],
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 14,
+                                    color: Colors.grey[400],
+                                  ),
                                 ],
                               ),
                             ],
@@ -890,16 +1154,28 @@ class _MyClassesSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Padding(
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text('Lớp học nhóm của tôi', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                   GestureDetector(
-                     onTap: () => context.push('/my-enrolled-classes'),
-                     child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
-                   ),
+                  Text(
+                    'Lớp học nhóm của tôi',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => context.push('/my-enrolled-classes'),
+                    child: Text(
+                      'Xem tất cả',
+                      style: TextStyle(
+                        color: EduTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -920,9 +1196,15 @@ class _MyClassesSection extends ConsumerWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.green.withOpacity(0.1)),
-                      boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                     child: InkWell(
+                    child: InkWell(
                       onTap: () => context.push('/class-detail', extra: course),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,28 +1214,68 @@ class _MyClassesSection extends ConsumerWidget {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                child: const Icon(Icons.class_, color: Colors.green, size: 20),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.class_,
+                                  color: Colors.green,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(child: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                              Expanded(
+                                child: Text(
+                                  course.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(course.subject, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                              Text(
+                                course.subject,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(course.schedule, style: const TextStyle(fontSize: 12, color: Colors.black87), maxLines: 1),
-                                  Text(course.status == 'open' ? 'Đang học' : 'Kết thúc', 
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: course.status == 'open' ? Colors.green : Colors.grey, fontSize: 11)),
+                                  Text(
+                                    course.schedule,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                  ),
+                                  Text(
+                                    course.status == 'open'
+                                        ? 'Đang học'
+                                        : 'Kết thúc',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: course.status == 'open'
+                                          ? Colors.green
+                                          : Colors.grey,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ],
-                              )
+                              ),
                             ],
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -979,14 +1301,8 @@ class _MyLearningOverviewSection extends ConsumerWidget {
     if (user == null || user.role == 'tutor') return const SizedBox.shrink();
 
     final coursesAsync = ref.watch(myEnrolledCoursesProvider);
-    final groupsAsync = ref.watch(myGroupsProvider);
-
     final classCount = coursesAsync.maybeWhen(
       data: (courses) => courses.length,
-      orElse: () => 0,
-    );
-    final groupCount = groupsAsync.maybeWhen(
-      data: (groups) => groups.length,
       orElse: () => 0,
     );
 
@@ -997,7 +1313,9 @@ class _MyLearningOverviewSection extends ConsumerWidget {
         children: [
           Text(
             'Lớp của tôi',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1005,20 +1323,22 @@ class _MyLearningOverviewSection extends ConsumerWidget {
               Expanded(
                 child: _MyLearningOverviewCard(
                   title: 'Dạy kèm 1-1',
-                  subtitle: classCount > 0 ? '$classCount lớp đang theo học' : 'Xem lớp đã đăng ký',
+                  subtitle: 'Xem lịch học 1-1',
                   icon: Icons.person,
                   color: Colors.green,
-                  onTap: () => context.push('/my-enrolled-classes'),
+                  onTap: () => context.go('/schedule'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _MyLearningOverviewCard(
                   title: 'Lớp học nhóm',
-                  subtitle: groupCount > 0 ? '$groupCount lớp học nhóm' : 'Xem lớp học nhóm đã tham gia',
+                  subtitle: classCount > 0
+                      ? '$classCount lớp học nhóm đã tham gia'
+                      : 'Xem lớp học nhóm đã đăng ký',
                   icon: Icons.groups,
                   color: Colors.blue,
-                  onTap: () => context.push('/my-study-groups'),
+                  onTap: () => context.push('/my-enrolled-classes'),
                 ),
               ),
             ],
@@ -1053,14 +1373,14 @@ class _MyLearningOverviewCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 116,
-          padding: const EdgeInsets.all(14),
+          height: 132,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.14)),
+            border: Border.all(color: color.withValues(alpha: 0.14)),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.04),
+                color: color.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1071,31 +1391,42 @@ class _MyLearningOverviewCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                ],
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1110,7 +1441,7 @@ class _MyGroupsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-     final myGroupsAsync = ref.watch(myGroupsProvider);
+    final myGroupsAsync = ref.watch(myGroupsProvider);
 
     return myGroupsAsync.when(
       data: (groups) {
@@ -1119,16 +1450,28 @@ class _MyGroupsSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Padding(
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text('Lớp học nhóm', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                   GestureDetector(
-                     onTap: () => context.push('/my-study-groups'),
-                     child: Text('Xem tất cả', style: TextStyle(color: EduTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
-                   ),
+                  Text(
+                    'Lớp học nhóm',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => context.push('/my-study-groups'),
+                    child: Text(
+                      'Xem tất cả',
+                      style: TextStyle(
+                        color: EduTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1149,10 +1492,19 @@ class _MyGroupsSection extends ConsumerWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                      boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                     child: InkWell(
-                      onTap: () => context.push('/group-detail', extra: grp), // Updated route
+                    child: InkWell(
+                      onTap: () => context.push(
+                        '/group-detail',
+                        extra: grp,
+                      ), // Updated route
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1160,36 +1512,79 @@ class _MyGroupsSection extends ConsumerWidget {
                           Row(
                             children: [
                               Badge(
-                                isLabelVisible: grp.pendingRequestsCount > 0 || grp.hasNewMessages,
-                                label: grp.pendingRequestsCount > 0 ? Text('${grp.pendingRequestsCount}') : null,
+                                isLabelVisible:
+                                    grp.pendingRequestsCount > 0 ||
+                                    grp.hasNewMessages,
+                                label: grp.pendingRequestsCount > 0
+                                    ? Text('${grp.pendingRequestsCount}')
+                                    : null,
                                 smallSize: 10,
                                 backgroundColor: Colors.red,
                                 offset: const Offset(4, -4),
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                  child: const Icon(Icons.groups, color: Colors.blue, size: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.groups,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(child: Text(grp.topic, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                              Expanded(
+                                child: Text(
+                                  grp.topic,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${grp.subject} - ${grp.gradeLevel}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                              Text(
+                                '${grp.subject} - ${grp.gradeLevel}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('${grp.currentMembers}/${grp.maxMembers} TV', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                  Text(NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(grp.pricePerSession), 
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: EduTheme.primary, fontSize: 13)),
+                                  Text(
+                                    '${grp.currentMembers}/${grp.maxMembers} TV',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    NumberFormat.currency(
+                                      locale: 'vi_VN',
+                                      symbol: 'đ',
+                                      decimalDigits: 0,
+                                    ).format(grp.pricePerSession),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: EduTheme.primary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
-                              )
+                              ),
                             ],
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -1215,10 +1610,30 @@ class _QuickActionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      {'icon': Icons.person_search_rounded, 'label': 'Dạy kèm 1-1', 'route': '/search', 'color': Colors.blue},
-      {'icon': Icons.post_add_rounded, 'label': 'Đăng yêu cầu', 'route': '/create-tutor-request', 'color': Colors.orange},
-      {'icon': Icons.groups_rounded, 'label': 'Lớp học nhóm', 'route': '/search?tab=groups', 'color': Colors.green},
-      {'icon': Icons.calendar_month_rounded, 'label': 'Lịch học', 'route': '/schedule', 'color': Colors.purple},
+      {
+        'icon': Icons.person_search_rounded,
+        'label': 'Dạy kèm 1-1',
+        'route': '/search',
+        'color': Colors.blue,
+      },
+      {
+        'icon': Icons.post_add_rounded,
+        'label': 'Đăng yêu cầu',
+        'route': '/create-tutor-request',
+        'color': Colors.orange,
+      },
+      {
+        'icon': Icons.groups_rounded,
+        'label': 'Lớp học nhóm',
+        'route': '/search?tab=groups',
+        'color': Colors.green,
+      },
+      {
+        'icon': Icons.calendar_month_rounded,
+        'label': 'Lịch học',
+        'route': '/schedule',
+        'color': Colors.purple,
+      },
     ];
 
     return Padding(
@@ -1297,14 +1712,21 @@ class _UpcomingScheduleSection extends ConsumerWidget {
             try {
               final startStr = b.timeSlot.split(' - ')[0]; // "09:00"
               final parts = startStr.split(':');
-              final startTime = DateTime(b.date.year, b.date.month, b.date.day, int.parse(parts[0]), int.parse(parts[1]));
-              
+              final startTime = DateTime(
+                b.date.year,
+                b.date.month,
+                b.date.day,
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+              );
+
               final diff = startTime.difference(now).inMinutes;
               // Class is soon (< 30m) or ongoing (> -60m)
               if (diff >= -60 && diff <= 30) {
-                if (diff < minDiff) { // pick the closest one
-                   minDiff = diff;
-                   imminentBooking = b;
+                if (diff < minDiff) {
+                  // pick the closest one
+                  minDiff = diff;
+                  imminentBooking = b;
                 }
               }
             } catch (e) {
@@ -1323,9 +1745,15 @@ class _UpcomingScheduleSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildWarningBanner(BuildContext context, BookingItem booking, int diffMinutes) {
-    String statusText = diffMinutes <= 0 ? 'Đang diễn ra' : 'Sắp bắt đầu ($diffMinutes phút)';
-    
+  Widget _buildWarningBanner(
+    BuildContext context,
+    BookingItem booking,
+    int diffMinutes,
+  ) {
+    String statusText = diffMinutes <= 0
+        ? 'Đang diễn ra'
+        : 'Sắp bắt đầu ($diffMinutes phút)';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GestureDetector(
@@ -1389,7 +1817,11 @@ class _UpcomingScheduleSection extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 16,
+              ),
             ],
           ),
         ),
@@ -1427,7 +1859,11 @@ class _UpcomingScheduleSection extends ConsumerWidget {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.event_note_rounded, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.event_note_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1459,7 +1895,11 @@ class _UpcomingScheduleSection extends ConsumerWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.arrow_forward_rounded, color: Colors.indigo.shade600, size: 18),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.indigo.shade600,
+                  size: 18,
+                ),
               ),
             ],
           ),
@@ -1476,11 +1916,23 @@ class _StudyTipsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tips = [
-      {'icon': Icons.lightbulb_outline, 'tip': 'Chia nhỏ thời gian học thành các phiên 25 phút (Pomodoro)', 'color': Colors.amber},
-      {'icon': Icons.psychology_outlined, 'tip': 'Ôn lại bài học trong vòng 24h để nhớ lâu hơn', 'color': Colors.purple},
-      {'icon': Icons.edit_note_rounded, 'tip': 'Ghi chép lại những điểm quan trọng bằng từ của bạn', 'color': Colors.teal},
+      {
+        'icon': Icons.lightbulb_outline,
+        'tip': 'Chia nhỏ thời gian học thành các phiên 25 phút (Pomodoro)',
+        'color': Colors.amber,
+      },
+      {
+        'icon': Icons.psychology_outlined,
+        'tip': 'Ôn lại bài học trong vòng 24h để nhớ lâu hơn',
+        'color': Colors.purple,
+      },
+      {
+        'icon': Icons.edit_note_rounded,
+        'tip': 'Ghi chép lại những điểm quan trọng bằng từ của bạn',
+        'color': Colors.teal,
+      },
     ];
-    
+
     // Get tip based on day
     final tipIndex = DateTime.now().day % tips.length;
     final tip = tips[tipIndex];
@@ -1509,7 +1961,11 @@ class _StudyTipsSection extends StatelessWidget {
                 color: (tip['color'] as Color).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(tip['icon'] as IconData, color: tip['color'] as Color, size: 24),
+              child: Icon(
+                tip['icon'] as IconData,
+                color: tip['color'] as Color,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1518,7 +1974,11 @@ class _StudyTipsSection extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_awesome, size: 14, color: tip['color'] as Color),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: tip['color'] as Color,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Mẹo học tập hôm nay',

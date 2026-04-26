@@ -8,19 +8,19 @@ import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 
 /// Group Matching Tab - Tab "Học ghép" trong Search Screen
-/// 
+///
 /// **Purpose:**
 /// - Hiển thị danh sách các nhóm học tập (Study Groups)
 /// - Cho phép học viên tạo nhóm mới hoặc tham gia nhóm có sẵn
 /// - Quản lý trạng thái tham gia (pending, approved, rejected)
-/// 
+///
 /// **Features:**
 /// - Tạo nhóm học mới
 /// - Xem danh sách nhóm
 /// - Tham gia nhóm (gửi yêu cầu)
 /// - Kiểm tra nhóm (cho chủ nhóm)
 /// - Hiển thị trạng thái: Đang chờ duyệt, Đã tham gia, Bị từ chối, Nhóm đã đầy
-/// 
+///
 /// **Status Flow:**
 /// - Không tham gia → "Tham gia nhóm" (gửi yêu cầu)
 /// - Đã gửi yêu cầu → "Đang chờ duyệt" (pending)
@@ -40,32 +40,38 @@ class GroupMatchingTab extends ConsumerWidget {
     return Column(
       children: [
         if (currentUser?.role == 'tutor')
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => context.push('/create-group'),
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Tạo lớp học nhóm mới'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                elevation: 2,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/create-group'),
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Tạo lớp học nhóm mới'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                ),
               ),
             ),
           ),
-        ),
         Expanded(
           child: requestsAsync.when(
             skipLoadingOnRefresh: true,
             data: (requests) {
               // Exclude user's own groups from the search list
-              final displayRequests = requests.where((req) => 
-                  currentUser == null || currentUser.id.toString() != req.creatorId.toString()
-              ).toList();
+              final displayRequests = requests
+                  .where(
+                    (req) =>
+                        currentUser == null ||
+                        currentUser.id.toString() != req.creatorId.toString(),
+                  )
+                  .toList();
 
               if (displayRequests.isEmpty) {
                 return RefreshIndicator(
@@ -79,9 +85,16 @@ class GroupMatchingTab extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.group_off_outlined, size: 60, color: Colors.grey.shade300),
+                              Icon(
+                                Icons.group_off_outlined,
+                                size: 60,
+                                color: Colors.grey.shade300,
+                              ),
                               const SizedBox(height: 16),
-                              const Text("Chưa có lớp học nhóm nào.", style: TextStyle(color: Colors.grey)),
+                              const Text(
+                                "Chưa có lớp học nhóm nào.",
+                                style: TextStyle(color: Colors.grey),
+                              ),
                             ],
                           ),
                         ),
@@ -97,7 +110,12 @@ class GroupMatchingTab extends ConsumerWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: displayRequests.length,
-                  itemBuilder: (context, index) => _buildGroupCard(context, displayRequests[index], currencyFormat, ref),
+                  itemBuilder: (context, index) => _buildGroupCard(
+                    context,
+                    displayRequests[index],
+                    currencyFormat,
+                    ref,
+                  ),
                 ),
               );
             },
@@ -110,18 +128,18 @@ class GroupMatchingTab extends ConsumerWidget {
   }
 
   /// Build group card widget
-  /// 
+  ///
   /// **Purpose:**
   /// - Hiển thị thông tin nhóm học tập
   /// - Xác định trạng thái tham gia của user
   /// - Hiển thị button phù hợp với trạng thái
-  /// 
+  ///
   /// **Parameters:**
   /// - `context`: BuildContext
   /// - `req`: GroupRequest object
   /// - `currencyFormat`: NumberFormat for currency display
   /// - `ref`: WidgetRef for Riverpod
-  /// 
+  ///
   /// **Button States:**
   /// - Owner: "Kiểm tra nhóm" → Navigate to group management
   /// - Approved: "Đã tham gia" (disabled)
@@ -129,12 +147,18 @@ class GroupMatchingTab extends ConsumerWidget {
   /// - Rejected: "Bị từ chối" (disabled, red style)
   /// - Full: "Nhóm đã đầy" (disabled, tonal style)
   /// - Available: "Tham gia nhóm" → Show join confirmation
-  Widget _buildGroupCard(BuildContext context, GroupRequest req, NumberFormat currencyFormat, WidgetRef ref) {
+  Widget _buildGroupCard(
+    BuildContext context,
+    GroupRequest req,
+    NumberFormat currencyFormat,
+    WidgetRef ref,
+  ) {
     final user = ref.watch(authStateChangesProvider).value;
     // Check if current user is the group creator
-    final isOwner = user != null && user.id.toString() == req.creatorId.toString();
+    final isOwner =
+        user != null && user.id.toString() == req.creatorId.toString();
     // Check if group is full
-    final isFull = req.currentMembers >= req.maxMembers;
+    final isFull = req.status == 'full' || req.currentMembers >= req.maxMembers;
     // Check membership status (pending, approved, rejected)
     final isPending = req.membershipStatus == 'pending';
     final isApproved = req.membershipStatus == 'approved';
@@ -153,19 +177,33 @@ class GroupMatchingTab extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: isFull ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                    color: isFull
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    isFull ? 'Đã đầy' : 'Đang chờ: ${req.currentMembers}/${req.maxMembers} HS',
-                    style: TextStyle(color: isFull ? Colors.red : Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+                    isFull
+                        ? 'Đã đầy'
+                        : 'Đang chờ: ${req.currentMembers}/${req.maxMembers} HS',
+                    style: TextStyle(
+                      color: isFull ? Colors.red : Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 Text(
                   '${currencyFormat.format(req.pricePerSession)}/buổi',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
                 ),
               ],
             ),
@@ -174,27 +212,55 @@ class GroupMatchingTab extends ConsumerWidget {
               '${req.subject} - ${req.gradeLevel}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.person_outline, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text('Tạo bởi: ${isOwner ? 'Bạn' : req.creatorName}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    if (isOwner && req.pendingRequestsCount > 0)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${req.pendingRequestsCount} yêu cầu',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                  ],
+            if (isFull) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: const Text(
+                  'Full',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.person_outline, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  'Tạo bởi: ${isOwner ? 'Bạn' : req.creatorName}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (isOwner && req.pendingRequestsCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${req.pendingRequestsCount} yêu cầu',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             Text(
               req.description,
@@ -204,83 +270,111 @@ class GroupMatchingTab extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Row(
-               children: [
-                 const Icon(Icons.location_on_outlined, size: 14, color: Colors.blueGrey),
-                 const SizedBox(width: 4),
-                  Text(req.location, style: const TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.w500)),
-               ],
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: Colors.blueGrey,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  req.location,
+                  style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
+            if (isFull &&
+                req.paymentDeadline != null &&
+                req.paymentStatus == 'pending') ...[
+              const SizedBox(height: 8),
+              _buildPaymentDeadlineLine(req.paymentDeadline!),
+            ],
             const SizedBox(height: 16),
             // Action Button - Different states based on user's relationship with group
             // Logic: Owner → Check Group | Approved → Joined | Pending → Waiting | Rejected → Rejected | Full → Full | Available → Join
             SizedBox(
               width: double.infinity,
-              child: isOwner 
-                // Owner: Navigate to group management screen to approve/reject members
-                ? FilledButton.icon(
-                    onPressed: () {
-                         _showGroupManagement(context, req);
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Quản lý lớp học nhóm'),
-                  )
-                // Member status: Approved (already joined) or Pending (waiting for approval)
-                : (isApproved || isPending)
-                    ? OutlinedButton.icon(
-                        onPressed: () {
-                          // Check 12 hour rule: "học viên có thể rời nhóm trước 12 giờ kể từ khi tham gia nhóm"
-                          final joinedAt = req.joinedAt;
-                          if (joinedAt != null && DateTime.now().difference(joinedAt).inHours >= 12) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Đã quá 12 giờ kể từ khi tham gia, bạn không thể rời nhóm này.'),
-                                backgroundColor: Colors.red.shade700,
-                                behavior: SnackBarBehavior.floating,
+              child: isOwner
+                  // Owner: Navigate to group management screen to approve/reject members
+                  ? FilledButton.icon(
+                      onPressed: () {
+                        _showGroupManagement(context, req);
+                      },
+                      icon: const Icon(Icons.settings),
+                      label: const Text('Quản lý lớp học nhóm'),
+                    )
+                  // Member status: Approved (already joined) or Pending (waiting for approval)
+                  : (isApproved || isPending)
+                  ? OutlinedButton.icon(
+                      onPressed: () {
+                        // Check 12 hour rule: "học viên có thể rời nhóm trước 12 giờ kể từ khi tham gia nhóm"
+                        final joinedAt = req.joinedAt;
+                        if (joinedAt != null &&
+                            DateTime.now().difference(joinedAt).inHours >= 12) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Đã quá 12 giờ kể từ khi tham gia, bạn không thể rời nhóm này.',
                               ),
-                            );
-                            return;
-                          }
-                          _showLeaveConfirmation(context, req, ref);
-                        },
-                        icon: const Icon(Icons.logout, size: 18),
-                        label: Text(isApproved ? 'Rời lớp học nhóm' : 'Hủy yêu cầu'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                          side: const BorderSide(color: Colors.redAccent),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              backgroundColor: Colors.red.shade700,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        _showLeaveConfirmation(context, req, ref);
+                      },
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: Text(
+                        isApproved ? 'Rời lớp học nhóm' : 'Hủy yêu cầu',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      )
-                // Member status: Rejected (request was rejected)
-                : isRejected
-                     ? OutlinedButton(
-                         onPressed: () {
-                           _showJoinConfirmation(context, req, ref);
-                         },
-                         style: OutlinedButton.styleFrom(
-                           side: const BorderSide(color: Colors.orange),
-                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                           foregroundColor: Colors.orange,
-                         ),
-                         child: const Text('Xin vào lại'),
-                       )
-                // Group is full (cannot join)
-                : isFull 
-                    ? const FilledButton.tonal(
-                        onPressed: null, 
-                        child: Text('Nhóm đã đầy'),
-                      )
-                // Available: Show join confirmation dialog
-                : OutlinedButton(
-                    onPressed: () {
-                      _showJoinConfirmation(context, req, ref);
-                    },
-                    style: OutlinedButton.styleFrom(
-                       side: const BorderSide(color: Colors.blueAccent),
-                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                       foregroundColor: Colors.blueAccent,
+                      ),
+                    )
+                  // Member status: Rejected (request was rejected)
+                  : isRejected
+                  ? OutlinedButton(
+                      onPressed: () {
+                        _showJoinConfirmation(context, req, ref);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.orange),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: Colors.orange,
+                      ),
+                      child: const Text('Xin vào lại'),
+                    )
+                  // Group is full (cannot join)
+                  : isFull
+                  ? const FilledButton.tonal(
+                      onPressed: null,
+                      child: Text('Nhóm đã đầy'),
+                    )
+                  // Available: Show join confirmation dialog
+                  : OutlinedButton(
+                      onPressed: () {
+                        _showJoinConfirmation(context, req, ref);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.blueAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: Colors.blueAccent,
+                      ),
+                      child: const Text('Tham gia lớp học nhóm'),
                     ),
-                    child: const Text('Tham gia lớp học nhóm'),
-                  ),
             ),
           ],
         ),
@@ -288,24 +382,54 @@ class GroupMatchingTab extends ConsumerWidget {
     );
   }
 
+  Widget _buildPaymentDeadlineLine(DateTime deadline) {
+    final difference = deadline.difference(DateTime.now());
+    final text = difference.isNegative
+        ? 'Hạn thanh toán còn lại: đã quá hạn'
+        : 'Hạn thanh toán còn lại: còn ${difference.inHours} giờ ${difference.inMinutes % 60} phút';
+
+    return Row(
+      children: [
+        const Icon(Icons.timer_outlined, color: Colors.red, size: 14),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Show join confirmation dialog
-  /// 
+  ///
   /// **Purpose:**
   /// - Confirms user's intent to join a study group
   /// - Sends join request to backend
   /// - Updates UI after successful join
-  /// 
+  ///
   /// **Process:**
   /// 1. Show confirmation dialog
   /// 2. If confirmed, call repository to join group
   /// 3. Invalidate provider to refresh list
   /// 4. Show success/error message
-  void _showJoinConfirmation(BuildContext context, GroupRequest req, WidgetRef ref) {
+  void _showJoinConfirmation(
+    BuildContext context,
+    GroupRequest req,
+    WidgetRef ref,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận tham gia lớp học nhóm'),
-        content: Text('Bạn có chắc chắn muốn tham gia lớp học nhóm "${req.subject}" này không?'),
+        content: Text(
+          'Bạn có chắc chắn muốn tham gia lớp học nhóm "${req.subject}" này không?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -318,19 +442,23 @@ class GroupMatchingTab extends ConsumerWidget {
               final repo = ref.read(sharedLearningRepositoryProvider);
               final success = await repo.joinGroup(req.id);
               if (success) {
-                  ref.invalidate(groupRequestsProvider);
-                  ref.invalidate(myAllGroupsProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã gửi yêu cầu tham gia thành công!')),
-                    );
-                  }
+                ref.invalidate(groupRequestsProvider);
+                ref.invalidate(myAllGroupsProvider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã gửi yêu cầu tham gia thành công!'),
+                    ),
+                  );
+                }
               } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Gửi yêu cầu thất bại. Vui lòng thử lại.')),
-                    );
-                  }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gửi yêu cầu thất bại. Vui lòng thử lại.'),
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Tham gia'),
@@ -341,12 +469,12 @@ class GroupMatchingTab extends ConsumerWidget {
   }
 
   /// Navigate to group management screen
-  /// 
+  ///
   /// **Purpose:**
   /// - Opens group management screen for group owner
   /// - Allows owner to approve/reject pending members
   /// - Shows list of all group members
-  /// 
+  ///
   /// **Features in Group Management:**
   /// - View all members (approved, pending, rejected)
   /// - Approve pending members
@@ -354,16 +482,22 @@ class GroupMatchingTab extends ConsumerWidget {
   /// - Remove members (for approved members)
   /// - Delete group
   void _showGroupManagement(BuildContext context, GroupRequest req) {
-       context.push('/group-management', extra: req);
+    context.push('/group-management', extra: req);
   }
 
   /// Show leave group confirmation dialog
-  void _showLeaveConfirmation(BuildContext context, GroupRequest req, WidgetRef ref) {
+  void _showLeaveConfirmation(
+    BuildContext context,
+    GroupRequest req,
+    WidgetRef ref,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận rời lớp học nhóm'),
-        content: Text('Bạn có chắc chắn muốn rời khỏi lớp học nhóm "${req.subject}" không?'),
+        content: Text(
+          'Bạn có chắc chắn muốn rời khỏi lớp học nhóm "${req.subject}" không?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -377,25 +511,31 @@ class GroupMatchingTab extends ConsumerWidget {
               try {
                 final success = await repo.leaveGroup(req.id);
                 if (success) {
-                    ref.invalidate(groupRequestsProvider);
-                    ref.invalidate(myAllGroupsProvider);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã rời lớp học nhóm thành công!')),
-                      );
-                    }
+                  ref.invalidate(groupRequestsProvider);
+                  ref.invalidate(myAllGroupsProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã rời lớp học nhóm thành công!'),
+                      ),
+                    );
+                  }
                 } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Rời lớp học nhóm thất bại. Vui lòng thử lại.')),
-                      );
-                    }
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Rời lớp học nhóm thất bại. Vui lòng thử lại.',
+                        ),
+                      ),
+                    );
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     SnackBar(content: Text('Lỗi: $e')),
-                   );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
                 }
               }
             },

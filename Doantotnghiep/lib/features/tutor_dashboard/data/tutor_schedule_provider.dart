@@ -120,6 +120,8 @@ class TutorScheduleNotifier extends StateNotifier<TutorScheduleState> {
 
   List<UnifiedScheduleItem> _expandCourseSchedule(Course course) {
     List<UnifiedScheduleItem> expandedItems = [];
+    final status = course.status.toLowerCase();
+    if (status != 'open' && status != 'ongoing') return [];
     
     // Format expected: "T2, T4, T6 (08:00 - 10:00)"
     final scheduleStr = course.schedule;

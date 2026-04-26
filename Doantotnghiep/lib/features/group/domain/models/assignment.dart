@@ -48,6 +48,28 @@ class Assignment {
   }
 }
 
+int _parseInt(dynamic value, {int fallback = 0}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+DateTime _parseDateTime(dynamic value) {
+  if (value is DateTime) return value;
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
 class AssignmentSubmission {
   final int id;
   final int assignmentId;
@@ -73,13 +95,13 @@ class AssignmentSubmission {
 
   factory AssignmentSubmission.fromJson(Map<String, dynamic> json) {
     return AssignmentSubmission(
-      id: json['id'],
-      assignmentId: json['assignment_id'],
-      studentId: json['student_id'],
-      content: json['content'],
-      fileUrl: json['file_url'],
-      submittedAt: DateTime.parse(json['submitted_at']),
-      grade: json['grade'] != null ? double.parse(json['grade'].toString()) : null,
+      id: _parseInt(json['id']),
+      assignmentId: _parseInt(json['assignment_id']),
+      studentId: _parseInt(json['student_id']),
+      content: json['content']?.toString(),
+      fileUrl: json['file_url']?.toString(),
+      submittedAt: _parseDateTime(json['submitted_at']),
+      grade: _parseDouble(json['grade']),
       feedback: json['feedback'],
       student: json['student'] != null ? StudentInfo.fromJson(json['student']) : null,
     );
@@ -95,9 +117,9 @@ class StudentInfo {
 
   factory StudentInfo.fromJson(Map<String, dynamic> json) {
     return StudentInfo(
-      id: json['id'],
-      name: json['name'],
-      avatarUrl: json['avatar_url'],
+      id: _parseInt(json['id']),
+      name: json['name']?.toString() ?? 'Học viên',
+      avatarUrl: json['avatar_url']?.toString(),
     );
   }
 }

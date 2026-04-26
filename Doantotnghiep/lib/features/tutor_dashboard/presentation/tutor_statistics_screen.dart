@@ -140,6 +140,9 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
                 _buildPremiumWalletCard(wallet, currency),
                 const SizedBox(height: 24),
 
+                _buildIncomeChart(wallet, currency),
+                const SizedBox(height: 24),
+
                 // Action Buttons Row
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -312,6 +315,97 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
     );
   }
 
+  Widget _buildIncomeChart(WalletState wallet, NumberFormat currency) {
+    final today = DateTime.now();
+    final days = List.generate(7, (index) {
+      final date = today.subtract(Duration(days: 6 - index));
+      return DateTime(date.year, date.month, date.day);
+    });
+
+    final dailyTotals = days.map((day) {
+      return wallet.transactions.where((tx) {
+        final txDay = DateTime(tx.date.year, tx.date.month, tx.date.day);
+        return tx.type == 'earning' && tx.status == 'success' && txDay == day;
+      }).fold<double>(0, (total, tx) => total + tx.amount.abs());
+    }).toList();
+
+    final maxTotal = dailyTotals.fold<double>(0, (max, value) => value > max ? value : max);
+    final totalIncome = dailyTotals.fold<double>(0, (total, value) => total + value);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Biểu đồ thu nhập',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: EduTheme.textPrimary),
+              ),
+              Text(
+                currency.format(totalIncome),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: EduTheme.success),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('7 ngày gần nhất', style: TextStyle(color: EduTheme.textSecondary, fontSize: 12)),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 130,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(days.length, (index) {
+                final value = dailyTotals[index];
+                final barHeight = maxTotal == 0 ? 6.0 : 12 + (value / maxTotal) * 80;
+                final isToday = index == days.length - 1;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          height: barHeight,
+                          decoration: BoxDecoration(
+                            color: value > 0
+                                ? (isToday ? EduTheme.primary : EduTheme.success)
+                                : Colors.grey.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          DateFormat('dd/MM').format(days[index]),
+                          style: TextStyle(color: EduTheme.textSecondary, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildWalletActionBtn({
     required IconData icon,
     required String label,
@@ -345,7 +439,9 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
   Widget _buildTuitionItem(Map<String, dynamic> t, NumberFormat currency) {
     final bool isCompleted = t['status'] == 'completed';
     final String studentName = t['student']?['name'] ?? 'Học viên';
-    final DateTime date = DateTime.parse(t['date']);
+    final rawDate = t['date'] ?? t['start_time'] ?? t['created_at'];
+    final DateTime date = DateTime.tryParse(rawDate?.toString() ?? '') ?? DateTime.now();
+    final amount = double.tryParse((t['total_price'] ?? t['price'] ?? t['amount'] ?? 0).toString()) ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -380,7 +476,7 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
             ),
           ),
           Text(
-            currency.format(t['total_price'] ?? 0),
+            currency.format(amount),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: isCompleted ? Colors.green : Colors.blue,
@@ -395,15 +491,17 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
     final amountController = TextEditingController();
     final bankNameController = TextEditingController();
     final accountNumberController = TextEditingController();
+    final accountNameController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Rút tiền về ngân hàng', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             const Padding(
               padding: EdgeInsets.only(bottom: 16.0),
               child: Text(
@@ -438,7 +536,18 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-          ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: accountNameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Tên chủ tài khoản',
+                hintText: 'VD: NGUYEN VAN A',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -446,7 +555,7 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
             child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final amount = double.tryParse(amountController.text);
               if (amount == null || amount < 50000) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số tiền tối thiểu là 50.000đ')));
@@ -456,15 +565,19 @@ class _TutorStatisticsScreenState extends ConsumerState<TutorStatisticsScreen> w
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số dư không đủ')));
                 return;
               }
-              if (bankNameController.text.isEmpty || accountNumberController.text.isEmpty) {
+              if (bankNameController.text.isEmpty || accountNumberController.text.isEmpty || accountNameController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin ngân hàng')));
                 return;
               }
 
-              ref.read(walletProvider.notifier).withdraw(amount, bankNameController.text, accountNumberController.text);
+              final success = await ref.read(walletProvider.notifier).withdraw(amount, bankNameController.text, accountNumberController.text, accountNameController.text);
+              if (!context.mounted) return;
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đang xử lý rút tiền...'), backgroundColor: Colors.green),
+                SnackBar(
+                  content: Text(success ? 'Yêu cầu rút tiền đã được gửi' : 'Rút tiền thất bại, vui lòng thử lại'),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ),
               );
             },
             style: ElevatedButton.styleFrom(

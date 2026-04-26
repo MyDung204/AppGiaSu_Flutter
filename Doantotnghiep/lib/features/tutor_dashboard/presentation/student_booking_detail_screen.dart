@@ -79,6 +79,8 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildStudentProfileCard(context, total, completed, progress),
+                      const SizedBox(height: 16),
+                      _buildOneToOneActions(context, ref, studentBookings),
                       const SizedBox(height: 24),
                       const Text(
                         'Lịch sử buổi học',
@@ -200,10 +202,78 @@ class StudentBookingDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildOneToOneActions(BuildContext context, WidgetRef ref, List<BookingItem> bookings) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _EduTheme.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Quản lý dạy kèm 1-1',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _EduTheme.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Áp dụng thay đổi cho tất cả buổi học sắp tới của học viên này.',
+            style: TextStyle(fontSize: 13, color: _EduTheme.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _confirmCancelOneToOne(context, ref, bookings),
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text('Hủy 1-1'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _EduTheme.error,
+                    side: const BorderSide(color: _EduTheme.error),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _showUpdateOneToOneDialog(context, ref, bookings),
+                  icon: const Icon(Icons.tune_outlined, size: 18),
+                  label: const Text('Cập nhật 1-1'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _EduTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<BookingItem> _getUpcomingBookings(List<BookingItem> bookings) {
+    final upcoming = bookings.where(_isUpcomingBooking).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    return upcoming;
+  }
+
+  bool _isUpcomingBooking(BookingItem booking) {
+    final status = booking.status.toLowerCase();
+    return status == 'upcoming' || status == 'confirmed' || status == 'locked' || status == 'pending';
+  }
+
   Widget _buildBookingItem(BuildContext context, WidgetRef ref, BookingItem booking) {
     final statusColor = _getStatusColor(booking.status);
     final statusText = _getStatusText(booking.status);
-    final isUpcoming = booking.status.toLowerCase() == 'confirmed' || booking.status.toLowerCase() == 'pending';
+    final status = booking.status.toLowerCase();
+    final isUpcoming = _isUpcomingBooking(booking);
+    final canUpdate = status != 'cancelled';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -247,6 +317,10 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                    Text(booking.gradeLevel!, style: const TextStyle(fontSize: 12, color: _EduTheme.textSecondary)),
                 ],
               ),
+              if (canUpdate) ...[
+                const SizedBox(height: 10),
+                _buildBookingActions(context, ref, booking, canCancel: isUpcoming),
+              ],
             ],
           ),
           children: [
@@ -256,7 +330,21 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                  crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
                    const Divider(),
-                   if (booking.meetingLink != null)
+                   ListTile(
+                     contentPadding: EdgeInsets.zero,
+                     leading: Icon(
+                       booking.learningMode == 'offline' ? Icons.location_on_outlined : Icons.videocam_outlined,
+                       color: _EduTheme.primary,
+                     ),
+                     title: const Text('Cách học', style: TextStyle(fontSize: 14)),
+                     subtitle: Text(
+                       booking.learningMode == 'offline'
+                           ? 'Offline${(booking.address ?? '').isNotEmpty ? ' - ${booking.address}' : ''}'
+                           : 'Online',
+                     ),
+                   ),
+
+                   if ((booking.meetingLink ?? '').isNotEmpty)
                      ListTile(
                        contentPadding: EdgeInsets.zero,
                        leading: const Icon(Icons.link, color: Colors.blue),
@@ -267,7 +355,7 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                        },
                      ),
                     
-                   if (booking.tutorFeedback != null) ...[
+                   if ((booking.tutorFeedback ?? '').isNotEmpty) ...[
                       const Text('Đánh giá của bạn:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 4),
                       Text(booking.tutorFeedback!, style: const TextStyle(color: _EduTheme.textSecondary, fontStyle: FontStyle.italic)),
@@ -278,10 +366,8 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                    Row(
                      mainAxisAlignment: MainAxisAlignment.end,
                      children: [
-                       TextButton(
-                         onPressed: () {
-                           // Cancel Logic
-                         },
+                      TextButton(
+                        onPressed: () => _confirmCancelBooking(context, ref, booking),
                          child: const Text('Hủy', style: TextStyle(color: Colors.red)),
                        ),
                        const SizedBox(width: 8),
@@ -306,11 +392,48 @@ class StudentBookingDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildBookingActions(
+    BuildContext context,
+    WidgetRef ref,
+    BookingItem booking, {
+    required bool canCancel,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        if (canCancel)
+          OutlinedButton.icon(
+            onPressed: () => _confirmCancelBooking(context, ref, booking),
+            icon: const Icon(Icons.cancel_outlined, size: 16),
+            label: const Text('Hủy'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _EduTheme.error,
+              side: const BorderSide(color: _EduTheme.error),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        FilledButton.icon(
+          onPressed: () => _showUpdateSessionDialog(context, ref, booking),
+          icon: const Icon(Icons.edit_calendar_outlined, size: 16),
+          label: const Text('Cập nhật'),
+          style: FilledButton.styleFrom(
+            backgroundColor: _EduTheme.primary,
+            foregroundColor: Colors.white,
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
+      case 'upcoming':
       case 'confirmed': return _EduTheme.primary;
       case 'completed': return _EduTheme.success;
       case 'cancelled': return _EduTheme.error;
+      case 'locked':
       case 'pending': return _EduTheme.secondary;
       default: return Colors.grey;
     }
@@ -318,11 +441,211 @@ class StudentBookingDetailScreen extends ConsumerWidget {
 
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
+      case 'upcoming':
       case 'confirmed': return 'Sắp tới';
       case 'completed': return 'Hoàn thành';
       case 'cancelled': return 'Đã hủy';
+      case 'locked':
       case 'pending': return 'Chờ xác nhận';
       default: return status;
+    }
+  }
+
+  Future<void> _confirmCancelOneToOne(BuildContext context, WidgetRef ref, List<BookingItem> bookings) async {
+    final upcomingBookings = _getUpcomingBookings(bookings);
+    if (upcomingBookings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không có buổi 1-1 sắp tới để hủy')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hủy dạy kèm 1-1'),
+        content: Text('Hủy ${upcomingBookings.length} buổi học sắp tới của học viên này?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Không')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hủy 1-1', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    var successCount = 0;
+    final notifier = ref.read(bookingProvider.notifier);
+    for (final booking in upcomingBookings) {
+      final success = await notifier.cancelBooking(booking.id);
+      if (success) successCount++;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã hủy $successCount/${upcomingBookings.length} buổi 1-1 sắp tới'),
+          backgroundColor: successCount == upcomingBookings.length ? _EduTheme.success : _EduTheme.error,
+        ),
+      );
+    }
+  }
+
+  void _showUpdateOneToOneDialog(BuildContext context, WidgetRef ref, List<BookingItem> bookings) {
+    final upcomingBookings = _getUpcomingBookings(bookings);
+    if (upcomingBookings.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không có buổi 1-1 sắp tới để cập nhật')),
+      );
+      return;
+    }
+
+    final firstBooking = upcomingBookings.first;
+    var selectedMode = firstBooking.learningMode == 'offline' ? 'offline' : 'online';
+    final linkController = TextEditingController(text: firstBooking.meetingLink ?? '');
+    final addressController = TextEditingController(text: firstBooking.address ?? '');
+    final noteController = TextEditingController(text: firstBooking.tutorFeedback ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Cập nhật dạy kèm 1-1'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Áp dụng cho ${upcomingBookings.length} buổi học sắp tới.',
+                  style: const TextStyle(color: _EduTheme.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedMode,
+                  decoration: const InputDecoration(
+                    labelText: 'Cách học',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'online', child: Text('Online')),
+                    DropdownMenuItem(value: 'offline', child: Text('Offline')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedMode = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                if (selectedMode == 'online')
+                  TextField(
+                    controller: linkController,
+                    decoration: const InputDecoration(
+                      labelText: 'Link phòng học',
+                      prefixIcon: Icon(Icons.link),
+                      border: OutlineInputBorder(),
+                    ),
+                  )
+                else
+                  TextField(
+                    controller: addressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Địa chỉ học offline',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: noteController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Ghi chú cho học viên',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final notifier = ref.read(bookingProvider.notifier);
+                var successCount = 0;
+
+                for (final booking in upcomingBookings) {
+                  try {
+                    await notifier.updateSessionInfo(
+                      booking.id,
+                      learningMode: selectedMode,
+                      meetingLink: selectedMode == 'online' ? linkController.text.trim() : '',
+                      address: selectedMode == 'offline' ? addressController.text.trim() : '',
+                      tutorFeedback: noteController.text.trim(),
+                    );
+                    successCount++;
+                  } catch (_) {
+                    // Continue the batch and report partial success after the loop.
+                  }
+                }
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã cập nhật $successCount/${upcomingBookings.length} buổi 1-1 sắp tới'),
+                      backgroundColor: successCount == upcomingBookings.length ? _EduTheme.success : _EduTheme.error,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Lưu'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmCancelBooking(BuildContext context, WidgetRef ref, BookingItem booking) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hủy lịch dạy 1-1'),
+        content: const Text('Bạn có chắc muốn hủy buổi dạy kèm 1-1 này không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Không')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hủy lịch', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final success = await ref.read(bookingProvider.notifier).cancelBooking(booking.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Đã hủy lịch dạy 1-1' : 'Hủy lịch thất bại'),
+            backgroundColor: success ? _EduTheme.success : _EduTheme.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hủy lịch thất bại'), backgroundColor: _EduTheme.error),
+        );
+      }
     }
   }
 

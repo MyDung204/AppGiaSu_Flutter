@@ -58,10 +58,14 @@ class QuizController extends Controller
 
         if ($user->role === 'tutor') {
             // Tutor: list my quizzes
-            $quizzes = Quiz::where('tutor_id', $user->id)
-                ->withCount('questions')
-                ->latest()
-                ->get();
+            $query = Quiz::where('tutor_id', $user->id)
+                ->withCount('questions');
+
+            if ($request->has('course_id')) $query->where('course_id', $request->course_id);
+            if ($request->has('student_id')) $query->where('student_id', $request->student_id);
+            if ($request->has('study_group_id')) $query->where('study_group_id', $request->study_group_id);
+
+            $quizzes = $query->latest()->get();
         } else {
             // Student: list published quizzes
             $courseIds = DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
@@ -97,6 +101,50 @@ class QuizController extends Controller
         // Load questions. For students, hide 'is_correct' in options.
         if ($user->role === 'tutor' && $quiz->tutor_id === $user->id) {
             $quiz->load(['questions.options']);
+            $quiz->load(['attempts.user:id,name,email,avatar_url']);
+
+            $completedUserIds = $quiz->attempts->pluck('user_id')->unique()->values();
+            $eligibleStudents = collect();
+
+            if ($quiz->course_id) {
+                $eligibleStudents = DB::table('course_students')
+                    ->join('users', 'course_students.user_id', '=', 'users.id')
+                    ->where('course_students.course_id', $quiz->course_id)
+                    ->where('course_students.status', 'approved')
+                    ->select('users.id', 'users.name', 'users.email', 'users.avatar_url')
+                    ->get();
+            } elseif ($quiz->study_group_id) {
+                $eligibleStudents = DB::table('study_group_members')
+                    ->join('users', 'study_group_members.user_id', '=', 'users.id')
+                    ->where('study_group_members.study_group_id', $quiz->study_group_id)
+                    ->whereIn('study_group_members.status', ['approved', 'member'])
+                    ->select('users.id', 'users.name', 'users.email', 'users.avatar_url')
+                    ->get();
+            } elseif ($quiz->student_id) {
+                $eligibleStudents = DB::table('users')
+                    ->where('id', $quiz->student_id)
+                    ->select('id', 'name', 'email', 'avatar_url')
+                    ->get();
+            }
+
+            $quiz->completed_students = $quiz->attempts
+                ->sortByDesc('completed_at')
+                ->unique('user_id')
+                ->map(function ($attempt) {
+                    return [
+                        'id' => $attempt->user?->id,
+                        'name' => $attempt->user?->name ?? 'Học viên',
+                        'email' => $attempt->user?->email,
+                        'avatar_url' => $attempt->user?->avatar_url,
+                        'score' => $attempt->score,
+                        'completed_at' => optional($attempt->completed_at)->toIso8601String(),
+                    ];
+                })
+                ->values();
+
+            $quiz->pending_students = $eligibleStudents
+                ->whereNotIn('id', $completedUserIds)
+                ->values();
         } else {
             // Student view: Load questions and options but hide is_correct
             $quiz->load(['questions' => function ($q) {
@@ -190,7 +238,7 @@ class QuizController extends Controller
         try {
             DB::beginTransaction();
 
-            $quiz->fill($request->only(['title', 'course_id', 'student_id', 'description', 'is_published']));
+            $quiz->fill($request->only(['title', 'course_id', 'student_id', 'study_group_id', 'description', 'is_published']));
             if ($request->has('time_limit_minutes') || $request->has('time_limit')) {
                 $quiz->time_limit_minutes = $request->time_limit_minutes ?? $request->time_limit;
             }
@@ -257,6 +305,7 @@ class QuizController extends Controller
         $score = 0;
         $totalPoints = 0;
         $correctAnswers = [];
+        $selectedAnswers = [];
 
         // Load all questions with correct options for grading
         $questions = $quiz->questions()->with('options')->get();
@@ -266,19 +315,18 @@ class QuizController extends Controller
             
             // Find student's answer for this question
             $studentAnswer = collect($request->answers)->firstWhere('question_id', $question->id);
+            $correctOption = $question->options->where('is_correct', true)->first();
+            $correctAnswers[$question->id] = $correctOption ? $correctOption->id : null;
             
             // Logic for grading
             // Assuming single choice for now: if option_id matches a correct option
             if ($studentAnswer) {
                 $selectedOptionId = $studentAnswer['option_id'];
-                $correctOption = $question->options->where('is_correct', true)->first();
+                $selectedAnswers[$question->id] = $selectedOptionId;
                 
                 if ($correctOption && $correctOption->id == $selectedOptionId) {
                     $score += $question->points;
                 }
-                
-                // Add to review data
-                $correctAnswers[$question->id] = $correctOption ? $correctOption->id : null;
             }
         }
 
@@ -296,6 +344,7 @@ class QuizController extends Controller
             'total_points' => $totalPoints,
             'attempt_id' => $attempt->id,
             'correct_answers' => $correctAnswers, // Map of question_id -> correct_option_id
+            'selected_answers' => $selectedAnswers, // Map of question_id -> selected_option_id
         ]);
     }
 

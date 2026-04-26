@@ -35,6 +35,109 @@ class AssignmentController extends Controller
         return false;
     }
 
+    private function userCanAccessAssignment(Request $request, \App\Models\Assignment $assignment): bool
+    {
+        $user = $request->user();
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        if ($this->userCanManageCourse($request, $assignment->course_id, $assignment->student_id, $assignment->study_group_id)) {
+            return true;
+        }
+
+        if ($user->role === 'tutor') {
+            return false;
+        }
+
+        if ($assignment->student_id && $assignment->student_id == $user->id) {
+            return true;
+        }
+
+        if ($assignment->course_id) {
+            return \Illuminate\Support\Facades\DB::table('course_students')
+                ->where('course_id', $assignment->course_id)
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->exists();
+        }
+
+        if ($assignment->study_group_id) {
+            return \Illuminate\Support\Facades\DB::table('study_group_members')
+                ->where('study_group_id', $assignment->study_group_id)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'member'])
+                ->exists();
+        }
+
+        return false;
+    }
+
+    private function assignmentRecipientIds(\App\Models\Assignment $assignment)
+    {
+        if ($assignment->student_id) {
+            return collect([$assignment->student_id]);
+        }
+
+        if ($assignment->course_id) {
+            return \Illuminate\Support\Facades\DB::table('course_students')
+                ->where('course_id', $assignment->course_id)
+                ->where('status', 'approved')
+                ->pluck('user_id');
+        }
+
+        if ($assignment->study_group_id) {
+            return \Illuminate\Support\Facades\DB::table('study_group_members')
+                ->where('study_group_id', $assignment->study_group_id)
+                ->whereIn('status', ['approved', 'member'])
+                ->pluck('user_id');
+        }
+
+        return collect();
+    }
+
+    private function notifyAssignmentCreated(\App\Models\Assignment $assignment): void
+    {
+        $recipientIds = $this->assignmentRecipientIds($assignment)->filter()->unique()->values();
+        $title = 'Bài tập mới';
+        $body = "Gia sư vừa giao bài tập: {$assignment->title}";
+        $type = 'assignment_created';
+        $data = [
+            'assignment_id' => (string) $assignment->id,
+            'course_id' => $assignment->course_id ? (string) $assignment->course_id : '',
+            'study_group_id' => $assignment->study_group_id ? (string) $assignment->study_group_id : '',
+            'student_id' => $assignment->student_id ? (string) $assignment->student_id : '',
+        ];
+
+        foreach ($recipientIds as $studentId) {
+            try {
+                $notificationService = app(\App\Services\FirebaseNotificationService::class);
+                $notificationService->sendToUser(
+                    (string) $studentId,
+                    $title,
+                    $body,
+                    $type,
+                    $data
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Assignment created but push notification failed', [
+                    'assignment_id' => $assignment->id,
+                    'student_id' => $studentId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                \App\Models\AppNotification::create([
+                    'user_id' => $studentId,
+                    'title' => $title,
+                    'body' => $body,
+                    'type' => $type,
+                    'data' => $data,
+                    'is_read' => false,
+                ]);
+            }
+        }
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -54,13 +157,26 @@ class AssignmentController extends Controller
         } else {
             // Student view
             $courseIds = \Illuminate\Support\Facades\DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
-            $groupIds = \Illuminate\Support\Facades\DB::table('study_group_members')->where('user_id', $user->id)->pluck('study_group_id');
+            $groupIds = \Illuminate\Support\Facades\DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'member'])
+                ->pluck('study_group_id');
             
             $query->where(function($q) use ($user, $courseIds, $groupIds) {
                 $q->where('student_id', $user->id)
                   ->orWhereIn('course_id', $courseIds)
                   ->orWhereIn('study_group_id', $groupIds);
             });
+
+            if ($request->has('course_id')) {
+                $query->where('course_id', $request->course_id);
+            }
+            if ($request->has('study_group_id')) {
+                $query->where('study_group_id', $request->study_group_id);
+            }
+            if ($request->has('student_id')) {
+                $query->where('student_id', $request->student_id);
+            }
         }
 
         $assignments = $query->withCount('submissions')
@@ -99,6 +215,7 @@ class AssignmentController extends Controller
         }
 
         $assignment = \App\Models\Assignment::create($request->all());
+        $this->notifyAssignmentCreated($assignment);
 
         return response()->json($assignment, 201);
     }
@@ -128,19 +245,30 @@ class AssignmentController extends Controller
         $request->validate([
             'content' => 'nullable|string',
             'file_url' => 'nullable|string',
+            'file' => 'nullable|file|max:10240',
         ]);
 
-        if (!$request->input('content') && !$request->input('file_url')) {
+        if (!$request->input('content') && !$request->input('file_url') && !$request->hasFile('file')) {
             return response()->json(['message' => 'Nội dung hoặc file không được để trống'], 422);
         }
 
         $user = $request->user();
+        $assignment = \App\Models\Assignment::findOrFail($id);
+        if (!$this->userCanAccessAssignment($request, $assignment)) {
+            return response()->json(['message' => 'Báº¡n khÃ´ng cÃ³ quyá»n ná»™p bÃ i táº­p nÃ y.'], 403);
+        }
         
+        $fileUrl = $request->input('file_url');
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->store('assignment_submissions', 'public');
+            $fileUrl = $request->getSchemeAndHttpHost() . '/storage/' . $path;
+        }
+
         $submission = \App\Models\AssignmentSubmission::updateOrCreate(
             ['assignment_id' => $id, 'student_id' => $user->id],
             [
                 'content' => $request->input('content'),
-                'file_url' => $request->input('file_url'),
+                'file_url' => $fileUrl,
                 'submitted_at' => now(),
             ]
         );
@@ -148,8 +276,13 @@ class AssignmentController extends Controller
         return response()->json($submission);
     }
 
-    public function submissions($id)
+    public function submissions(Request $request, $id)
     {
+        $assignment = \App\Models\Assignment::findOrFail($id);
+        if (!$this->userCanManageCourse($request, $assignment->course_id, $assignment->student_id, $assignment->study_group_id)) {
+            return response()->json(['message' => 'Báº¡n khÃ´ng cÃ³ quyá»n xem bÃ i ná»™p nÃ y.'], 403);
+        }
+
         // Tutor view: Get all submissions
         $submissions = \App\Models\AssignmentSubmission::where('assignment_id', $id)
             ->with('student:id,name,avatar_url')

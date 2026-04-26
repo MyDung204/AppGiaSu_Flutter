@@ -81,6 +81,40 @@ class _QuizItemCard extends ConsumerWidget {
   final Quiz quiz;
   const _QuizItemCard({required this.quiz});
 
+  Future<void> _openEdit(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final detailedQuiz = await ref.read(quizDetailProvider(quiz.id).future);
+      if (!context.mounted) return;
+
+      navigator.pop();
+      final updated = await context.push<bool>('/tutor-create-quiz', extra: detailedQuiz);
+      if (!context.mounted) return;
+      if (updated == true) {
+        ref.invalidate(quizListProvider(null));
+        ref.invalidate(quizDetailProvider(quiz.id));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Không tải được chi tiết bài kiểm tra: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
@@ -124,7 +158,7 @@ class _QuizItemCard extends ConsumerWidget {
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {
             if (value == 'edit') {
-              context.push('/tutor-create-quiz', extra: quiz);
+              await _openEdit(context, ref);
               return;
             }
 
@@ -162,7 +196,7 @@ class _QuizItemCard extends ConsumerWidget {
             PopupMenuItem(value: 'delete', child: Text('Xóa')),
           ],
         ),
-        onTap: () => context.push('/tutor-create-quiz', extra: quiz),
+        onTap: () => _openEdit(context, ref),
       ),
     );
   }

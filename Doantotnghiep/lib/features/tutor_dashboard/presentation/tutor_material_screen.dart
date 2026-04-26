@@ -90,7 +90,8 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
   }
 
   Future<void> _renameMaterial(Map<String, dynamic> material) async {
-    final controller = TextEditingController(text: material['name']?.toString() ?? '');
+    final currentName = material['name']?.toString() ?? '';
+    final controller = TextEditingController(text: currentName);
     final newName = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -114,7 +115,7 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
     );
     controller.dispose();
 
-    if (newName == null || newName.isEmpty || newName == material['name']) return;
+    if (newName == null || newName.isEmpty || newName == currentName) return;
 
     final success = await ref.read(tutorMaterialsProvider.notifier).updateMaterial(
           material['id'].toString(),
@@ -187,7 +188,13 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
     IconData iconData;
     Color iconColor;
     
-    final type = (material['file_type'] ?? '').toUpperCase();
+    final type = (material['file_type'] ?? '').toString().toUpperCase();
+    final name = material['name']?.toString() ?? 'Tài liệu chưa đặt tên';
+    final fileSize = material['file_size']?.toString() ?? '--';
+    final createdAt = DateTime.tryParse(material['created_at']?.toString() ?? '');
+    final createdAtText = createdAt == null
+        ? '--/--/----'
+        : DateFormat('dd/MM/yyyy').format(createdAt);
 
     switch (type) {
       case 'PDF':
@@ -234,14 +241,14 @@ class _TutorMaterialScreenState extends ConsumerState<TutorMaterialScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  material['name'],
+                  name,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${material['file_size']} • ${DateFormat('dd/MM/yyyy').format(DateTime.parse(material['created_at']))}',
+                  '$fileSize • $createdAtText',
                   style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 ),
               ],

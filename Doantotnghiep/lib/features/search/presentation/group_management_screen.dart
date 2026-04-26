@@ -4,6 +4,7 @@ import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 class GroupManagementScreen extends ConsumerStatefulWidget {
   final GroupRequest group;
@@ -17,10 +18,12 @@ class GroupManagementScreen extends ConsumerStatefulWidget {
 class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
   bool _isLoading = true;
   List<dynamic> _members = [];
+  late String _currentStatus;
 
   @override
   void initState() {
     super.initState();
+    _currentStatus = widget.group.status;
     _fetchMembers();
   }
 
@@ -118,6 +121,34 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
      }
   }
 
+  Future<void> _editGroup() async {
+    final updated = await context.push<bool>('/create-group', extra: widget.group);
+    if (updated == true && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _toggleStatus(bool isOpen) async {
+    final newStatus = isOpen ? 'open' : 'closed';
+    final repo = ref.read(sharedLearningRepositoryProvider);
+    final success = await repo.toggleGroupStatus(widget.group.id, newStatus);
+
+    if (success) {
+      setState(() => _currentStatus = newStatus);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isOpen ? 'Đã mở lại lớp học' : 'Đã đóng lớp học'))
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lỗi khi cập nhật trạng thái'))
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,9 +157,20 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
+              if (value == 'edit') _editGroup();
               if (value == 'delete') _deleteGroup();
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Sửa lớp học nhóm'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(value: 'delete', child: Text('Giải tán lớp học nhóm', style: TextStyle(color: Colors.red))),
             ],
           ),
@@ -210,23 +252,63 @@ class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
   }
 
   Widget _buildGroupInfoCard() {
+    final bool isOpen = _currentStatus == 'open' || _currentStatus == 'full';
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.group.subject, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Chủ đề: ${widget.group.topic}'),
-            const SizedBox(height: 4),
-            Text('Thành viên: ${widget.group.currentMembers}/${widget.group.maxMembers}'),
-            const SizedBox(height: 4),
-            Text('Học phí: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(widget.group.pricePerSession)}/buổi'),
-          ],
-        ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(widget.group.subject, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isOpen ? Colors.green : Colors.red),
+                      ),
+                      child: Text(
+                        isOpen ? 'Đang mở' : 'Đã đóng',
+                        style: TextStyle(
+                          color: isOpen ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Chủ đề: ${widget.group.topic}'),
+                const SizedBox(height: 4),
+                Text('Thành viên: ${widget.group.currentMembers}/${widget.group.maxMembers}'),
+                const SizedBox(height: 4),
+                Text('Học phí: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(widget.group.pricePerSession)}/buổi'),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            title: const Text('Trạng thái hiển thị lớp học', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            subtitle: Text(
+              isOpen ? 'Học viên có thể tìm thấy và tham gia' : 'Lớp học bị ẩn khỏi danh sách tìm kiếm',
+              style: const TextStyle(fontSize: 12),
+            ),
+            value: isOpen,
+            activeColor: Colors.green,
+            onChanged: (value) => _toggleStatus(value),
+          ),
+        ],
       ),
     );
   }

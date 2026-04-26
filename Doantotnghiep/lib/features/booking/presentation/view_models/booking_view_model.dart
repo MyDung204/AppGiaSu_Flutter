@@ -99,9 +99,9 @@ class BookingViewModel extends AutoDisposeFamilyAsyncNotifier<BookingState, Tuto
     state = AsyncData(state.value!.copyWith(payFull: value));
   }
 
-  Future<void> confirmBooking({String? paymentPin}) async {
+  Future<bool> confirmBooking({String? paymentPin}) async {
     final currentState = state.value;
-    if (currentState == null || !currentState.canConfirm) return;
+    if (currentState == null || !currentState.canConfirm) return false;
 
     final selectedDate = currentState.selectedDate!;
     final selectedTimeSlot = currentState.selectedTimeSlot!;
@@ -165,6 +165,7 @@ class BookingViewModel extends AutoDisposeFamilyAsyncNotifier<BookingState, Tuto
           isLoading: false,
         ));
       }
+      return true;
     } catch (e) {
       String userMessage = 'Đã xảy ra lỗi.';
       if (e is BookingException) {
@@ -178,6 +179,7 @@ class BookingViewModel extends AutoDisposeFamilyAsyncNotifier<BookingState, Tuto
           isLoading: false,
         ));
       }
+      return false;
     }
   }
 

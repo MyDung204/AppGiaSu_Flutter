@@ -52,6 +52,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
         ref.invalidate(tutorClassProvider);
         ref.invalidate(tutorRequestsProvider);
         ref.invalidate(bookingProvider);
+        ref.invalidate(tutorScheduleProvider);
         ref.invalidate(unreadNotificationCountProvider);
         
         // Show snackbar (Verified: this helps debugging)
@@ -75,6 +76,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     _timer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (mounted) {
         ref.invalidate(bookingProvider);
+        ref.invalidate(tutorScheduleProvider);
         ref.invalidate(tutorRequestsProvider);
         ref.invalidate(unreadNotificationCountProvider);
         ref.invalidate(notificationsProvider); // Essential for "Smart Content" listener
@@ -175,6 +177,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             ref.invalidate(tutorClassProvider);
             ref.invalidate(tutorRequestsProvider);
             ref.invalidate(bookingProvider);
+            ref.invalidate(tutorScheduleProvider);
             ref.invalidate(tutorStatisticsProvider);
             ref.invalidate(authRepositoryProvider); // Refresh user profile (rating)
           },
@@ -201,8 +204,8 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                     _buildQuickActionsGrid(context),
                     const SizedBox(height: 28),
                     
-                    // Today's Schedule
-                    _buildTodaySchedule(context, ref.watch(tutorScheduleProvider)),
+                    // Upcoming Schedule
+                    _buildUpcomingSchedule(context, ref.watch(tutorScheduleProvider)),
                     const SizedBox(height: 28),
                     
                     // Performance Insights
@@ -706,7 +709,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             _buildQuickActionButton(
               context,
               icon: Icons.add_circle_rounded,
-              label: 'Tạo lớp nhóm',
+              label: 'Tạo lớp học nhóm',
               gradient: [EduTheme.primary, EduTheme.primaryLight],
               onTap: () => context.push('/create-class'),
             ),
@@ -766,7 +769,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             _buildQuickActionButton(
               context,
               icon: Icons.group_add_rounded,
-              label: 'Học viên Nhóm',
+              label: 'Yêu cầu tuyển nhóm',
               gradient: [const Color(0xFF06B6D4), const Color(0xFF22D3EE)],
               onTap: () => context.go('/tutor-dashboard/find-students?tab=1'),
             ),
@@ -875,10 +878,27 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     );
   }
 
-  /// Today's Schedule - Merged 1-1 and Group Classes
-  Widget _buildTodaySchedule(BuildContext context, TutorScheduleState scheduleState) {
-    // Filter for today's items
-    final todayItems = scheduleState.unifiedSchedule.where((item) => item.isToday()).toList();
+  String _formatScheduleDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+
+    if (target == today) return 'Hôm nay';
+    if (target == today.add(const Duration(days: 1))) return 'Ngày mai';
+    return DateFormat('dd/MM').format(date);
+  }
+
+  /// Upcoming Schedule - Merged 1-1 and Group Classes
+  Widget _buildUpcomingSchedule(BuildContext context, TutorScheduleState scheduleState) {
+    final now = DateTime.now();
+    final upcomingItems = scheduleState.unifiedSchedule.where((item) {
+      final status = item.status?.toLowerCase() ?? '';
+      if (status == 'completed' || status == 'cancelled') return false;
+      return item.endTime.isAfter(now);
+    }).toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    final visibleItems = upcomingItems.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -898,7 +918,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'Lịch dạy hôm nay',
+                  'Lịch dạy sắp tới',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: EduTheme.textPrimary),
                 ),
               ],
@@ -913,7 +933,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
         
         if (scheduleState.isLoading)
           const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
-        else if (todayItems.isEmpty)
+        else if (visibleItems.isEmpty)
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -926,14 +946,14 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                 children: [
                   Icon(Icons.free_breakfast_rounded, size: 40, color: EduTheme.textSecondary.withOpacity(0.5)),
                   const SizedBox(height: 8),
-                  Text('Hôm nay bạn không có lịch dạy', style: TextStyle(color: EduTheme.textSecondary)),
+                  Text('Chưa có lịch dạy sắp tới', style: TextStyle(color: EduTheme.textSecondary)),
                 ],
               ),
             ),
           )
         else
           Column(
-            children: todayItems.map<Widget>((item) {
+            children: visibleItems.map<Widget>((item) {
               final isGroup = item.type == ScheduleType.group;
               
               return Container(
@@ -995,9 +1015,13 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                                     children: [
                                       Icon(Icons.access_time_rounded, size: 14, color: EduTheme.textSecondary),
                                       const SizedBox(width: 4),
-                                      Text(
-                                        '${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
-                                        style: TextStyle(color: EduTheme.textSecondary, fontSize: 13),
+                                      Flexible(
+                                        child: Text(
+                                          '${_formatScheduleDate(item.startTime)} • ${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
+                                          style: TextStyle(color: EduTheme.textSecondary, fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                       if (isGroup) ...[
                                         const SizedBox(width: 8),
@@ -1008,7 +1032,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: const Text(
-                                            'Lớp nhóm',
+                                            'Lớp học nhóm',
                                             style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
                                           ),
                                         ),

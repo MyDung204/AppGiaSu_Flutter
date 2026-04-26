@@ -20,7 +20,7 @@ class WalletScreen extends ConsumerWidget {
                     ref.watch(authRepositoryProvider).currentUser?.tutorProfile != null;
 
     return Scaffold(
-      appBar: isTutor ? _buildTutorAppBar(context) : AppBar(title: const Text('Ví của tôi')),
+      appBar: isTutor ? _buildTutorAppBar(context) : AppBar(title: const Text('Ví & Thu nhập')),
       body: walletAsync.when(
         data: (walletState) {
           final balance = walletState.balance;
@@ -198,6 +198,7 @@ class WalletScreen extends ConsumerWidget {
     final amountController = TextEditingController();
     final bankNameController = TextEditingController();
     final accountNumberController = TextEditingController();
+    final accountNameController = TextEditingController();
 
     showDialog(
       context: context,
@@ -232,12 +233,18 @@ class WalletScreen extends ConsumerWidget {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Số tài khoản'),
             ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: accountNameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Tên chủ tài khoản'),
+            ),
           ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               final amount = double.tryParse(amountController.text);
               if (amount == null || amount < 50000) {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số tiền tối thiểu là 50,000đ')));
@@ -247,14 +254,20 @@ class WalletScreen extends ConsumerWidget {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số dư không đủ')));
                  return;
               }
-              if (bankNameController.text.isEmpty || accountNumberController.text.isEmpty) {
+              if (bankNameController.text.isEmpty || accountNumberController.text.isEmpty || accountNameController.text.isEmpty) {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập thông tin ngân hàng')));
                  return;
               }
 
-              ref.read(walletProvider.notifier).withdraw(amount, bankNameController.text, accountNumberController.text);
+              final success = await ref.read(walletProvider.notifier).withdraw(amount, bankNameController.text, accountNumberController.text, accountNameController.text);
+              if (!context.mounted) return;
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đang xử lý rút tiền...')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(success ? 'Yêu cầu rút tiền đã được gửi' : 'Rút tiền thất bại, vui lòng thử lại'),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ),
+              );
             },
             child: const Text('Rút tiền'),
           ),
@@ -277,7 +290,7 @@ class WalletScreen extends ConsumerWidget {
         child: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text('Ví của tôi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: const Text('Ví & Thu nhập', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
       ),

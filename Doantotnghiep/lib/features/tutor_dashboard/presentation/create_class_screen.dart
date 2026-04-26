@@ -213,7 +213,7 @@ class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Tên lớp học nhóm', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập tên lớp nhóm' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập tên lớp học nhóm' : null,
               ),
               const SizedBox(height: 16),
               Row(

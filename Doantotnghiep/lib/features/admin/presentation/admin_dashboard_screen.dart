@@ -49,8 +49,8 @@ class AdminDashboardScreen extends ConsumerWidget {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Xác nhận thoát'),
-                  content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Quản trị không?'),
+                  title: const Text('Xác nhận đăng xuất'),
+                  content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
@@ -59,7 +59,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Đăng xuất'),
+                      child: const Text('Đồng ý'),
                     ),
                   ],
                 ),

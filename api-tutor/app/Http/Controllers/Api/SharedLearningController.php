@@ -216,6 +216,101 @@ class SharedLearningController extends Controller
     /// **Returns:**
     /// - `Course`: Created course object
     /// 
+    public function payCourseTuition(Request $request, $id)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::findOrFail($id);
+        $enrollment = DB::table('course_students')
+            ->where('course_id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa tham gia lớp học nhóm này.'], 403);
+        }
+
+        if ($enrollment->payment_status === 'paid') {
+            return response()->json(['message' => 'Bạn đã thanh toán học phí cho lớp này rồi.'], 400);
+        }
+
+        $price = (float) $course->price;
+        if ($price <= 0) {
+            DB::table('course_students')
+                ->where('id', $enrollment->id)
+                ->update([
+                    'payment_status' => 'paid',
+                    'next_payment_due' => now()->addMonth(),
+                    'grace_period_ends_at' => null,
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['message' => 'Lớp miễn phí, đã cập nhật trạng thái thanh toán.']);
+        }
+
+        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
+        if ($wallet->balance < $price) {
+            return response()->json(['message' => 'Số dư ví không đủ. Vui lòng nạp thêm tiền.'], 400);
+        }
+
+        $tutor = \App\Models\Tutor::find($course->tutor_id);
+        if (!$tutor) {
+            return response()->json(['message' => 'Không tìm thấy gia sư của lớp học nhóm này.'], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            $referenceId = "course_tuition_{$id}_{$user->id}_" . time();
+
+            $wallet->decrement('balance', $price);
+
+            Transaction::create([
+                'wallet_id' => $wallet->id,
+                'amount' => -$price,
+                'type' => 'payment',
+                'description' => "Thanh toán học phí lớp học nhóm: {$course->title}",
+                'reference_id' => $referenceId,
+                'status' => 'success',
+            ]);
+
+            DB::table('course_students')
+                ->where('id', $enrollment->id)
+                ->update([
+                    'payment_status' => 'paid',
+                    'next_payment_due' => now()->addMonth(),
+                    'grace_period_ends_at' => null,
+                    'updated_at' => now(),
+                ]);
+
+            $tutorWallet = Wallet::firstOrCreate(['user_id' => $tutor->user_id]);
+            $tutorWallet->increment('balance', $price);
+
+            Transaction::create([
+                'wallet_id' => $tutorWallet->id,
+                'amount' => $price,
+                'type' => 'earning',
+                'description' => "Học phí từ {$user->name} cho lớp học nhóm: {$course->title}",
+                'reference_id' => $referenceId,
+                'status' => 'success',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Thanh toán học phí thành công.',
+                'balance' => $wallet->fresh()->balance,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Course tuition payment error: " . $e->getMessage());
+            return response()->json(['message' => 'Lỗi hệ thống khi xử lý thanh toán học phí.'], 500);
+        }
+    }
+
     public function storeCourse(Request $request)
     {
         $user = $request->user('sanctum');
@@ -413,11 +508,12 @@ class SharedLearningController extends Controller
                     ]);
 
                 if ($isTutorGroup) {
-                    $group->increment('current_members');
-                    if ($group->current_members >= $group->max_members) {
+                    $newMemberCount = $group->current_members + 1;
+                    $group->update(['current_members' => $newMemberCount]);
+                    if ($newMemberCount >= $group->max_members) {
                         $group->update([
                             'status' => 'full',
-                            'payment_deadline' => now()->addHours(24)
+                            'payment_deadline' => $group->payment_deadline ?? now()->addHours(24)
                         ]);
                     }
                     return response()->json(['message' => 'Đã tham gia nhóm thành công.']);
@@ -457,11 +553,12 @@ class SharedLearningController extends Controller
         ]);
 
         if ($isTutorGroup) {
-            $group->increment('current_members');
-            if ($group->current_members >= $group->max_members) {
+            $newMemberCount = $group->current_members + 1;
+            $group->update(['current_members' => $newMemberCount]);
+            if ($newMemberCount >= $group->max_members) {
                 $group->update([
                     'status' => 'full',
-                    'payment_deadline' => now()->addHours(24)
+                    'payment_deadline' => $group->payment_deadline ?? now()->addHours(24)
                 ]);
             }
             return response()->json(['message' => 'Đã tham gia nhóm thành công.']);
@@ -592,11 +689,15 @@ public function approveMember(Request $request, $groupId, $userId)
             ->update(['status' => 'approved']);
 
         // Increment count
-        $group->increment('current_members');
+        $newMemberCount = $group->current_members + 1;
+        $group->update(['current_members' => $newMemberCount]);
 
         // Update status if full
-        if ($group->current_members >= $group->max_members) {
-            $group->update(['status' => 'full']);
+        if ($newMemberCount >= $group->max_members) {
+            $group->update([
+                'status' => 'full',
+                'payment_deadline' => $group->payment_deadline ?? now()->addHours(24)
+            ]);
         }
 
     // Notify User
@@ -1222,5 +1323,25 @@ public function approveMember(Request $request, $groupId, $userId)
         ]);
 
         return response()->json($announcement->load('user:id,name,avatar_url'), 201);
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        $group = StudyGroup::findOrFail($id);
+        if ($group->creator_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $newStatus = $request->input('status');
+        if (!in_array($newStatus, ['open', 'closed'])) {
+            return response()->json(['message' => 'Invalid status'], 400);
+        }
+
+        $group->update(['status' => $newStatus]);
+
+        return response()->json([
+            'message' => 'Đã cập nhật trạng thái lớp học nhóm.',
+            'status' => $newStatus
+        ]);
     }
 }

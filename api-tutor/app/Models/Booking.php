@@ -2,10 +2,18 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Booking extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'total_price' => 'decimal:2',
+    ];
+
     protected $fillable = [
         'tutor_id', 
         'student_id', 
@@ -46,6 +54,9 @@ class Booking extends Model
             case 'pending':
                 return 'Locked';
             case 'confirmed':
+                if ($this->end_time && Carbon::parse($this->end_time)->lte(now())) {
+                    return 'Completed';
+                }
                 return 'Upcoming';
             case 'cancelled':
                 return 'Cancelled';

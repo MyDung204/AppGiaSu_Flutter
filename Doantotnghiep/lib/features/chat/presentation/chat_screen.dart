@@ -371,7 +371,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ),
                 
-              if (msg.text.isNotEmpty)
+              if (msg.text.isNotEmpty && msg.attachmentType != 'location')
                 Padding(
                    padding: const EdgeInsets.only(top: 4),
                    child: Container(

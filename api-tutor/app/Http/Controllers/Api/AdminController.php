@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Tutor;
+use App\Models\VerificationRequest;
 
 class AdminController extends Controller
 {
@@ -139,7 +140,20 @@ class AdminController extends Controller
      */
     public function tutorRequests()
     {
-        return response()->json(Tutor::where('is_verified', false)->orWhere('is_verified', 0)->orderBy('created_at', 'desc')->get());
+        $tutors = Tutor::with('user')
+            ->where('is_verified', false)
+            ->orWhere('is_verified', 0)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tutor) {
+                $data = $tutor->toArray();
+                $data['verification_request'] = VerificationRequest::where('user_id', $tutor->user_id)
+                    ->latest()
+                    ->first();
+                return $data;
+            });
+
+        return response()->json($tutors);
     }
 
     public function approveTutor($id)
@@ -148,15 +162,30 @@ class AdminController extends Controller
         if ($tutor) {
             $tutor->is_verified = true;
             $tutor->save();
+
+            VerificationRequest::where('user_id', $tutor->user_id)
+                ->latest()
+                ->first()
+                ?->update(['status' => 'approved']);
+            $tutor->user?->update(['identity_verified_at' => now()]);
+
             return response()->json(['message' => 'Tutor approved']);
         }
         return response()->json(['message' => 'Tutor not found'], 404);
     }
 
-    public function rejectTutor($id)
+    public function rejectTutor(Request $request, $id)
     {
         $tutor = Tutor::find($id);
         if ($tutor) {
+            VerificationRequest::where('user_id', $tutor->user_id)
+                ->latest()
+                ->first()
+                ?->update([
+                    'status' => 'rejected',
+                    'note' => $request->reason ?? 'Ho so gia su khong dat yeu cau.',
+                ]);
+
             $tutor->delete();
             return response()->json(['message' => 'Tutor rejected']);
         }

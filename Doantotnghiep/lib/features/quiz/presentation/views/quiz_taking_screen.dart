@@ -19,10 +19,10 @@ class QuizTakingScreen extends ConsumerStatefulWidget {
 class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
   late PageController _pageController;
   int _currentQuestionIndex = 0;
-  
+
   // Map<QuestionID, OptionID>
   final Map<int, int> _answers = {};
-  
+
   Timer? _timer;
   int _secondsRemaining = 0;
 
@@ -30,9 +30,10 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    
+
     // Initialize Timer
-    if (widget.quiz.timeLimitMinutes != null && widget.quiz.timeLimitMinutes! > 0) {
+    if (widget.quiz.timeLimitMinutes != null &&
+        widget.quiz.timeLimitMinutes! > 0) {
       _secondsRemaining = widget.quiz.timeLimitMinutes! * 60;
       _startTimer();
     }
@@ -60,12 +61,11 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
 
   Future<void> _submitQuiz({bool isTimeout = false}) async {
     _timer?.cancel();
-    
+
     // Transform answers map to List<Map> for API
-    final submissionData = _answers.entries.map((e) => {
-      'question_id': e.key,
-      'option_id': e.value,
-    }).toList();
+    final submissionData = _answers.entries
+        .map((e) => {'question_id': e.key, 'option_id': e.value})
+        .toList();
 
     // Show loading
     showDialog(
@@ -74,14 +74,19 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final result = await ref.read(quizActionProvider.notifier).submitQuiz(widget.quiz.id, submissionData);
+    final result = await ref
+        .read(quizActionProvider.notifier)
+        .submitQuiz(widget.quiz.id, submissionData);
 
     if (!mounted) return;
     Navigator.of(context).pop(); // Close loading
 
     if (result != null) {
       // Success -> Go to Result
-      context.replace('/quiz-result', extra: {'quiz': widget.quiz, 'result': result});
+      context.replace(
+        '/quiz-result',
+        extra: {'quiz': widget.quiz, 'result': result, 'returnToClass': true},
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Nộp bài thất bại. Vui lòng thử lại.')),
@@ -113,31 +118,45 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
-              color: _secondsRemaining < 60 && widget.quiz.timeLimitMinutes != null 
-                  ? Colors.red[100] 
+              color:
+                  _secondsRemaining < 60 && widget.quiz.timeLimitMinutes != null
+                  ? Colors.red[100]
                   : Colors.blue[50],
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _secondsRemaining < 60 && widget.quiz.timeLimitMinutes != null
-                 ? Colors.red 
-                 : Colors.blue,
+                color:
+                    _secondsRemaining < 60 &&
+                        widget.quiz.timeLimitMinutes != null
+                    ? Colors.red
+                    : Colors.blue,
               ),
             ),
             child: Row(
               children: [
-                Icon(Icons.timer, size: 16, 
-                  color: _secondsRemaining < 60 && widget.quiz.timeLimitMinutes != null ? Colors.red : Colors.blue),
+                Icon(
+                  Icons.timer,
+                  size: 16,
+                  color:
+                      _secondsRemaining < 60 &&
+                          widget.quiz.timeLimitMinutes != null
+                      ? Colors.red
+                      : Colors.blue,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   _timerText,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: _secondsRemaining < 60 && widget.quiz.timeLimitMinutes != null ? Colors.red : Colors.blue,
+                    color:
+                        _secondsRemaining < 60 &&
+                            widget.quiz.timeLimitMinutes != null
+                        ? Colors.red
+                        : Colors.blue,
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
       body: Column(
@@ -148,7 +167,7 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
             backgroundColor: Colors.grey[200],
             valueColor: AlwaysStoppedAnimation<Color>(EduTheme.primary),
           ),
-          
+
           Expanded(
             child: PageView.builder(
               controller: _pageController,
@@ -163,28 +182,39 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
                     children: [
                       Text(
                         'Câu hỏi ${index + 1}/${widget.quiz.questions.length}',
-                        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         question.content,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       ...question.options.map((option) {
                         final isSelected = _answers[question.id] == option.id;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: isSelected ? EduTheme.primary.withOpacity(0.1) : Colors.white,
+                            color: isSelected
+                                ? EduTheme.primary.withValues(alpha: 0.1)
+                                : Colors.white,
                             border: Border.all(
-                              color: isSelected ? EduTheme.primary : Colors.grey[300]!,
+                              color: isSelected
+                                  ? EduTheme.primary
+                                  : Colors.grey[300]!,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: InkWell(
-                            onTap: () => _onOptionSelected(question.id!, option.id!),
+                            onTap: () =>
+                                _onOptionSelected(question.id!, option.id!),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -193,7 +223,8 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
                                   Radio<int>(
                                     value: option.id!,
                                     groupValue: _answers[question.id],
-                                    onChanged: (val) => _onOptionSelected(question.id!, val!),
+                                    onChanged: (val) =>
+                                        _onOptionSelected(question.id!, val!),
                                     activeColor: EduTheme.primary,
                                   ),
                                   Expanded(child: Text(option.content)),
@@ -209,13 +240,19 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
               },
             ),
           ),
-          
+
           // Navigation Buttons
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, -2),
+                ),
+              ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -223,19 +260,25 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
                 if (_currentQuestionIndex > 0)
                   OutlinedButton(
                     onPressed: () {
-                      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
                       setState(() => _currentQuestionIndex--);
                     },
                     child: const Text('Quay lại'),
                   )
                 else
                   const SizedBox(),
-                  
+
                 if (_currentQuestionIndex < widget.quiz.questions.length - 1)
                   ElevatedButton(
                     onPressed: () {
-                       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-                       setState(() => _currentQuestionIndex++);
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                      setState(() => _currentQuestionIndex++);
                     },
                     child: const Text('Tiếp theo'),
                   )
@@ -244,7 +287,10 @@ class _QuizTakingScreenState extends ConsumerState<QuizTakingScreen> {
                     onPressed: _submitQuiz,
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('NỘP BÀI'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
               ],
             ),

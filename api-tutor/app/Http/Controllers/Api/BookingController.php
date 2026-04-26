@@ -72,6 +72,14 @@ class BookingController extends Controller
         if (count($times) != 2)
             return response()->json(['message' => 'Invalid time slot'], 400);
 
+        $tutor = \App\Models\Tutor::where('id', $request->tutor_id)
+            ->orWhere('user_id', $request->tutor_id)
+            ->first();
+
+        if (!$tutor) {
+            return response()->json(['message' => 'Không tìm thấy gia sư. Vui lòng chọn lại gia sư.'], 404);
+        }
+
         $cleanDate = Carbon::parse($request->date)->format('Y-m-d');
         $startTime = Carbon::parse($cleanDate . ' ' . $times[0]);
         $endTime = Carbon::parse($cleanDate . ' ' . $times[1]);
@@ -83,7 +91,7 @@ class BookingController extends Controller
 
         // ... (Previous code)
         // Check availability (Basic check for primary slot)
-        $exists = Booking::where('tutor_id', $request->tutor_id)
+        $exists = Booking::where('tutor_id', $tutor->id)
             ->where(function ($q) use ($startTime, $endTime) {
                 $q->whereBetween('start_time', [$startTime, $endTime])
                     ->where('status', '!=', 'cancelled');
@@ -164,7 +172,7 @@ class BookingController extends Controller
         try {
             // 3. Create Bookings FIRST (to get ID)
             $booking = Booking::create([
-                'tutor_id' => $request->tutor_id,
+                'tutor_id' => $tutor->id,
                 'student_id' => $studentId, 
                 'start_time' => $startTime,
                 'end_time' => $endTime,
@@ -180,7 +188,7 @@ class BookingController extends Controller
             // Create Child Bookings from pre-calculated data
             foreach ($childBookingsData as $childData) {
                  Booking::create([
-                    'tutor_id' => $request->tutor_id,
+                    'tutor_id' => $tutor->id,
                     'student_id' => $studentId,
                     'start_time' => $childData['start'],
                     'end_time' => $childData['end'],
@@ -220,9 +228,10 @@ class BookingController extends Controller
         // 3. Auto-send Proposal to Chat (Rest of the code...)
 
         // 3. Auto-send Proposal to Chat
-        $tutorUser = \App\Models\Tutor::find($request->tutor_id)->user_id; // Get Tutor's user_id
+        $tutorUser = $tutor->user_id; // Get Tutor's user_id
         $studentUser = $studentId; // Student's user_id
 
+        try {
         $u1 = min($tutorUser, $studentUser);
         $u2 = max($tutorUser, $studentUser);
 
@@ -243,9 +252,15 @@ class BookingController extends Controller
         ]);
 
         $conv->update(['last_message' => '[Đề nghị học] ' . $msgContent, 'updated_at' => now()]);
+        } catch (\Throwable $e) {
+            \Log::warning('Booking created but chat proposal failed', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Notify Tutor about new booking request
-        $tutor = \App\Models\Tutor::find($request->tutor_id);
+        try {
         if ($tutor) {
             $this->notificationService->sendToUser(
                 $tutor->user_id,
@@ -254,6 +269,12 @@ class BookingController extends Controller
                 'booking',
                 ['booking_id' => $booking->id]
             );
+        }
+        } catch (\Throwable $e) {
+            \Log::warning('Booking created but tutor notification failed', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return response()->json($booking->load(['tutor', 'children']), 201);
@@ -276,6 +297,7 @@ class BookingController extends Controller
         });
 
         // Notify Student
+        try {
         $this->notificationService->sendToUser(
             $booking->student_id,
             'Đặt lịch thành công ✅',
@@ -283,6 +305,12 @@ class BookingController extends Controller
             'booking',
             ['booking_id' => $booking->id]
         );
+        } catch (\Throwable $e) {
+            \Log::warning('Booking confirmed but student notification failed', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -344,9 +372,13 @@ class BookingController extends Controller
     public function cancel($id)
     {
         $booking = Booking::findOrFail($id);
+        $userId = auth()->id();
+        $tutor = $booking->tutor;
+        $isStudent = $booking->student_id == $userId;
+        $isTutor = $tutor && ($tutor->user_id == $userId || $booking->tutor_id == $userId);
         
         // Add check policy if needed (user owns booking)
-        if ($booking->student_id != auth()->id()) {
+        if (!$isStudent && !$isTutor) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
@@ -381,13 +413,22 @@ class BookingController extends Controller
              }
         }
 
-        // Notify Tutor if student cancels
-        $tutor = $booking->tutor;
-        if ($tutor) {
+        // Notify the other side about the cancellation.
+        if ($isStudent && $tutor) {
             $this->notificationService->sendToUser(
                 $tutor->user_id,
                 'Lịch học bị hủy ❌',
                 "Học viên đã hủy buổi học lúc " . Carbon::parse($booking->start_time)->format('H:i d/m/Y'),
+                'booking',
+                ['booking_id' => $booking->id]
+            );
+        }
+
+        if ($isTutor) {
+            $this->notificationService->sendToUser(
+                $booking->student_id,
+                'Lịch học bị hủy ❌',
+                "Gia sư đã hủy buổi học lúc " . Carbon::parse($booking->start_time)->format('H:i d/m/Y'),
                 'booking',
                 ['booking_id' => $booking->id]
             );
@@ -401,8 +442,10 @@ class BookingController extends Controller
         $booking = Booking::findOrFail($id);
 
         // Verification: Current user must be the tutor of this booking
-        $tutor = \App\Models\Tutor::where('user_id', $request->user()->id)->first();
-        if (!$tutor || $booking->tutor_id != $tutor->id) {
+        $authUserId = $request->user()->id;
+        $tutor = \App\Models\Tutor::where('user_id', $authUserId)->first();
+        $isTutorBooking = ($tutor && $booking->tutor_id == $tutor->id) || $booking->tutor_id == $authUserId;
+        if (!$isTutorBooking) {
              return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -410,7 +453,9 @@ class BookingController extends Controller
             'lesson_topic' => 'nullable|string|max:255',
             'tutor_feedback' => 'nullable|string',
             'status' => 'nullable|in:completed',
-            'meeting_link' => 'nullable|string'
+            'meeting_link' => 'nullable|string',
+            'learning_mode' => 'nullable|in:online,offline',
+            'address' => 'nullable|string|max:255',
         ]);
 
         $updateData = [];
@@ -419,6 +464,14 @@ class BookingController extends Controller
 
         if ($request->has('meeting_link')) {
              $updateData['meeting_link'] = $request->meeting_link;
+        }
+
+        if ($request->has('learning_mode')) {
+             $updateData['learning_mode'] = $request->learning_mode;
+        }
+
+        if ($request->has('address')) {
+             $updateData['address'] = $request->address;
         }
 
         if ($request->has('status') && $request->status == 'completed') {

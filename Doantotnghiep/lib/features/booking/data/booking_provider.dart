@@ -53,6 +53,7 @@ class BookingItem {
   final String? lessonTopic;
   final String? tutorFeedback;
   final String? meetingLink;
+  final String? address;
   final String? gradeLevel;
 
   BookingItem({
@@ -70,6 +71,7 @@ class BookingItem {
     this.lessonTopic,
     this.tutorFeedback,
     this.meetingLink,
+    this.address,
     this.gradeLevel,
   });
 
@@ -90,6 +92,7 @@ class BookingItem {
       lessonTopic: json['lesson_topic'],
       tutorFeedback: json['tutor_feedback'],
       meetingLink: json['meeting_link'],
+      address: json['address'],
       gradeLevel: json['grade_level'],
     );
   }
@@ -117,6 +120,9 @@ class BookingItem {
     DateTime? lockedUntil,
     String? lessonTopic,
     String? tutorFeedback,
+    String? learningMode,
+    String? meetingLink,
+    String? address,
     String? gradeLevel,
   }) {
     return BookingItem(
@@ -130,11 +136,12 @@ class BookingItem {
       status: status ?? this.status,
       lockedUntil: lockedUntil ?? this.lockedUntil,
       type: type,
-      learningMode: learningMode,
+      learningMode: learningMode ?? this.learningMode,
       lessonTopic: lessonTopic ?? this.lessonTopic,
       tutorFeedback: tutorFeedback ?? this.tutorFeedback,
+      meetingLink: meetingLink ?? this.meetingLink,
+      address: address ?? this.address,
       gradeLevel: gradeLevel ?? this.gradeLevel,
-      meetingLink: meetingLink,
     );
   }
 }
@@ -379,7 +386,7 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
   /// await notifier.cancelBooking(bookingId);
   /// // Booking is cancelled, refund processed
   /// ```
-  Future<void> cancelBooking(String id) async {
+  Future<bool> cancelBooking(String id) async {
     final apiClient = ref.read(apiClientProvider);
     try {
       // POST /bookings/{id}/cancel
@@ -390,11 +397,14 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
       // Refresh booking list to show cancelled status
       ref.invalidateSelf();
       ref.invalidate(walletProvider); // Refund update
+      return true;
     } on ApiException catch (e) {
       // Log error for debugging
       print('Cancel Error: ${e.userMessage}');
+      return false;
     } catch (e) {
       print('Unexpected Cancel Error: $e');
+      return false;
     }
   }
 
@@ -413,7 +423,15 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
   }
 
   /// Update Session Info (Lesson Topic, Feedback)
-  Future<void> updateSessionInfo(String id, {String? lessonTopic, String? tutorFeedback, bool? completed, String? meetingLink}) async {
+  Future<void> updateSessionInfo(
+    String id, {
+    String? lessonTopic,
+    String? tutorFeedback,
+    bool? completed,
+    String? meetingLink,
+    String? learningMode,
+    String? address,
+  }) async {
     final apiClient = ref.read(apiClientProvider);
     try {
       final data = {
@@ -421,6 +439,8 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
         if (tutorFeedback != null) 'tutor_feedback': tutorFeedback,
         if (completed == true) 'status': 'completed',
         if (meetingLink != null) 'meeting_link': meetingLink,
+        if (learningMode != null) 'learning_mode': learningMode,
+        if (address != null) 'address': address,
       };
       
       await apiClient.post('${ApiConstants.bookings}/$id/session-info', data: data);

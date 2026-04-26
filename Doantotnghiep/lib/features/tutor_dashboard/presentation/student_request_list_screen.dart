@@ -86,7 +86,7 @@ class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScr
                   indicatorWeight: 3,
                   tabs: const [
                     Tab(text: 'Học viên 1-1'),
-                    Tab(text: 'Học viên Nhóm'),
+                    Tab(text: 'Yêu cầu tuyển nhóm'),
                   ],
                 ),
               ),
@@ -184,7 +184,7 @@ class _StudentRequestListScreenState extends ConsumerState<StudentRequestListScr
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _currentTab == 0 ? 'Học viên đang tìm dạy kèm 1-1' : 'Các lớp nhóm đang tìm học viên',
+                  _currentTab == 0 ? 'Học viên đang tìm dạy kèm 1-1' : 'Các lớp học nhóm đang tìm học viên',
                   style: TextStyle(
                     fontSize: 13,
                     color: _EduTheme.textSecondary,

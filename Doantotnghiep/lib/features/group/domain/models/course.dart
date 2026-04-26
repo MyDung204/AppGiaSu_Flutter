@@ -13,7 +13,8 @@ class Course {
   final String gradeLevel; // Cấp độ
   final String mode; // Hình thức học (Online/Offline)
   final String? address; // Địa chỉ (nếu Offline)
-  final List<Map<String, dynamic>> students; // Danh sách học viên (chỉ có khi là tutor)
+  final List<Map<String, dynamic>>
+  students; // Danh sách học viên (chỉ có khi là tutor)
   final bool isEnrolled;
   final int? studentCount; // Số lượng học viên (dành cho student view)
   final String? meetingLink;
@@ -53,13 +54,15 @@ class Course {
   final int? graceRemainingSeconds;
 
   // Helper getter to get accurate count regardless of view role
-  int get currentStudentCount => students.isNotEmpty ? students.length : (studentCount ?? 0);
+  int get currentStudentCount =>
+      students.isNotEmpty ? students.length : (studentCount ?? 0);
+  bool get isFull => maxStudents > 0 && currentStudentCount >= maxStudents;
 
   factory Course.fromJson(Map<String, dynamic> json) {
     // Parse start_date - hỗ trợ nhiều format
     DateTime parseStartDate() {
       if (json['start_date'] == null) return DateTime.now();
-      
+
       try {
         // Thử parse ISO format trước
         return DateTime.parse(json['start_date'].toString());
@@ -73,7 +76,11 @@ class Course {
             // Format: YYYY-MM-DD
             final parts = dateStr.split('-');
             if (parts.length == 3) {
-              return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+              return DateTime(
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+                int.parse(parts[2]),
+              );
             }
           }
         } catch (e2) {
@@ -82,7 +89,7 @@ class Course {
       }
       return DateTime.now();
     }
-    
+
     return Course(
       id: json['id'].toString(),
       tutorId: json['tutor_id']?.toString() ?? '',
@@ -98,18 +105,27 @@ class Course {
       address: json['address'],
       subject: json['subject'] ?? '',
       gradeLevel: json['grade_level'] ?? '',
-      students: (json['students'] as List<dynamic>?)
-          ?.map((e) => e as Map<String, dynamic>)
-          .toList() ?? [],
+      students:
+          (json['students'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          [],
       isEnrolled: json['is_enrolled'] == true || json['is_enrolled'] == 1,
       meetingLink: json['meeting_link'],
       studentCount: int.tryParse(json['student_count'].toString()),
-      tutorPhone: json['tutor']?['phone'] ?? json['tutor']?['user']?['phone_number'] ?? json['tutor']?['phone_number'],
+      tutorPhone:
+          json['tutor']?['phone'] ??
+          json['tutor']?['user']?['phone_number'] ??
+          json['tutor']?['phone_number'],
       isTutor: json['is_tutor'] == true || json['is_tutor'] == 1,
       tutorUserId: json['tutor']?['user_id']?.toString(),
       paymentStatus: json['payment_status'],
-      gracePeriodEndsAt: json['grace_period_ends_at'] != null ? DateTime.tryParse(json['grace_period_ends_at']) : null,
-      graceRemainingSeconds: int.tryParse(json['grace_remaining_seconds'].toString()),
+      gracePeriodEndsAt: json['grace_period_ends_at'] != null
+          ? DateTime.tryParse(json['grace_period_ends_at'])
+          : null,
+      graceRemainingSeconds: int.tryParse(
+        json['grace_remaining_seconds'].toString(),
+      ),
     );
   }
 }

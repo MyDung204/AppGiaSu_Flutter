@@ -1,5 +1,3 @@
-import 'package:doantotnghiep/core/theme/edu_theme.dart';
-import 'package:doantotnghiep/features/auth/presentation/view_models/auth_view_model.dart';
 import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
@@ -31,12 +29,13 @@ class MyGroupsScreen extends ConsumerWidget {
             _GroupList(provider: myJoinedGroupsProvider, isCreated: false),
           ],
         ),
-        floatingActionButton: (ref.watch(authStateChangesProvider).value?.role == 'tutor') 
-          ? FloatingActionButton(
-              onPressed: () => context.push('/create-group'),
-              child: const Icon(Icons.add),
-            )
-          : null,
+        floatingActionButton:
+            (ref.watch(authStateChangesProvider).value?.role == 'tutor')
+            ? FloatingActionButton(
+                onPressed: () => context.push('/create-group'),
+                child: const Icon(Icons.add),
+              )
+            : null,
       ),
     );
   }
@@ -66,10 +65,18 @@ class _GroupList extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(isCreated ? Icons.group_add_outlined : Icons.group_outlined, size: 60, color: Colors.grey),
+                      Icon(
+                        isCreated
+                            ? Icons.group_add_outlined
+                            : Icons.group_outlined,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(height: 16),
                       Text(
-                        isCreated ? 'Bạn chưa tạo nhóm nào' : 'Bạn chưa tham gia nhóm nào',
+                        isCreated
+                            ? 'Bạn chưa tạo nhóm nào'
+                            : 'Bạn chưa tham gia nhóm nào',
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ],
@@ -90,7 +97,9 @@ class _GroupList extends ConsumerWidget {
               final group = groups[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 2,
                 child: InkWell(
                   onTap: () => context.push('/group-detail', extra: group),
@@ -100,87 +109,217 @@ class _GroupList extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                         Row(
-                           children: [
-                             Badge(
-                               isLabelVisible: group.pendingRequestsCount > 0 || group.hasNewMessages,
-                               label: group.pendingRequestsCount > 0 ? Text('${group.pendingRequestsCount}') : null,
-                               smallSize: 10,
-                               backgroundColor: Colors.red,
-                               offset: const Offset(4, -4),
-                               child: Container(
-                                 padding: const EdgeInsets.all(8),
-                                 decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                 child: const Icon(Icons.menu_book_outlined, color: Colors.blue),
-                               ),
-                             ),
-                             const SizedBox(width: 12),
-                             Expanded(
-                               child: Column(
-                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                 children: [
-                                   Text(group.topic, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                   Text('${group.subject} - ${group.gradeLevel}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                                 ],
-                               ),
-                             ),
-                             if (group.membershipStatus == 'pending')
-                               Container(
-                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                 decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                 child: const Text('Chờ duyệt', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
-                               )
-                             else if (group.status == 'open')
-                               Container(
-                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                 decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                 child: const Text('Đang tìm', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
-                               )
-                             else
-                               Container(
-                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                 decoration: BoxDecoration(color: Colors.grey.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                                 child: const Text('Đã đóng', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-                               ),
-                             if (!isCreated && group.paymentStatus == 'pending' && group.status == 'full')
-                               Container(
-                                 margin: const EdgeInsets.only(left: 4),
-                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                 decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                 child: const Text('Cần thanh toán', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
-                               ),
-                             if (!isCreated && group.paymentStatus == 'paid')
-                               Container(
-                                 margin: const EdgeInsets.only(left: 4),
-                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                 decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                 child: const Text('Đã đóng phí', style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold)),
-                               )
-                           ],
-                         ),
-                         if (!isCreated && group.paymentStatus == 'pending' && group.paymentDeadline != null)
-                           Padding(
-                             padding: const EdgeInsets.only(top: 8),
-                             child: Row(
-                               children: [
-                                 const Icon(Icons.timer_outlined, color: Colors.red, size: 14),
-                                 const SizedBox(width: 4),
-                                 Text(
-                                   'Hạn: ${DateFormat('HH:mm dd/MM').format(group.paymentDeadline!)}',
-                                   style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
-                                 ),
-                               ],
-                             ),
-                           ),
-                         const Divider(height: 24),
-                         Row(
-                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                           children: [
-                             _InfoItem(icon: Icons.people_outline, text: '${group.currentMembers}/${group.maxMembers} Tv'),
-                             _InfoItem(icon: Icons.attach_money, text: '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(group.pricePerSession)}'),
-                             _InfoItem(icon: Icons.calendar_today, text: DateFormat('dd/MM').format(group.startTime)),
-                           ],
-                         )
+                        Row(
+                          children: [
+                            Badge(
+                              isLabelVisible:
+                                  group.pendingRequestsCount > 0 ||
+                                  group.hasNewMessages,
+                              label: group.pendingRequestsCount > 0
+                                  ? Text('${group.pendingRequestsCount}')
+                                  : null,
+                              smallSize: 10,
+                              backgroundColor: Colors.red,
+                              offset: const Offset(4, -4),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.menu_book_outlined,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    group.topic,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${group.subject} - ${group.gradeLevel}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (group.membershipStatus == 'pending')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Chờ duyệt',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else if (group.status == 'full')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Full',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else if (group.status == 'open')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Đang tìm',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Đã đóng',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            if (!isCreated &&
+                                group.paymentStatus == 'pending' &&
+                                group.status == 'full')
+                              Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Cần thanh toán',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            if (!isCreated && group.paymentStatus == 'paid')
+                              Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Đã đóng phí',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (group.paymentStatus == 'pending' &&
+                            group.paymentDeadline != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.timer_outlined,
+                                  color: Colors.red,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Hạn: ${DateFormat('HH:mm dd/MM').format(group.paymentDeadline!)}',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _InfoItem(
+                              icon: Icons.people_outline,
+                              text:
+                                  '${group.currentMembers}/${group.maxMembers} Tv',
+                            ),
+                            _InfoItem(
+                              icon: Icons.attach_money,
+                              text:
+                                  '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(group.pricePerSession)}',
+                            ),
+                            _InfoItem(
+                              icon: Icons.calendar_today,
+                              text: DateFormat('dd/MM').format(group.startTime),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -206,9 +345,16 @@ class _InfoItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-         Icon(icon, size: 16, color: Colors.grey[600]),
-         const SizedBox(width: 4),
-         Text(text, style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500)),
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

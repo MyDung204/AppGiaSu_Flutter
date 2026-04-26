@@ -20,6 +20,6 @@ class VerificationRequest extends Model
 
     public function user()
     {
-        return $table->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
 }

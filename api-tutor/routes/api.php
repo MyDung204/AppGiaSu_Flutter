@@ -38,6 +38,7 @@ Route::post('/questions', [QuestionController::class, 'store']);
 Route::post('/questions/{id}/answers', [QuestionController::class, 'storeAnswer']);
 
 Route::get('/tutor-requests', [TutorRequestController::class, 'index']);
+Route::get('/verification/file/{filename}', [VerificationController::class, 'file']);
 
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -52,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courses/{id}/join', [SharedLearningController::class, 'joinCourse']);
     Route::post('/courses/{id}/leave', [SharedLearningController::class, 'leaveCourse']);
     Route::post('/courses/{id}/kick', [SharedLearningController::class, 'removeStudentFromCourse']);
+    Route::post('/courses/{id}/pay', [SharedLearningController::class, 'payCourseTuition']);
     Route::post('/courses/{id}/tuition/refuse', [SharedLearningController::class, 'refuseTuition']);
     Route::get('/my-courses', [SharedLearningController::class, 'myCourses']);
     
@@ -64,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/study-groups/{id}/members/{userId}', [SharedLearningController::class, 'removeMember']);
     Route::post('/study-groups/{id}/leave', [SharedLearningController::class, 'leaveGroup']);
     Route::post('/study-groups/{id}/pay', [SharedLearningController::class, 'payGroupTuition']);
+    Route::post('/study-groups/{id}/toggle-status', [SharedLearningController::class, 'toggleStatus']);
 
     // Announcements
     Route::get('/courses/{id}/announcements', [SharedLearningController::class, 'indexAnnouncements']);

@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
 import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/group/domain/models/assignment.dart';
@@ -56,30 +57,20 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   }
 
   Future<void> _submitAssignment() async {
-    if (_contentController.text.isEmpty && _selectedImage == null) {
+    if (_contentController.text.trim().isEmpty && _selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập nội dung hoặc chọn ảnh.')));
       return;
     }
 
     setState(() => _isSubmitting = true);
 
-    String? fileUrl;
-    // Mock upload for now: In real app, upload _selectedImage to Firebase Storage and get URL
-    if (_selectedImage != null) {
-       // Simulate upload
-       await Future.delayed(const Duration(seconds: 1)); 
-       fileUrl = 'https://via.placeholder.com/300?text=Uploaded+Image'; 
-       // In production using user's real logic, this would be:
-       // fileUrl = await ref.read(chatRepositoryProvider).uploadImage(_selectedImage!);
-    }
-
-    final result = await ref.read(sharedLearningRepositoryProvider).submitAssignment(
+    try {
+      final result = await ref.read(sharedLearningRepositoryProvider).submitAssignment(
       widget.assignment.id, 
-      _contentController.text, 
-      fileUrl
+      _contentController.text.trim(),
+      null,
+      filePath: _selectedImage?.path,
     );
-
-    setState(() => _isSubmitting = false);
 
     if (mounted) {
       if (result != null) {
@@ -87,6 +78,17 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
         Navigator.pop(context); 
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('❌ Lỗi khi nộp bài.')));
+      }
+    }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.userMessage), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }

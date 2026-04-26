@@ -1,8 +1,91 @@
-# Ignore IDE/Editor files
+# OS / editor
+.DS_Store
+Thumbs.db
 .idea/
 .vscode/
+*.iml
+*.ipr
+*.iws
 *.swp
 *.swo
 *~
-.DS_Store
+
+# Local environment / secrets
 .env
+.env.local
+.env.backup
+.env.production
+.env.*.local
+auth.json
+firebase_credentials.json
+**/firebase_credentials.json
+*.pem
+
+# Local scratch files
+/scratch/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.pid
+*.seed
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/doc/api/
+*.symbols
+app.*.symbols
+app.*.map.json
+
+# Android local/build artifacts
+**/.gradle/
+**/.kotlin/
+**/local.properties
+**/captures/
+**/.cxx/
+**/key.properties
+**/*.keystore
+**/*.jks
+*.apk
+*.aab
+
+# Flutter generated platform artifacts
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/linux/flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# Laravel local/build artifacts
+api-tutor/public/build/
+api-tutor/public/hot
+api-tutor/public/storage
+api-tutor/storage/*.key
+api-tutor/storage/pail/
+api-tutor/storage/logs/*.log
+api-tutor/storage/framework/cache/data/*
+api-tutor/storage/framework/sessions/*
+api-tutor/storage/framework/testing/*
+api-tutor/storage/framework/views/*
+api-tutor/database/*.sqlite
+api-tutor/database/*.sqlite-*

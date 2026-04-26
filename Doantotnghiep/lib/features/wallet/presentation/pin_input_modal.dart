@@ -39,6 +39,8 @@ class _PinInputModalState extends ConsumerState<PinInputModal> {
       final success = await widget.onVerify(_pinController.text);
       if (success && mounted) {
            Navigator.pop(context, _pinController.text); // Return the PIN string
+      } else if (mounted) {
+        setState(() => _error = 'Mã PIN không chính xác');
       }
     } catch (e) {
       setState(() => _error = e.toString());

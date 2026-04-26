@@ -13,6 +13,7 @@ library;
 
 import 'package:doantotnghiep/features/admin/data/admin_repository.dart';
 import 'package:doantotnghiep/features/admin/data/admin_verification_provider.dart';
+import 'package:doantotnghiep/core/network/api_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +37,12 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshRequests,
+          ),
+        ],
       ),
       body: requestsAsync.when(
         data: (requests) {
@@ -51,19 +58,28 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
               ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: requests.length,
-            itemBuilder: (context, index) {
-              final req = requests[index];
-              return _buildRequestCard(req);
-            },
+          return RefreshIndicator(
+            onRefresh: _refreshRequests,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: requests.length,
+              itemBuilder: (context, index) {
+                final req = requests[index];
+                return _buildRequestCard(req);
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Lỗi: $err')),
       ),
     );
+  }
+
+  Future<void> _refreshRequests() async {
+    ref.invalidate(adminVerificationRequestsProvider);
+    await ref.read(adminVerificationRequestsProvider.future);
   }
 
   Widget _buildRequestCard(Map<String, dynamic> req) {
@@ -152,6 +168,8 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
   }
 
   Widget _buildImagePreview(String label, String? url) {
+    final imageUrl = _resolveImageUrl(url);
+
     return Column(
       children: [
         Container(
@@ -159,14 +177,33 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
-            image: url != null ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover) : null,
           ),
-          child: url == null ? const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)) : null,
+          clipBehavior: Clip.antiAlias,
+          child: imageUrl == null
+              ? const Center(child: Icon(Icons.image_not_supported, color: Colors.grey))
+              : Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Text('Không tải được ảnh', textAlign: TextAlign.center),
+                  ),
+                ),
         ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
+  }
+
+  String? _resolveImageUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+    final baseUri = Uri.parse(ApiConstants.baseUrl);
+    final origin = '${baseUri.scheme}://${baseUri.authority}';
+    return Uri.parse(origin).resolve(url).toString();
   }
 
   Future<void> _handleApprove(Map<String, dynamic> req) async {

@@ -211,12 +211,17 @@ class TutorController extends Controller
         if ($user->role === 'tutor') {
             $query->where('tutor_id', $user->id);
         } else {
-            // Student filtering: must be explicitly assigned to them OR part of a course they are in
+            // Student filtering: must be explicitly assigned to them, part of a course, or part of a study group.
             $courseIds = DB::table('course_students')->where('user_id', $user->id)->pluck('course_id');
+            $studyGroupIds = DB::table('study_group_members')
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'member'])
+                ->pluck('study_group_id');
             
-            $query->where(function($q) use ($user, $courseIds) {
+            $query->where(function($q) use ($user, $courseIds, $studyGroupIds) {
                 $q->where('student_id', $user->id)
-                  ->orWhereIn('course_id', $courseIds);
+                  ->orWhereIn('course_id', $courseIds)
+                  ->orWhereIn('study_group_id', $studyGroupIds);
             });
         }
 
@@ -349,21 +354,46 @@ class TutorController extends Controller
         $user = $request->user();
         $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
 
-        $totalRevenue = DB::table('bookings')
+        $bookingRevenue = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->where('status', 'completed')
             ->sum('total_price');
 
-        $activeClasses = DB::table('bookings')
+        $walletEarnings = DB::table('transactions')
+            ->join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('wallets.user_id', $user->id)
+            ->where('transactions.type', 'earning')
+            ->where('transactions.status', 'success')
+            ->sum('transactions.amount');
+
+        $totalRevenue = (float) $bookingRevenue + (float) $walletEarnings;
+
+        $activeBookings = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->whereIn('status', ['upcoming', 'confirmed'])
             ->count();
 
-        $totalStudents = DB::table('bookings')
+        $activeCourses = DB::table('courses')
+            ->where('tutor_id', $tutor->id)
+            ->whereIn('status', ['open', 'full'])
+            ->count();
+
+        $activeClasses = $activeBookings + $activeCourses;
+
+        $bookingStudentIds = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
             ->whereIn('status', ['completed', 'upcoming', 'confirmed'])
-            ->distinct('user_id')
-            ->count('user_id');
+            ->pluck('student_id')
+            ->toArray();
+
+        $courseStudentIds = DB::table('course_students')
+            ->join('courses', 'course_students.course_id', '=', 'courses.id')
+            ->where('courses.tutor_id', $tutor->id)
+            ->where('course_students.status', 'approved')
+            ->pluck('course_students.user_id')
+            ->toArray();
+
+        $totalStudents = count(array_unique(array_merge($bookingStudentIds, $courseStudentIds)));
 
         $completedSessions = DB::table('bookings')
             ->where('tutor_id', $tutor->id)
@@ -402,9 +432,11 @@ class TutorController extends Controller
         $user = $request->user();
         $tutor = Tutor::where('user_id', $user->id)->firstOrFail();
 
-        $bookings = \App\Models\Booking::with(['student'])
-            ->where('tutor_id', $tutor->id)
-            ->orderBy('date', 'desc')
+        $tutorIds = [$tutor->id, $user->id];
+
+        $bookings = \App\Models\Booking::with(['student', 'tutor'])
+            ->whereIn('tutor_id', $tutorIds)
+            ->orderBy('start_time', 'desc')
             ->get();
 
         return response()->json($bookings);

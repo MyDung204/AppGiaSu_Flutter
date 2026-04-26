@@ -37,7 +37,7 @@ class AdminScaffold extends StatelessWidget {
                 NavigationRailDestination(
                   icon: Icon(Icons.verified_user_outlined),
                   selectedIcon: Icon(Icons.verified_user, color: AppTheme.primaryColor),
-                  label: Text('Kiểm duyệt'),
+                  label: Text('Duyệt KYC'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.report_outlined),
@@ -81,7 +81,7 @@ class AdminScaffold extends StatelessWidget {
            NavigationDestination(
             icon: Icon(Icons.verified_user_outlined),
             selectedIcon: Icon(Icons.verified_user, color: AppTheme.primaryColor),
-            label: 'Kiểm duyệt',
+            label: 'Duyệt KYC',
           ),
           NavigationDestination(
             icon: Icon(Icons.report_outlined),
@@ -97,7 +97,7 @@ class AdminScaffold extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/admin')) {
       if (location.endsWith('/users') || location.contains('/users/')) return 1;
-      if (location.endsWith('/tutors') || location.endsWith('/approve')) return 2;
+      if (location.endsWith('/verification') || location.endsWith('/tutors') || location.endsWith('/approve')) return 2;
       if (location.endsWith('/reports')) return 3;
       return 0; // Dashboard
     }
@@ -113,7 +113,7 @@ class AdminScaffold extends StatelessWidget {
         context.go('/admin/users');
         break;
       case 2:
-        context.go('/admin/tutors');
+        context.go('/admin/verification');
         break;
       case 3:
         context.go('/admin/reports');
