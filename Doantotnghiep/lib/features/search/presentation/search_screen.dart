@@ -1,7 +1,6 @@
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:doantotnghiep/features/search/presentation/widgets/class_listing_tab.dart';
-import 'package:doantotnghiep/features/search/presentation/widgets/group_matching_tab.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/search/domain/models/search_filter.dart';
 import 'package:doantotnghiep/features/search/presentation/view_models/search_view_model.dart';
@@ -79,8 +78,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     return DefaultTabController(
-      length: 3,
-      initialIndex: widget.initialTab.clamp(0, 2).toInt(),
+      length: 2,
+      initialIndex: widget.initialTab.clamp(0, 1).toInt(),
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
@@ -114,7 +113,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Dạy kèm 1-1'),
-              Tab(text: 'Học ghép'),
               Tab(text: 'Lớp học nhóm'),
             ],
             labelColor: Colors.blueAccent,
@@ -268,10 +266,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ],
             ),
             
-            // Tab 2: Group Matching
-            const GroupMatchingTab(),
-            
-            // Tab 3: Classes
+            // Tab 2: Classes
             const ClassListingTab(),
           ],
         ),

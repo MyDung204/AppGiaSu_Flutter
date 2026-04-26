@@ -1625,7 +1625,7 @@ class _QuickActionsSection extends StatelessWidget {
       {
         'icon': Icons.groups_rounded,
         'label': 'Lớp học nhóm',
-        'route': '/search?tab=groups',
+        'route': '/search?tab=classes',
         'color': Colors.green,
       },
       {

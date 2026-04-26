@@ -112,10 +112,8 @@ class AppRouter {
               final subject = state.uri.queryParameters['subject'];
               final tabName = state.uri.queryParameters['tab'];
               var initialTab = 0;
-              if (tabName == 'groups') {
+              if (tabName == 'classes' || tabName == 'groups') {
                 initialTab = 1;
-              } else if (tabName == 'classes') {
-                initialTab = 2;
               }
               return SearchScreen(
                 initialSubject: subject,
