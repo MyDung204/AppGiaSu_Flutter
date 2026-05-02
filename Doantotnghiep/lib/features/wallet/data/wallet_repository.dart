@@ -1,4 +1,5 @@
 import 'package:doantotnghiep/core/network/api_client.dart';
+import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/features/wallet/domain/models/wallet_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,17 +27,13 @@ class WalletRepository {
       return WalletState();
     } catch (e) {
       print('Error fetching wallet: $e');
-      return WalletState(); // Return empty on error
+      rethrow;
     }
   }
 
   Future<bool> deposit(double amount) async {
-    try {
-      await _client.post('/wallet/deposit', data: {'amount': amount});
-      return true;
-    } catch (e) {
-      return false;
-    }
+    await _client.post('/wallet/deposit', data: {'amount': amount});
+    return true;
   }
 
   Future<bool> withdraw(double amount, String bankName, String accountNumber, String accountName) async {
@@ -73,21 +70,12 @@ class WalletRepository {
       try {
         await _client.post('/wallet/pin/verify', data: {'pin': pin});
         return true;
-      } catch (e) {
-        return false;
+      } on ApiException {
+        rethrow;
       }
   }
 
   Future<bool> simulateDeposit(double amount, int userId) async {
-    try {
-      await _client.post('/payment/simulate', data: {
-        'amount': amount,
-        'user_id': userId,
-      });
-      return true;
-    } catch (e) {
-      print('Simulate error: $e');
-      return false;
-    }
+    return deposit(amount);
   }
 }

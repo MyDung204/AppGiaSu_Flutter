@@ -21,15 +21,21 @@ class _EduTheme {
 
 class StudentBookingDetailScreen extends ConsumerWidget {
   final AppUser student;
+  final List<BookingItem> initialBookings;
   
   const StudentBookingDetailScreen({
     super.key,
     required this.student,
+    this.initialBookings = const [],
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookingsAsync = ref.watch(bookingProvider);
+    final studentBookingsFromRoute = initialBookings
+        .where((b) => b.student?.id == student.id || b.userId == student.id)
+        .toList();
+    final hasInitialBookings = studentBookingsFromRoute.isNotEmpty;
     
     return DefaultTabController(
       length: 3,
@@ -59,45 +65,19 @@ class StudentBookingDetailScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             // Tab 1: Bookings List
-            bookingsAsync.when(
+            hasInitialBookings
+                ? _buildBookingsTab(context, ref, studentBookingsFromRoute)
+                : bookingsAsync.when(
               data: (bookings) {
-                final studentBookings = bookings.where((b) => b.student?.id == student.id).toList();
-                
+                final studentBookings = bookings
+                    .where((b) => b.student?.id == student.id || b.userId == student.id)
+                    .toList();
+
                 if (studentBookings.isEmpty) {
                   return const Center(child: Text('Không tìm thấy lịch học'));
                 }
 
-                studentBookings.sort((a, b) => b.date.compareTo(a.date));
-
-                final total = studentBookings.length;
-                final completed = studentBookings.where((b) => b.status.toLowerCase() == 'completed').length;
-                final progress = total > 0 ? completed / total : 0.0;
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStudentProfileCard(context, total, completed, progress),
-                      const SizedBox(height: 16),
-                      _buildOneToOneActions(context, ref, studentBookings),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Lịch sử buổi học',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _EduTheme.textPrimary),
-                      ),
-                      const SizedBox(height: 16),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: studentBookings.length,
-                        itemBuilder: (context, index) {
-                          return _buildBookingItem(context, ref, studentBookings[index]);
-                        },
-                      ),
-                    ],
-                  ),
-                );
+                return _buildBookingsTab(context, ref, studentBookings);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Lỗi: $err')),
@@ -116,6 +96,40 @@ class StudentBookingDetailScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBookingsTab(BuildContext context, WidgetRef ref, List<BookingItem> studentBookings) {
+    studentBookings.sort((a, b) => b.date.compareTo(a.date));
+
+    final total = studentBookings.length;
+    final completed = studentBookings.where((b) => b.status.toLowerCase() == 'completed').length;
+    final progress = total > 0 ? completed / total : 0.0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStudentProfileCard(context, total, completed, progress),
+          const SizedBox(height: 16),
+          _buildOneToOneActions(context, ref, studentBookings),
+          const SizedBox(height: 24),
+          const Text(
+            'Lịch sử buổi học',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _EduTheme.textPrimary),
+          ),
+          const SizedBox(height: 16),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: studentBookings.length,
+            itemBuilder: (context, index) {
+              return _buildBookingItem(context, ref, studentBookings[index]);
+            },
+          ),
+        ],
       ),
     );
   }

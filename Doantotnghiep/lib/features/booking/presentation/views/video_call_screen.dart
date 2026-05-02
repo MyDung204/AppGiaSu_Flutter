@@ -6,7 +6,13 @@ import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 
 class VideoCallScreen extends ConsumerStatefulWidget {
   final String bookingId;
-  const VideoCallScreen({super.key, required this.bookingId});
+  final String? meetingLink;
+
+  const VideoCallScreen({
+    super.key,
+    required this.bookingId,
+    this.meetingLink,
+  });
 
   @override
   ConsumerState<VideoCallScreen> createState() => _VideoCallScreenState();
@@ -29,7 +35,8 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     setState(() => _isJoining = true);
     
     final user = ref.read(authRepositoryProvider).currentUser;
-    final roomName = "Doantotnghiep_Booking_${widget.bookingId}";
+    final roomName = _roomNameFromMeetingLink(widget.meetingLink) ??
+        'Doantotnghiep_Booking_${widget.bookingId}';
     final displayName = user?.name ?? "User";
     final email = user?.email ?? "";
     final avatar = user?.avatarUrl;
@@ -63,6 +70,15 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
         setState(() => _isJoining = false);
       }
     }
+  }
+
+  String? _roomNameFromMeetingLink(String? meetingLink) {
+    if (meetingLink == null || meetingLink.trim().isEmpty) return null;
+
+    final uri = Uri.tryParse(meetingLink.trim());
+    if (uri == null || uri.pathSegments.isEmpty) return null;
+
+    return Uri.decodeComponent(uri.pathSegments.last);
   }
 
   @override

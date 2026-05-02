@@ -201,7 +201,7 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
            
            if (upcoming == null) return const SizedBox.shrink(); // Should not happen
 
-          return _buildStudentCard(context, student, totalSessions, completed, progress, upcoming);
+          return _buildStudentCard(context, student, totalSessions, completed, progress, upcoming, studentBookings);
         },
       );
   }
@@ -212,7 +212,8 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
     int total, 
     int completed, 
     double progress, 
-    BookingItem nextSession
+    BookingItem nextSession,
+    List<BookingItem> studentBookings
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -231,8 +232,14 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-             context.push('/student-booking-detail', extra: student);
-          },
+             context.push(
+               '/student-booking-detail',
+               extra: {
+                 'student': student,
+                 'bookings': studentBookings,
+               },
+             );
+           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(16),

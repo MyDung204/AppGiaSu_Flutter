@@ -74,7 +74,7 @@ class BookingState {
 
   bool get canConfirm {
     if (isLoading) return false;
-    if (status != BookingStatus.idle) return false;
+    if (status != BookingStatus.idle && status != BookingStatus.error) return false;
 
     if (bookingType == 'single') {
       return selectedDate != null && selectedTimeSlot != null;
@@ -97,6 +97,5 @@ enum BookingStatus {
   success,
   error,
 }
-
 
 

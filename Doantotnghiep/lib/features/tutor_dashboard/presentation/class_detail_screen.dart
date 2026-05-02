@@ -1620,16 +1620,14 @@ class ClassDetailScreen extends ConsumerWidget {
       return;
     }
 
-    final Uri url = Uri.parse(meetingUrl);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Không thể mở cuộc họp')));
-      }
-    }
+    if (!context.mounted) return;
+    context.push(
+      '/video-call',
+      extra: {
+        'bookingId': 'course_${course.id}',
+        'meetingLink': meetingUrl,
+      },
+    );
   }
 
   void _confirmKick(

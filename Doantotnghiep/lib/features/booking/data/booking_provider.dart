@@ -78,7 +78,7 @@ class BookingItem {
   factory BookingItem.fromJson(Map<String, dynamic> json) {
     return BookingItem(
       id: json['id'].toString(),
-      userId: json['user_id'].toString(),
+      userId: (json['student_id'] ?? json['user_id']).toString(),
       tutor: Tutor.fromJson(json['tutor']),
       student: json['student'] != null ? AppUser.fromJson(json['student']) : null,
       date: DateTime.parse(json['date'] ?? json['start_time']),
@@ -348,11 +348,11 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
        // Refresh booking list to show updated status
        ref.invalidateSelf();
      } on ApiException catch (e) {
-       // Log error but don't throw (non-critical)
-       // Booking may already be confirmed or cancelled
        print('Confirm Error: ${e.userMessage}');
+       rethrow;
      } catch (e) {
        print('Unexpected Confirm Error: $e');
+       rethrow;
      }
   }
 

@@ -335,7 +335,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          constraints: const BoxConstraints(maxWidth: 250),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
           child: Column(
             crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [

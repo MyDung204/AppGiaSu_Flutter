@@ -37,6 +37,7 @@ import 'package:doantotnghiep/features/tutor_dashboard/presentation/class_detail
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/recommended_requests_screen.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/student_booking_detail_screen.dart';
 import 'package:doantotnghiep/features/auth/domain/models/app_user.dart';
+import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 
 // Quiz Imports
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/tutor_quiz_management_screen.dart';
@@ -254,7 +255,15 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/video-call',
         builder: (context, state) {
-          final bookingId = state.extra as String? ?? '';
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return VideoCallScreen(
+              bookingId: extra['bookingId']?.toString() ?? '',
+              meetingLink: extra['meetingLink']?.toString(),
+            );
+          }
+
+          final bookingId = extra as String? ?? '';
           return VideoCallScreen(bookingId: bookingId);
         },
       ),
@@ -672,7 +681,17 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/student-booking-detail',
         builder: (context, state) {
-          final student = state.extra as AppUser;
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            final student = extra['student'] as AppUser;
+            final bookings = (extra['bookings'] as List?)?.cast<BookingItem>() ?? const <BookingItem>[];
+            return StudentBookingDetailScreen(
+              student: student,
+              initialBookings: bookings,
+            );
+          }
+
+          final student = extra as AppUser;
           return StudentBookingDetailScreen(student: student);
         },
       ),

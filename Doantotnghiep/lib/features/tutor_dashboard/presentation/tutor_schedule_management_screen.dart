@@ -25,11 +25,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
+import 'package:doantotnghiep/features/group/domain/models/course.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/data/tutor_schedule_provider.dart';
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/unified_schedule_item.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/class_detail_screen.dart';
+import 'package:doantotnghiep/features/tutor_dashboard/presentation/session_detail_screen.dart';
 
 /// Màn hình quản lý lịch dạy của gia sư
 /// 
@@ -431,7 +434,7 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {
-                // Show details
+                _openScheduleDetail(item);
               },
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: isGroup ? Colors.orange : EduTheme.primary),
@@ -444,6 +447,32 @@ class _TutorScheduleManagementScreenState extends ConsumerState<TutorScheduleMan
         ],
       ),
     );
+  }
+
+  void _openScheduleDetail(UnifiedScheduleItem item) {
+    if (item.type == ScheduleType.oneToOne && item.originalItem is BookingItem) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SessionDetailScreen(
+            booking: item.originalItem as BookingItem,
+            isReadOnly: false,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (item.type == ScheduleType.group && item.originalItem is Course) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClassDetailScreen(
+            course: item.originalItem as Course,
+          ),
+        ),
+      );
+    }
   }
 
   Color _getStatusColor(String status) {

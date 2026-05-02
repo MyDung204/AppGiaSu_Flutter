@@ -59,6 +59,7 @@ Tài liệu này được đồng bộ 100% với file `mission.md` để giúp 
 - **[A3.1] Gộp Ví & Thống kê:**
     - Vào Tab "Tài khoản" -> Chọn "Ví & Thu nhập".
     - Xác nhận: Thấy biểu đồ thu nhập ở trên và các nút Nạp/Rút/Mã PIN ở dưới. [x] /Đã thêm biểu đồ thu nhập 7 ngày gần nhất ngay dưới thẻ ví./
+    - Thử nạp tiền demo: Vào Ví -> Nạp tiền -> Chọn/nhập số tiền >= 10.000đ -> Xác nhận trong màn bank simulator -> Số dư ví phải tăng và có transaction `deposit`. [-] /Đã sửa code: nạp demo dùng trực tiếp `/wallet/deposit`, không phụ thuộc `/payment/simulate` theo `user_id`; ví mới tự có PIN demo mặc định `000000`, ví cũ thiếu PIN cũng được tự bổ sung khi load ví/verify PIN. Chờ test thủ công xác nhận./
     - Thử nhấn "Rút tiền" -> Nhập số tiền, ngân hàng, số tài khoản và tên chủ tài khoản -> Xác nhận gửi được yêu cầu rút tiền. [x] /Đã sửa frontend gửi thêm `account_name` đúng với validation backend, tránh lỗi rút tiền thất bại./
 
 ### A4. Giao diện & Tên gọi
@@ -104,6 +105,7 @@ Tài liệu này được đồng bộ 100% với file `mission.md` để giúp 
     - Trang chủ Học viên -> Nhấn nút "Kèm 1-1" -> Tự động chuyển màn Search với tab "Dạy kèm".[x]
     - Nhấn nút "Lớp học nhóm" -> Tự động chuyển màn Search với tab "Lớp học nhóm".[x]
     - Học viên chọn Gia sư 1-1 -> Chọn lịch -> Xác nhận & thanh toán bằng PIN ví mặc định `000000` -> Phải tạo lịch thành công; nếu nhập sai PIN phải hiện lỗi ngay trong form PIN, không báo chung chung "đăng ký thất bại". [x] /Đã thêm migration `bookings.address` và chạy migrate để sửa lỗi server 500 sau khi nhập đúng PIN. Đã sửa nút thanh toán tự chờ tải ví và mở nhập PIN ngay trong lần bấm đầu tiên./
+    - Sau khi đặt lịch 1-1 thành công -> Booking phải được tạo ở trạng thái `confirmed`/Upcoming ngay, không phụ thuộc bước confirm lần hai; nếu học online phải có `meeting_link` Jitsi tự sinh. [-] /Đã sửa code: backend tạo booking confirmed ngay sau khi thanh toán ví thành công, tự sinh link `https://meet.jit.si/AppGiaSu-{bookingId}-{studentId}-{tutorId}` cho lịch online, sửa kiểm tra trùng lịch theo overlap thật, và frontend hiển thị SnackBar thành công/thất bại rõ ràng. Chờ test thủ công xác nhận./
 - **[B2] Lớp của tôi:**
     - Trang chủ Học viên -> Tìm mục "Lớp của tôi".
     - Xác nhận có 2 ô rõ ràng: "Dạy kèm 1-1" (mở lịch học 1-1) và "Lớp học nhóm" (mở danh sách lớp học nhóm đã đăng ký).

@@ -4,15 +4,35 @@ use App\Http\Controllers\Controller;
 use App\Models\Wallet;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class WalletController extends Controller
 {
+    private function walletForUser($user): Wallet
+    {
+        $wallet = Wallet::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'balance' => 0,
+                'currency' => 'VND',
+                'payment_pin' => Hash::make('000000'),
+            ]
+        );
+
+        if (!$wallet->payment_pin) {
+            $wallet->payment_pin = Hash::make('000000');
+            $wallet->save();
+        }
+
+        return $wallet;
+    }
+
     // Get wallet and transactions
     public function index(Request $request)
     {
         $user = $request->user();
-        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
+        $wallet = $this->walletForUser($user);
         
         // Ensure transactions are loaded
         $transactions = Transaction::where('wallet_id', $wallet->id)->latest()->get();
@@ -35,7 +55,7 @@ class WalletController extends Controller
             'pin' => 'required|digits:6|confirmed' // confirmed ensures pin_confirmation matches
         ]);
 
-        $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
+        $wallet = Wallet::firstOrCreate(['user_id' => $request->user()->id]);
         
         if ($wallet->payment_pin) {
             return response()->json(['message' => 'Mã PIN đã được thiết lập. Vui lòng dùng chức năng đổi PIN.'], 400);
@@ -55,7 +75,7 @@ class WalletController extends Controller
             'new_pin' => 'required|digits:6|confirmed'
         ]);
 
-        $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
+        $wallet = $this->walletForUser($request->user());
 
         // Verify Old PIN
         if (!$wallet->payment_pin || !Hash::check($request->old_pin, $wallet->payment_pin)) {
@@ -73,10 +93,7 @@ class WalletController extends Controller
     {
         $request->validate(['pin' => 'required|digits:6']);
         
-        $wallet = Wallet::where('user_id', $request->user()->id)->first();
-        if (!$wallet || !$wallet->payment_pin) {
-             return response()->json(['message' => 'Chưa thiết lập mã PIN'], 400);
-        }
+        $wallet = $this->walletForUser($request->user());
 
         if (!Hash::check($request->pin, $wallet->payment_pin)) {
              return response()->json(['message' => 'Sai mã PIN'], 400);
@@ -90,7 +107,7 @@ class WalletController extends Controller
     {
         $request->validate(['amount' => 'required|numeric|min:10000']);
         $user = $request->user();
-        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
+        $wallet = $this->walletForUser($user);
 
         $wallet->balance += $request->amount;
         $wallet->save();
@@ -117,7 +134,7 @@ class WalletController extends Controller
         ]);
 
         $user = $request->user();
-        $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
+        $wallet = $this->walletForUser($user);
 
         if ($wallet->balance < $request->amount) {
             return response()->json(['message' => 'Insufficient balance'], 400);

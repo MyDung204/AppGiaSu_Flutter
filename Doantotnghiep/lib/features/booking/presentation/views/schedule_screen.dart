@@ -29,7 +29,6 @@ import 'package:intl/intl.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/session_detail_screen.dart'; // Added
 
 import 'package:table_calendar/table_calendar.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Màn hình lịch học của học viên
 /// 
@@ -188,14 +187,17 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
-                   if ((isTutor || !isPending) && 
-                       booking.status.toLowerCase() != 'locked' &&
-                       booking.status.toLowerCase() != 'cancelled') {
-                       Navigator.push(context, MaterialPageRoute(builder: (_) => SessionDetailScreen(
-                         booking: booking,
-                         isReadOnly: !isTutor, // Students are read-only
-                       )));
-                   }
+                  if (booking.status.toLowerCase() == 'cancelled') return;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SessionDetailScreen(
+                        booking: booking,
+                        isReadOnly: !isTutor,
+                      ),
+                    ),
+                  );
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -516,7 +518,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
        // 2. Old Google Meet link exists (from previous tests) -> Overwrite with Jitsi
        if (isTutor && (meetingUrl.isEmpty || !meetingUrl.contains('jit.si'))) {
           // Jitsi Meet link format: https://meet.jit.si/{unique_room_name}
-          meetingUrl = 'https://meet.jit.si/antigravity-class-${booking.id}'; 
+          meetingUrl = 'https://meet.jit.si/AppGiaSu-${booking.id}-${booking.userId}-${booking.tutor.id}';
           
           try {
              await ref.read(bookingProvider.notifier).updateSessionInfo(
@@ -539,13 +541,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
          return;
        }
 
-       final Uri url = Uri.parse(meetingUrl);
-       if (await canLaunchUrl(url)) {
-         await launchUrl(url, mode: LaunchMode.externalApplication);
-       } else {
-         if (context.mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không thể mở cuộc họp')));
-         }
-       }
+       if (!context.mounted) return;
+       context.push(
+         '/video-call',
+         extra: {
+           'bookingId': booking.id,
+           'meetingLink': meetingUrl,
+         },
+       );
   }
 }

@@ -398,7 +398,25 @@ class BookingReviewScreen extends ConsumerWidget {
                             final success = await viewModel.confirmBooking(paymentPin: pin);
 
                             if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Đặt lịch và thanh toán thành công.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
                               context.pop();
+                            } else if (context.mounted) {
+                              final message = ref
+                                      .read(bookingViewModelProvider(tutor))
+                                      .valueOrNull
+                                      ?.errorMessage ??
+                                  'Đặt lịch thất bại. Vui lòng thử lại.';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             }
                         }
                       },

@@ -17,7 +17,7 @@ class WalletNotifier extends AsyncNotifier<WalletState> {
   
   Future<void> deposit(double amount) async {
       final success = await ref.read(walletRepositoryProvider).deposit(amount);
-      if (success) refresh();
+      if (success) await refresh();
   }
 
   Future<bool> withdraw(double amount, String bankName, String accountNumber, String accountName) async {
@@ -28,7 +28,7 @@ class WalletNotifier extends AsyncNotifier<WalletState> {
 
   Future<void> simulateDeposit(double amount, int userId) async {
       final success = await ref.read(walletRepositoryProvider).simulateDeposit(amount, userId);
-      if (success) refresh();
+      if (success) await refresh();
   }
 
   // --- PIN METHODS ---

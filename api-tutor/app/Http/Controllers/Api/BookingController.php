@@ -17,6 +17,34 @@ class BookingController extends Controller
         $this->notificationService = $notificationService;
     }
 
+    private function buildMeetingLink(Booking $booking): ?string
+    {
+        if ($booking->learning_mode !== 'online') {
+            return null;
+        }
+
+        return 'https://meet.jit.si/AppGiaSu-' . $booking->id . '-' . $booking->student_id . '-' . $booking->tutor_id;
+    }
+
+    private function walletForStudent(int $studentId)
+    {
+        $wallet = \App\Models\Wallet::firstOrCreate(
+            ['user_id' => $studentId],
+            [
+                'balance' => 0,
+                'currency' => 'VND',
+                'payment_pin' => Hash::make('000000'),
+            ]
+        );
+
+        if (!$wallet->payment_pin) {
+            $wallet->payment_pin = Hash::make('000000');
+            $wallet->save();
+        }
+
+        return $wallet;
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -92,10 +120,10 @@ class BookingController extends Controller
         // ... (Previous code)
         // Check availability (Basic check for primary slot)
         $exists = Booking::where('tutor_id', $tutor->id)
-            ->where(function ($q) use ($startTime, $endTime) {
-                $q->whereBetween('start_time', [$startTime, $endTime])
-                    ->where('status', '!=', 'cancelled');
-            })->exists();
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime)
+            ->exists();
 
         if ($exists) {
             return response()->json(['message' => 'Slot already taken'], 409);
@@ -149,7 +177,7 @@ class BookingController extends Controller
         }
 
         // 2. Check Wallet & Verify PIN
-        $wallet = \App\Models\Wallet::firstOrCreate(['user_id' => $studentId]);
+        $wallet = $this->walletForStudent($studentId);
         
         // Verify PIN if wallet has one (force check if deducted > 0)
         if ($initialPayment > 0) {
@@ -177,29 +205,31 @@ class BookingController extends Controller
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'total_price' => $request->price,
-                'status' => 'pending', 
+                'status' => 'confirmed',
                 'notes' => 'Prepaid: ' . $initialPayment,
                 'type' => $type,
                 'learning_mode' => $learningMode,
                 'grade_level' => $gradeLevel,
                 'address' => $address
             ]);
+            $booking->update(['meeting_link' => $this->buildMeetingLink($booking)]);
 
             // Create Child Bookings from pre-calculated data
             foreach ($childBookingsData as $childData) {
-                 Booking::create([
+                 $childBooking = Booking::create([
                     'tutor_id' => $tutor->id,
                     'student_id' => $studentId,
                     'start_time' => $childData['start'],
                     'end_time' => $childData['end'],
                     'total_price' => $request->price,
-                    'status' => 'pending',
+                    'status' => 'confirmed',
                     'type' => 'single', // Child is single type
                     'parent_id' => $booking->id,
                     'learning_mode' => $learningMode,
                     'grade_level' => $gradeLevel,
                     'address' => $address
                 ]);
+                $childBooking->update(['meeting_link' => $this->buildMeetingLink($childBooking)]);
             }
 
             // Deduct & Create Transaction
@@ -277,7 +307,7 @@ class BookingController extends Controller
             ]);
         }
 
-        return response()->json($booking->load(['tutor', 'children']), 201);
+        return response()->json($booking->fresh()->load(['tutor', 'children']), 201);
     }
 
     public function confirm($id)

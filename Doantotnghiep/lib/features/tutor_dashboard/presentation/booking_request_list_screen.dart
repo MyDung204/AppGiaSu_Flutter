@@ -3,8 +3,8 @@ import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/session_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class _EduTheme {
   static const Color primary = Color(0xFF4F46E5);
@@ -507,7 +507,7 @@ class _BookingRequestListScreenState extends ConsumerState<BookingRequestListScr
        // Force update if empty OR if it's an old Google Meet link
        if (meetingUrl.isEmpty || !meetingUrl.contains('jit.si')) {
           // Auto-create Jitsi link
-          meetingUrl = 'https://meet.jit.si/antigravity-class-${booking.id}'; 
+          meetingUrl = 'https://meet.jit.si/AppGiaSu-${booking.id}-${booking.userId}-${booking.tutor.id}';
           
           try {
              await ref.read(bookingProvider.notifier).updateSessionInfo(
@@ -523,13 +523,13 @@ class _BookingRequestListScreenState extends ConsumerState<BookingRequestListScr
           }
        }
 
-       final Uri url = Uri.parse(meetingUrl);
-       if (await canLaunchUrl(url)) {
-         await launchUrl(url, mode: LaunchMode.externalApplication);
-       } else {
-         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không thể mở cuộc họp')));
-         }
-       }
+       if (!mounted) return;
+       context.push(
+         '/video-call',
+         extra: {
+           'bookingId': booking.id,
+           'meetingLink': meetingUrl,
+         },
+       );
   }
 }

@@ -113,6 +113,7 @@ class BookingViewModel extends AutoDisposeFamilyAsyncNotifier<BookingState, Tuto
     state = AsyncData(currentState.copyWith(
       status: BookingStatus.locking,
       isLoading: true,
+      errorMessage: null,
     ));
 
     try {
@@ -140,12 +141,6 @@ class BookingViewModel extends AutoDisposeFamilyAsyncNotifier<BookingState, Tuto
         paymentPin: paymentPin,
       );
       if (serverBookingId.isEmpty) throw Exception("Server returned invalid Booking ID");
-
-      // 2. Simulate Payment
-      await Future.delayed(const Duration(seconds: 1));
-
-      // 3. Confirm
-      await ref.read(bookingProvider.notifier).confirmBooking(serverBookingId);
 
       // 4. Notify Tutor
       try {

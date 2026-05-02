@@ -25,14 +25,14 @@ class DepositScreen extends ConsumerStatefulWidget {
 class _DepositScreenState extends ConsumerState<DepositScreen> {
   final _amountController = TextEditingController();
   final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-  
+
   String? _qrUrl;
   String? _transferContent;
-  
+
   // Config
-  final String bankId = 'MB'; 
-  final String accountNo = '0334996903'; 
-  final String accountName = 'HE THONG GIA SU'; 
+  final String bankId = 'MB';
+  final String accountNo = '0334996903';
+  final String accountName = 'HE THONG GIA SU';
 
   final List<double> _quickAmounts = [50000, 100000, 200000, 500000];
 
@@ -72,8 +72,8 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
        isScrollControlled: true,
        backgroundColor: Colors.transparent,
        builder: (modalContext) => _FakeBankApp(
-         amount: amount, 
-         content: content, 
+         amount: amount,
+         content: content,
          onConfirm: () async {
             final user = ref.read(authRepositoryProvider).currentUser;
             if (user != null) {
@@ -84,13 +84,30 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   if (!mounted) return;
                   showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
                   await Future.delayed(const Duration(seconds: 2));
-                  
-                  await ref.read(walletProvider.notifier).simulateDeposit(amount, idInt);
-                  
-                  if (mounted) {
-                     Navigator.of(context, rootNavigator: true).pop();
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nạp tiền thành công!')));
-                     Navigator.of(context).pop();
+
+                  try {
+                     await ref.read(walletProvider.notifier).simulateDeposit(amount, idInt);
+
+                     if (mounted) {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Nap tien demo thanh cong!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                     }
+                  } catch (e) {
+                     if (mounted) {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Nap tien demo that bai: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                     }
                   }
                }
             }
@@ -146,7 +163,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                       onPressed: _processDeposit, 
+                       onPressed: _processDeposit,
                        child: const Text('Nạp tiền')
                     ),
                   )
@@ -204,7 +221,7 @@ class _FakeBankApp extends StatelessWidget {
    final double amount;
    final String content;
    final VoidCallback onConfirm;
-   
+
    const _FakeBankApp({required this.amount, required this.content, required this.onConfirm});
 
    @override
@@ -224,7 +241,7 @@ class _FakeBankApp extends StatelessWidget {
              const SizedBox(height: 20),
              const Text('MB BANK SIMULATOR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
              const SizedBox(height: 30),
-             
+
              Expanded(
                child: Container(
                  width: double.infinity,
@@ -238,7 +255,7 @@ class _FakeBankApp extends StatelessWidget {
                    children: [
                       const Text('Xác nhận chuyển tiền', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 30),
-                      
+
                       _buildField('Tài khoản nguồn', 'NGUYEN VAN A - 88888888'),
                       const Divider(),
                       _buildField('Tài khoản thụ hưởng', 'HE THONG GIA SU - 0334996903'),
@@ -250,9 +267,9 @@ class _FakeBankApp extends StatelessWidget {
                       _buildField('Nội dung', content),
                       const SizedBox(height: 10),
                       const Text('Phí giao dịch: 0đ', style: TextStyle(color: Colors.grey)),
-                      
+
                       const Spacer(),
-                      
+
                       SizedBox(
                         width: double.infinity,
                         height: 56,
