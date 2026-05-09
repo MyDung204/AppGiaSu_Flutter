@@ -23,6 +23,22 @@ class Review {
     this.isVisible = false,
   });
 
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      id: json['id'].toString(),
+      bookingId: (json['booking_id'] ?? '').toString(),
+      tutorId: (json['tutor_id'] ?? '').toString(),
+      userId: (json['reviewer_id'] ?? '').toString(),
+      userName: json['reviewer_name'] ?? 'Học viên',
+      userAvatar: json['reviewer_avatar'] ?? '',
+      rating: double.tryParse((json['rating'] ?? 0).toString()) ?? 0,
+      comment: json['comment'] ?? '',
+      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+          DateTime.now(),
+      isVisible: false,
+    );
+  }
+
   Review copyWith({
     String? id,
     String? bookingId,
@@ -46,6 +62,29 @@ class Review {
       comment: comment ?? this.comment,
       createdAt: createdAt ?? this.createdAt,
       isVisible: isVisible ?? this.isVisible,
+    );
+  }
+}
+
+class ReviewStatus {
+  final bool canReview;
+  final bool hasReview;
+  final Review? review;
+
+  const ReviewStatus({
+    required this.canReview,
+    required this.hasReview,
+    this.review,
+  });
+
+  factory ReviewStatus.fromJson(Map<String, dynamic> json) {
+    final reviewJson = json['review'];
+    return ReviewStatus(
+      canReview: json['can_review'] == true,
+      hasReview: json['has_review'] == true,
+      review: reviewJson is Map<String, dynamic>
+          ? Review.fromJson(reviewJson)
+          : null,
     );
   }
 }

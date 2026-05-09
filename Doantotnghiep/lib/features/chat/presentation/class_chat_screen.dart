@@ -1,4 +1,6 @@
-import 'package:doantotnghiep/core/theme/edu_theme.dart';
+﻿import 'package:doantotnghiep/core/theme/edu_theme.dart';
+import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/chat/data/firebase_chat_repository.dart';
 import 'package:doantotnghiep/features/chat/data/group_chat_provider.dart';
 import 'package:doantotnghiep/features/chat/domain/models/chat_message.dart';
 import 'package:doantotnghiep/features/chat/presentation/widgets/attachment_image.dart';
@@ -29,9 +31,7 @@ class _ClassChatScreenState extends ConsumerState<ClassChatScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = ref.read(groupChatControllerProvider(_chatGroupId));
-      
-      // IMPORTANT: Ensure I am in the conversation list (safe join)
-      controller.joinChat(groupName: widget.course.title, initialMessage: 'Lớp mới được tạo');
+      _syncCourseChatMembers(controller);
       
       // Mark as read
       controller.markAsRead();
@@ -43,6 +43,36 @@ class _ClassChatScreenState extends ConsumerState<ClassChatScreen> {
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _syncCourseChatMembers(GroupChatController controller) async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    final memberIds = <String>{
+      if (widget.course.tutorUserId != null && widget.course.tutorUserId!.isNotEmpty)
+        widget.course.tutorUserId!,
+      if (user != null) user.id.toString(),
+      ...widget.course.students
+          .map((student) => student['id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty),
+    }.toList();
+
+    if (memberIds.length > 1 || widget.course.tutorUserId != null) {
+      try {
+        await ref.read(firebaseChatRepositoryProvider).createOrUpdateCourseConversation(
+              courseId: widget.course.id,
+              courseName: widget.course.title,
+              memberIds: memberIds,
+            );
+        return;
+      } catch (e) {
+        debugPrint('Sync course chat members failed: $e');
+      }
+    }
+
+    await controller.joinChat(
+      groupName: widget.course.title,
+      initialMessage: 'Lớp mới được tạo',
+    );
   }
 
   void _scrollToBottom() {
@@ -133,7 +163,7 @@ class _ClassChatScreenState extends ConsumerState<ClassChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, -2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5, offset: const Offset(0, -2))],
               ),
               child: SafeArea(
                 child: Row(
@@ -213,7 +243,7 @@ class _ClassChatScreenState extends ConsumerState<ClassChatScreen> {
                   bottomRight: msg.isUser ? Radius.zero : const Radius.circular(16),
                 ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5, offset: const Offset(0, 2)),
                 ],
               ),
               child: Column(

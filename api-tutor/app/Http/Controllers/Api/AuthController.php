@@ -6,6 +6,7 @@ use App\Models\Tutor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -79,5 +80,57 @@ class AuthController extends Controller
         $request->validate(['token' => 'required|string']);
         $request->user()->update(['device_token' => $request->token]);
         return response()->json(['message' => 'Device token updated']);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'avatar' => 'nullable|image|max:2048',
+            'remove_avatar' => 'nullable|boolean',
+        ]);
+
+        $user = $request->user();
+        $user->name = $request->name;
+
+        if ($request->boolean('remove_avatar')) {
+            if ($user->avatar_url && str_contains($user->avatar_url, '/storage/')) {
+                $oldPath = ltrim(parse_url($user->avatar_url, PHP_URL_PATH) ?? '', '/');
+                $oldPath = str_replace('storage/', '', $oldPath);
+                if ($oldPath !== '') {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            $user->avatar_url = null;
+        }
+
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar_url && str_contains($user->avatar_url, '/storage/')) {
+                $oldPath = ltrim(parse_url($user->avatar_url, PHP_URL_PATH) ?? '', '/');
+                $oldPath = str_replace('storage/', '', $oldPath);
+                if ($oldPath !== '') {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar_url = url('/storage/' . $path);
+        }
+
+        $user->save();
+
+        if ($user->role === 'tutor') {
+            $tutor = Tutor::where('user_id', $user->id)->first();
+            if ($tutor) {
+                $tutor->name = $user->name;
+                $tutor->avatar_url = $user->avatar_url;
+                $tutor->save();
+            }
+        }
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user->fresh()->load('tutorProfile'),
+        ]);
     }
 }

@@ -1,74 +1,66 @@
+import 'package:doantotnghiep/core/network/api_client.dart';
+import 'package:doantotnghiep/core/network/api_constants.dart';
 import 'package:doantotnghiep/features/rating/domain/models/review.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
-  return MockReviewRepository();
+  return ApiReviewRepository(ref.read(apiClientProvider));
 });
 
 abstract class ReviewRepository {
   Future<List<Review>> getReviewsForTutor(String tutorId);
+  Future<ReviewStatus> getMyReviewStatus(String tutorId);
+  Future<Review> submitTutorReview(
+    String tutorId, {
+    required int rating,
+    String? comment,
+  });
 }
 
-class MockReviewRepository implements ReviewRepository {
+class ApiReviewRepository implements ReviewRepository {
+  final ApiClient _apiClient;
+
+  ApiReviewRepository(this._apiClient);
+
   @override
   Future<List<Review>> getReviewsForTutor(String tutorId) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate delay
-    return [
-      Review(
-        id: '1',
-        bookingId: 'booking_1',
-        tutorId: tutorId,
-        userId: 'u1',
-        userName: 'Nguyễn Thị Hoa',
-        userAvatar: 'https://i.pravatar.cc/150?u=u1',
-        rating: 5.0,
-        comment: 'Gia sư dạy rất dễ hiểu, bé nhà mình tiến bộ rõ rệt.',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      Review(
-        id: '2',
-        bookingId: 'booking_2',
-        tutorId: tutorId,
-        userId: 'u2',
-        userName: 'Trần Minh Quân',
-        userAvatar: 'https://i.pravatar.cc/150?u=u2',
-        rating: 4.0,
-        comment: 'Nhiệt tình nhưng đôi khi đến muộn chút xíu.',
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-      ),
-      Review(
-        id: '3',
-        bookingId: 'booking_3',
-        tutorId: tutorId,
-        userId: 'u3',
-        userName: 'Lê Văn Tám',
-        userAvatar: 'https://i.pravatar.cc/150?u=u3',
-        rating: 5.0,
-        comment: 'Tuyệt vời, sẽ đặt lịch dài hạn.',
-        createdAt: DateTime.now().subtract(const Duration(days: 20)),
-      ),
-       Review(
-        id: '4',
-        bookingId: 'booking_4',
-        tutorId: tutorId,
-        userId: 'u4',
-        userName: 'Phạm Hương',
-        userAvatar: 'https://i.pravatar.cc/150?u=u4',
-        rating: 3.0,
-        comment: 'Dạy ổn, nhưng cần chuẩn bị bài kỹ hơn.',
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-      ),
-       Review(
-        id: '5',
-        bookingId: 'booking_5',
-        tutorId: tutorId,
-        userId: 'u5',
-        userName: 'Hoàng Long',
-        userAvatar: 'https://i.pravatar.cc/150?u=u5',
-        rating: 1.0,
-        comment: 'Không chuyên nghiệp, hủy lịch sát giờ.',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-    ];
+    final response = await _apiClient.get('${ApiConstants.tutors}/$tutorId/reviews');
+    if (response is! List) return [];
+    return response
+        .whereType<Map<String, dynamic>>()
+        .map(Review.fromJson)
+        .toList();
+  }
+
+  @override
+  Future<ReviewStatus> getMyReviewStatus(String tutorId) async {
+    final response = await _apiClient.get(
+      '${ApiConstants.tutors}/$tutorId/my-review-status',
+    );
+    if (response is! Map<String, dynamic>) {
+      return const ReviewStatus(canReview: false, hasReview: false);
+    }
+    return ReviewStatus.fromJson(response);
+  }
+
+  @override
+  Future<Review> submitTutorReview(
+    String tutorId, {
+    required int rating,
+    String? comment,
+  }) async {
+    final response = await _apiClient.post(
+      '${ApiConstants.tutors}/$tutorId/reviews',
+      data: {
+        'rating': rating,
+        if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+      },
+    );
+
+    if (response is Map<String, dynamic> && response['review'] is Map<String, dynamic>) {
+      return Review.fromJson(response['review'] as Map<String, dynamic>);
+    }
+
+    throw Exception('Không nhận được dữ liệu đánh giá từ máy chủ.');
   }
 }

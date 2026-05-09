@@ -32,6 +32,7 @@ Route::get('/study-groups/{id}/members', [SharedLearningController::class, 'getG
 Route::get('/tutors', [TutorController::class, 'index']);
 Route::get('/tutors/{id}', [TutorController::class, 'show'])->where('id', '[0-9]+');
 Route::get('/tutors/{id}/availability', [TutorController::class, 'getAvailability'])->where('id', '[0-9]+');
+Route::get('/tutors/{id}/reviews', [TutorController::class, 'reviews'])->where('id', '[0-9]+');
 
 Route::get('/questions', [QuestionController::class, 'index']);
 Route::post('/questions', [QuestionController::class, 'store']);
@@ -43,6 +44,8 @@ Route::get('/verification/file/{filename}', [VerificationController::class, 'fil
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
+    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/user/profile', [AuthController::class, 'updateProfile']);
     Route::post('/device-token', [AuthController::class, 'updateDeviceToken']);
 
     // Shared Learning
@@ -74,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tutors & Availability
     Route::post('/tutors/{id}/favorite', [TutorController::class, 'toggleFavorite']);
+    Route::get('/tutors/{id}/my-review-status', [TutorController::class, 'myReviewStatus']);
+    Route::post('/tutors/{id}/reviews', [TutorController::class, 'submitReview']);
     Route::get('/favorites/tutors', [TutorController::class, 'getFavorites']);
     Route::get('/tutors/my-availability', [TutorController::class, 'getMyAvailability']);
     Route::post('/tutors/availability', [TutorController::class, 'updateAvailability']);
@@ -90,6 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings/lock', [BookingController::class, 'lockSlot']);
+    Route::post('/bookings/complete-one-to-one', [BookingController::class, 'completeOneToOne']);
     Route::post('/bookings/{id}/confirm', [BookingController::class, 'confirm']);
     Route::post('/bookings/{id}/reject', [BookingController::class, 'reject']);
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);

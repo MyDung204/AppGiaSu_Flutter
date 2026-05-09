@@ -1,4 +1,4 @@
-/// Custom Scaffold with Modern Bottom Navigation Bar
+﻿/// Custom Scaffold with Modern Bottom Navigation Bar
 /// 
 /// **Purpose:**
 /// - Provides main app navigation with floating bottom bar
@@ -25,7 +25,6 @@ import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
-import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'dart:math' as math;
 
 /// Scaffold with custom floating navigation bar
@@ -145,7 +144,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1), 
+                    color: Colors.black.withValues(alpha: 0.1), 
                     blurRadius: 12, 
                     offset: const Offset(0, 6)
                   ),
@@ -162,7 +161,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08), 
+                    color: Colors.black.withValues(alpha: 0.08), 
                     blurRadius: 8, 
                     offset: const Offset(0, 2)
                   )
@@ -248,7 +247,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4), // Increased blur
                     child: Container(
-                      color: Colors.black.withOpacity(0.2), // Reduced opacity
+                      color: Colors.black.withValues(alpha: 0.2), // Reduced opacity
                     ),
                   ),
                 ),
@@ -280,10 +279,10 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                       // Diễn đàn was here, now hidden
                        _buildSubMenuButton(
                         angle: 35, // Adjusted angle
-                        icon: Icons.groups_rounded, // Changed from qr_code to groups
-                        label: 'Nhóm của tôi', // Changed from Scan QR
+                        icon: Icons.school_rounded,
+                        label: 'Lớp của tôi',
                         color: const Color(0xFF7B1FA2), // Custom Purple
-                        onTap: () { _closeMenu(); context.push('/my-study-groups'); } // Route to My Groups
+                        onTap: () { _closeMenu(); context.push('/my-enrolled-classes'); }
                       ),
                     ],
                   ),
@@ -310,17 +309,17 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                     child: Container(
                       height: 64,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9), // Higher opacity for cleaner look
+                        color: Colors.white.withValues(alpha: 0.9), // Higher opacity for cleaner look
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05), // Softer shadow
+                            color: Colors.black.withValues(alpha: 0.05), // Softer shadow
                             blurRadius: 30,
                             offset: const Offset(0, 10),
                             spreadRadius: 0,
                           ),
                         ],
-                        border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -357,7 +356,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (_isMenuOpen ? Colors.red : Colors.blue).withOpacity(0.3), // Lower opacity
+                            color: (_isMenuOpen ? Colors.red : Colors.blue).withValues(alpha: 0.3), // Lower opacity
                             blurRadius: 12,
                             spreadRadius: 2, // Reduced spread
                             offset: const Offset(0, 6),
@@ -397,7 +396,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
             curve: Curves.easeOutBack,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.blueAccent.withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? Colors.blueAccent.withValues(alpha: 0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
             child: _buildIconWithBadge(context, isSelected, icon, activeIcon, index),
@@ -420,7 +419,7 @@ class _ScaffoldWithNavBarState extends ConsumerState<ScaffoldWithNavBar> with Si
         return unreadAsync.when(
           data: (count) => count > 0 ? Badge(label: Text('$count'), backgroundColor: Colors.red, child: iconWidget) : iconWidget,
           loading: () => iconWidget,
-          error: (_, __) => iconWidget,
+          error: (_, _) => iconWidget,
         );
       }
       return iconWidget;

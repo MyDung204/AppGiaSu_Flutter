@@ -20,7 +20,9 @@
 library;
 
 import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
+import 'package:doantotnghiep/core/config/jitsi_config.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/rating/data/review_repository.dart';
 import 'package:doantotnghiep/features/rating/presentation/review_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +51,10 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isCalendarView = false;
+  final Set<String> _reviewedTutorIds = {};
+  final Set<String> _reviewStatusLoadedTutorIds = {};
+  final Map<String, Future<bool>> _reviewStatusFutures = {};
+  final Set<String> _submittingReviewTutorIds = {};
   
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
@@ -369,6 +375,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
             final booking = historyBookings[index];
             final dateStr = DateFormat('dd/MM/yyyy').format(booking.date);
             final isCancelled = booking.status.toLowerCase() == 'cancelled';
+            if (!isTutor && !isCancelled) {
+              _ensureReviewStatusLoaded(booking.tutor.id);
+            }
 
             return Card(
                 elevation: 2,
@@ -409,22 +418,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
                       Text('${booking.timeSlot}, $dateStr', style: const TextStyle(color: Colors.grey)),
                       const SizedBox(height: 12),
                       if (!isCancelled && !isTutor) // Only allow students to review tutors
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context, 
-                                useRootNavigator: true,
-                                isScrollControlled: true,
-                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                builder: (context) => const ReviewModal()
-                              );
-                            },
-                            icon: const Icon(Icons.star_border),
-                            label: const Text('Đánh giá'),
-                          ),
-                        ),
+                        _buildReviewAction(context, booking),
                     ],
                   ),
                 ),
@@ -449,6 +443,103 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
   /// **Actions:**
   /// - Báo cáo sự cố: Navigate đến màn hình tạo report
   /// - Hủy lịch học: Xác nhận và gọi API để hủy booking
+  void _ensureReviewStatusLoaded(String tutorId) {
+    if (_reviewedTutorIds.contains(tutorId) ||
+        _reviewStatusLoadedTutorIds.contains(tutorId) ||
+        _reviewStatusFutures.containsKey(tutorId)) {
+      return;
+    }
+
+    final future = ref
+        .read(reviewRepositoryProvider)
+        .getMyReviewStatus(tutorId)
+        .then((status) => status.hasReview);
+    _reviewStatusFutures[tutorId] = future;
+
+    future.then((hasReview) {
+      if (!mounted) return;
+      setState(() {
+        if (hasReview) {
+          _reviewedTutorIds.add(tutorId);
+        }
+        _reviewStatusLoadedTutorIds.add(tutorId);
+        _reviewStatusFutures.remove(tutorId);
+      });
+    }).catchError((_) {
+      _reviewStatusFutures.remove(tutorId);
+    });
+  }
+
+  Widget _buildReviewAction(BuildContext context, BookingItem booking) {
+    final tutorId = booking.tutor.id;
+    final isReviewed = _reviewedTutorIds.contains(tutorId);
+    final isSubmitting = _submittingReviewTutorIds.contains(tutorId);
+    final isCheckingStatus =
+        _reviewStatusFutures.containsKey(tutorId) && !isReviewed;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: isReviewed || isSubmitting || isCheckingStatus
+            ? null
+            : () => _submitReviewFromHistory(context, booking),
+        icon: isSubmitting || isCheckingStatus
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(isReviewed ? Icons.check_circle_outline : Icons.star_border),
+        label: Text(isReviewed ? 'Đã đánh giá' : 'Đánh giá'),
+      ),
+    );
+  }
+
+  Future<void> _submitReviewFromHistory(BuildContext context, BookingItem booking) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      builder: (_) => const ReviewModal(),
+    );
+
+    if (result == null) return;
+
+    final tutorId = booking.tutor.id;
+    final rating = (result['rating'] as num?)?.round() ?? 5;
+    final comment = result['comment']?.toString();
+
+    setState(() => _submittingReviewTutorIds.add(tutorId));
+    try {
+      await ref.read(reviewRepositoryProvider).submitTutorReview(
+            tutorId,
+            rating: rating,
+            comment: comment,
+          );
+
+      if (!mounted) return;
+      setState(() {
+        _reviewedTutorIds.add(tutorId);
+        _reviewStatusLoadedTutorIds.add(tutorId);
+        _reviewStatusFutures.remove(tutorId);
+      });
+      ref.invalidate(bookingProvider);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi đánh giá gia sư.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không gửi được đánh giá: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submittingReviewTutorIds.remove(tutorId));
+      }
+    }
+  }
+
   void _showActionSheet(BuildContext context, WidgetRef ref, String bookingId) {
     showModalBottomSheet(
       context: context,
@@ -512,25 +603,28 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
 
   Future<void> _handleMeetAction(BuildContext context, WidgetRef ref, BookingItem booking, bool isTutor) async {
        String meetingUrl = booking.meetingLink ?? '';
+       final fallbackJitsiUrl = _buildOneToOneMeetingUrl(booking);
        
        // If Tutor:
        // 1. No link exists -> Auto-create Jitsi
        // 2. Old Google Meet link exists (from previous tests) -> Overwrite with Jitsi
-       if (isTutor && (meetingUrl.isEmpty || !meetingUrl.contains('jit.si'))) {
+       if (meetingUrl.isEmpty || !_isValidAppJitsiUrl(meetingUrl)) {
           // Jitsi Meet link format: https://meet.jit.si/{unique_room_name}
-          meetingUrl = 'https://meet.jit.si/AppGiaSu-${booking.id}-${booking.userId}-${booking.tutor.id}';
+          meetingUrl = fallbackJitsiUrl;
           
-          try {
+          if (isTutor) {
+            try {
              await ref.read(bookingProvider.notifier).updateSessionInfo(
                booking.id, 
                meetingLink: meetingUrl
              );
              ref.invalidate(bookingProvider);
-          } catch (e) {
+            } catch (e) {
              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tạo phòng: $e')));
              }
-             return; 
+               return; 
+            }
           }
        }
 
@@ -549,5 +643,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
            'meetingLink': meetingUrl,
          },
        );
+  }
+
+  String _buildOneToOneMeetingUrl(BookingItem booking) {
+    final seed = '${booking.id}-${booking.userId}-${booking.tutor.id}';
+    final hash = seed.hashCode.abs().toRadixString(36);
+    return JitsiConfig.buildMeetingUrl('AppGiaSuV2-${booking.id}-$hash');
+  }
+
+  bool _isValidAppJitsiUrl(String url) {
+    return url.contains('AppGiaSuV2-');
   }
 }

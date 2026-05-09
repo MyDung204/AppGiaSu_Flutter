@@ -13,6 +13,12 @@ class _ReviewModalState extends State<ReviewModal> {
   final TextEditingController _commentController = TextEditingController();
 
   @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
@@ -31,12 +37,12 @@ class _ReviewModalState extends State<ReviewModal> {
           ),
           const SizedBox(height: 16),
           RatingBar.builder(
-            initialRating: 5,
+            initialRating: _rating,
             minRating: 1,
             direction: Axis.horizontal,
             allowHalfRating: true,
             itemCount: 5,
-            itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+            itemPadding: const EdgeInsets.symmetric(horizontal: 4),
             itemBuilder: (context, _) => const Icon(
               Icons.star,
               color: Colors.amber,
@@ -47,7 +53,7 @@ class _ReviewModalState extends State<ReviewModal> {
               });
             },
           ),
-           const SizedBox(height: 24),
+          const SizedBox(height: 24),
           TextField(
             controller: _commentController,
             maxLines: 3,
@@ -61,17 +67,16 @@ class _ReviewModalState extends State<ReviewModal> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                 // Mock submit
-                 Navigator.pop(context); // Use Navigator for modal
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cảm ơn bạn đã đánh giá!')),
-                 );
+                Navigator.pop(context, {
+                  'rating': _rating,
+                  'comment': _commentController.text.trim(),
+                });
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Gửi Đánh Giá'),
+              child: const Text('Gửi đánh giá'),
             ),
           ),
           const SizedBox(height: 24),

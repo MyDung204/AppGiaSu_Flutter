@@ -151,11 +151,21 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
           return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm 1-1', 'Danh sách dạy kèm trống');
       }
 
+      final activeStudentIds = myBookings
+          .where(_isActiveOneToOneBooking)
+          .map((booking) => booking.student?.id ?? booking.userId)
+          .toSet();
+
+      if (activeStudentIds.isEmpty) {
+          return _buildEmptyState(context, ref, 'Chưa có lịch dạy kèm 1-1', 'Danh sách dạy kèm trống');
+      }
+
       final Map<String, List<BookingItem>> studentGroups = {};
       
       for (var b in myBookings) {
           // Handle missing student object by creating a placeholder from userId
           final studentId = b.student?.id ?? b.userId;
+          if (!activeStudentIds.contains(studentId)) continue;
           if (!studentGroups.containsKey(studentId)) studentGroups[studentId] = [];
           studentGroups[studentId]!.add(b);
       }
@@ -328,6 +338,14 @@ class _MyClassesScreenState extends ConsumerState<MyClassesScreen> {
         ),
       ),
     );
+  }
+
+  bool _isActiveOneToOneBooking(BookingItem booking) {
+    final status = booking.status.toLowerCase();
+    return status != 'completed' &&
+        status != 'finished' &&
+        status != 'cancelled' &&
+        status != 'canceled';
   }
 
   /// Header

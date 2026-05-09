@@ -25,6 +25,9 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           const SizedBox(height: 16),
           _buildsectionHeader(context, 'Tài khoản'),
+          _buildListTile(context, Icons.person_outline, 'Thông tin tài khoản', () {
+             context.push('/account-edit');
+          }),
           _buildListTile(context, Icons.lock_outline, 'Đổi mật khẩu', () {
              context.push('/change-password');
           }),
@@ -49,6 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                    await ref.read(notificationRepositoryProvider).sendTestNotification(user.id);
                    // Success message handled by push up if works, but let's show success
                 } catch (e) {
+                   if (!context.mounted) return;
                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
                 }
               }

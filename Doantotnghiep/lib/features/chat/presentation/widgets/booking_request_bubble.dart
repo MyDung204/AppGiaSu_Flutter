@@ -55,7 +55,6 @@ class BookingRequestBubble extends ConsumerWidget {
 
   Widget _buildCard(BuildContext context, WidgetRef ref, BookingItem booking) {
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    final isTutor = !isUser; // If I see a message sent by "Partner" (Student), I am Tutor.
     // Wait, `isUser` in ChatMessage means "Current User sent this". 
     // Student sends request -> Student sees `isUser=true`. Tutor sees `isUser=false`.
     // So if `!isUser` (Partner sent this), and Partner is Student, then I am Tutor. 

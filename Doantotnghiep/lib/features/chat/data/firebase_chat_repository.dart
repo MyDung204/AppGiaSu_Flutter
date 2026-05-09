@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:dio/dio.dart';
@@ -260,6 +261,38 @@ class FirebaseChatRepository {
     }
   }
 
+  Future<void> createOrUpdateCourseConversation({
+    required String courseId,
+    required String courseName,
+    required List<String> memberIds,
+  }) {
+    return createOrUpdateGroupConversation(
+      'course_$courseId',
+      memberIds,
+      courseName,
+    );
+  }
+
+  Future<void> addMemberToCourseConversation({
+    required String courseId,
+    required String userId,
+    String? courseName,
+  }) {
+    return addMemberToGroupConversation(
+      'course_$courseId',
+      userId,
+      groupName: courseName,
+      initialMessage: 'Lớp mới được tạo',
+    );
+  }
+
+  Future<void> removeMemberFromCourseConversation({
+    required String courseId,
+    required String userId,
+  }) {
+    return removeMemberFromGroupConversation('course_$courseId', userId);
+  }
+
   // Send Group Message
   Future<void> sendGroupMessage({
     required String groupId,
@@ -272,8 +305,6 @@ class FirebaseChatRepository {
     
     String? attachmentUrl;
     String? attachmentName;
-    String attachmentType = 'image'; // Default to image for simple path
-
     // Reuse upload logic (simplified for brevity, can copy from sendMessage)
     if (attachmentPath != null) {
         // ... (Reuse existing logic or call internal helper if refactored)
@@ -291,7 +322,7 @@ class FirebaseChatRepository {
                 attachmentName = file.uri.pathSegments.last;
             }
          } catch(e) {
-           print("Group Upload Error: $e");
+           debugPrint("Group Upload Error: $e");
          }
     }
 

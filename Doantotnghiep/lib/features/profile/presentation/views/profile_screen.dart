@@ -26,7 +26,13 @@ class ProfileScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.grey.shade200,
-              child: Icon(Icons.person, size: 50, color: Colors.grey.shade400),
+              backgroundImage: (user?.avatarUrl != null &&
+                      user!.avatarUrl!.isNotEmpty)
+                  ? NetworkImage(user.avatarUrl!)
+                  : null,
+              child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
+                  ? Icon(Icons.person, size: 50, color: Colors.grey.shade400)
+                  : null,
             ),
             const SizedBox(height: 16),
             Text(
@@ -45,6 +51,12 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Menu Items
+            _buildMenuItem(
+              context,
+              Icons.edit_outlined,
+              'Chỉnh sửa tài khoản',
+              () => context.push('/account-edit'),
+            ),
             _buildMenuItem(
               context,
               Icons.account_balance_wallet,
@@ -94,15 +106,9 @@ class ProfileScreen extends ConsumerWidget {
               ),
               _buildMenuItem(
                 context,
-                Icons.quiz_outlined,
-                'Bài thi trắc nghiệm',
-                () => context.push('/quizzes'),
-              ),
-              _buildMenuItem(
-                context,
-                Icons.assignment,
-                'Yêu cầu tìm dạy kèm 1-1',
-                () => context.push('/my-requests'),
+                Icons.menu_book_outlined,
+                'Mục học của tôi',
+                () => context.push('/my-learning'),
               ),
               _buildMenuItem(
                 context,
@@ -112,39 +118,38 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
 
-            _buildMenuItem(
-              context,
-              Icons.verified_user,
-              'Xác thực danh tính (eKYC)',
-              () async {
-                final latestStatus = await ref.read(verificationRepositoryProvider).getStatus();
-                if (!context.mounted) return;
+            if (isTutor)
+              _buildMenuItem(
+                context,
+                Icons.verified_user,
+                'Xác thực danh tính (eKYC)',
+                () async {
+                  final latestStatus = await ref.read(verificationRepositoryProvider).getStatus();
+                  if (!context.mounted) return;
 
-                final isVerified = isTutor
-                    ? (user?.tutorProfile?['is_verified'] == true ||
-                          user?.tutorProfile?['is_verified'] == 1)
-                    : false;
-                final hasApprovedVerification =
-                    latestStatus.status == VerificationStatus.approved ||
-                    isVerified ||
-                    user?.identityVerifiedAt != null;
+                  final isVerified = user?.tutorProfile?['is_verified'] == true ||
+                      user?.tutorProfile?['is_verified'] == 1;
+                  final hasApprovedVerification =
+                      latestStatus.status == VerificationStatus.approved ||
+                      isVerified ||
+                      user?.identityVerifiedAt != null;
 
-                if (hasApprovedVerification) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Bạn đã xác thực danh tính thành công.'),
-                    ),
-                  );
-                } else {
-                  context.push(
-                    Uri(
-                      path: '/ekyc',
-                      queryParameters: {'isTutor': isTutor.toString()},
-                    ).toString(),
-                  );
-                }
-              },
-            ),
+                  if (hasApprovedVerification) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Bạn đã xác thực danh tính thành công.'),
+                      ),
+                    );
+                  } else {
+                    context.push(
+                      Uri(
+                        path: '/ekyc',
+                        queryParameters: {'isTutor': isTutor.toString()},
+                      ).toString(),
+                    );
+                  }
+                },
+              ),
             _buildMenuItem(
               context,
               Icons.settings,

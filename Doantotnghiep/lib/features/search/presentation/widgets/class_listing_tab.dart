@@ -1,5 +1,6 @@
 import 'package:doantotnghiep/features/group/data/course_provider.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/chat/data/firebase_chat_repository.dart';
 import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -298,6 +299,23 @@ class ClassListingTab extends ConsumerWidget {
                                                               );
                                                           if (context.mounted) {
                                                             if (success) {
+                                                              final currentUser = ref
+                                                                  .read(authRepositoryProvider)
+                                                                  .currentUser;
+                                                              if (currentUser != null) {
+                                                                try {
+                                                                  await ref
+                                                                      .read(firebaseChatRepositoryProvider)
+                                                                      .addMemberToCourseConversation(
+                                                                        courseId: course.id,
+                                                                        userId: currentUser.id.toString(),
+                                                                        courseName: course.title,
+                                                                      );
+                                                                } catch (e) {
+                                                                  debugPrint('Add course chat member failed: $e');
+                                                                }
+                                                              }
+                                                              if (!context.mounted) return;
                                                               ScaffoldMessenger.of(
                                                                 context,
                                                               ).showSnackBar(

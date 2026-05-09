@@ -11,10 +11,12 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:doantotnghiep/core/network/api_client.dart';
 import 'package:doantotnghiep/core/network/api_constants.dart';
 import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/features/auth/domain/models/app_user.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' as import_firebase_messaging;
@@ -299,11 +301,11 @@ class AuthRepository {
       final token = await import_firebase_messaging.FirebaseMessaging.instance.getToken();
       if (token != null) {
         await _apiClient.post('/device-token', data: {'token': token});
-        print("FCM Token Synced: $token");
+        debugPrint("FCM Token Synced: $token");
       }
     } catch (e) {
       // Ignore token sync errors (e.g. no internet or no firebase)
-      print('FCM Sync Error: $e');
+      debugPrint('FCM Sync Error: $e');
     }
   }
 
@@ -360,6 +362,43 @@ class AuthRepository {
         throw e.userMessage;
       }
       throw e.toString();
+    }
+  }
+
+  Future<AppUser> updateProfile({
+    required String name,
+    String? avatarPath,
+    bool removeAvatar = false,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'name': name.trim(),
+        if (removeAvatar) 'remove_avatar': true,
+      };
+
+      if (avatarPath != null && avatarPath.isNotEmpty) {
+        final fileName = avatarPath.split(RegExp(r'[\\/]')).last;
+        data['avatar'] = await MultipartFile.fromFile(avatarPath, filename: fileName);
+      }
+
+      final payload = FormData.fromMap(data);
+      final response = await _apiClient.post('/user/profile', data: payload);
+      final userJson = response['user'] as Map<String, dynamic>;
+      final updatedUser = AppUser.fromJson(userJson);
+
+      _currentUser = updatedUser;
+      _authStateController.add(updatedUser);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_data', jsonEncode(updatedUser.toJson()));
+      await prefs.setString('user_role', updatedUser.role);
+
+      return updatedUser;
+    } catch (e) {
+      if (e is ApiException) {
+        throw e.userMessage;
+      }
+      throw 'Cập nhật thông tin thất bại: ${e.toString()}';
     }
   }
 

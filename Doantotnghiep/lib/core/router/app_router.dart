@@ -55,7 +55,8 @@ import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_reque
 import 'package:doantotnghiep/features/notification/presentation/notification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:doantotnghiep/features/student/presentation/my_requests_screen.dart';
-import 'package:doantotnghiep/features/student/presentation/my_groups_screen.dart';
+import 'package:doantotnghiep/features/student/presentation/my_learning_screen.dart';
+import 'package:doantotnghiep/features/student/presentation/student_one_to_one_detail_screen.dart';
 import 'package:doantotnghiep/features/student/presentation/group_detail_screen.dart';
 import 'package:doantotnghiep/features/student/presentation/my_enrolled_classes_screen.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +71,7 @@ import 'package:doantotnghiep/features/booking/presentation/views/booking_screen
 import 'package:doantotnghiep/features/booking/presentation/views/booking_review_screen.dart';
 import 'package:doantotnghiep/features/search/presentation/search_screen.dart';
 import 'package:doantotnghiep/features/profile/presentation/views/profile_screen.dart';
+import 'package:doantotnghiep/features/profile/presentation/views/account_edit_screen.dart';
 import 'package:doantotnghiep/features/wallet/presentation/wallet_screen.dart';
 import 'package:doantotnghiep/features/home/presentation/widgets/scaffold_with_navbar.dart';
 import 'package:doantotnghiep/features/booking/presentation/views/schedule_screen.dart';
@@ -180,8 +182,21 @@ class AppRouter {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/my-learning',
+        builder: (context, state) => const MyLearningScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/student-one-to-one-detail',
+        builder: (context, state) {
+          final group = state.extra as OneToOneLearningGroup;
+          return StudentOneToOneDetailScreen(group: group);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/my-study-groups',
-        builder: (context, state) => const MyGroupsScreen(),
+        builder: (context, state) => const MyEnrolledClassesScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -359,10 +374,11 @@ class AppRouter {
             }
           }
 
-          if (tutor == null)
+          if (tutor == null) {
             return const Scaffold(
               body: Center(child: Text("Lỗi: Không tìm thấy thông tin")),
             );
+          }
 
           return ChatScreen(tutor: tutor, initialRequest: initialRequest);
         },
@@ -577,6 +593,11 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/change-password',
         builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/account-edit',
+        builder: (context, state) => const AccountEditScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

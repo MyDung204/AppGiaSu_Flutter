@@ -162,7 +162,11 @@ class ApiClient {
   /// ```
   Future<dynamic> put(String path, {dynamic data}) async {
     try {
-      final response = await _dio.put(path, data: data);
+      final response = await _dio.put(
+        path,
+        data: data,
+        options: data is FormData ? Options(contentType: 'multipart/form-data') : null,
+      );
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

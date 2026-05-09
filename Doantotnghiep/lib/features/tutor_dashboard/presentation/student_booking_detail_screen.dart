@@ -9,7 +9,6 @@ import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 
 class _EduTheme {
   static const Color primary = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFF818CF8);
   static const Color secondary = Color(0xFFF59E0B);
   static const Color success = Color(0xFF10B981);
   static const Color error = Color(0xFFEF4444);
@@ -266,6 +265,22 @@ class StudentBookingDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
+          if (_canCompleteOneToOne(bookings)) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _confirmCompleteOneToOne(context, ref, bookings),
+                icon: const Icon(Icons.task_alt_outlined, size: 18),
+                label: const Text('Hoàn thành kỳ dạy 1-1'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _EduTheme.success,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -280,6 +295,15 @@ class StudentBookingDetailScreen extends ConsumerWidget {
   bool _isUpcomingBooking(BookingItem booking) {
     final status = booking.status.toLowerCase();
     return status == 'upcoming' || status == 'confirmed' || status == 'locked' || status == 'pending';
+  }
+
+  bool _canCompleteOneToOne(List<BookingItem> bookings) {
+    final activeBookings = bookings.where((booking) {
+      final status = booking.status.toLowerCase();
+      return status != 'cancelled' && status != 'canceled';
+    }).toList();
+
+    return activeBookings.isNotEmpty && _getUpcomingBookings(activeBookings).isEmpty;
   }
 
   Widget _buildBookingItem(BuildContext context, WidgetRef ref, BookingItem booking) {
@@ -508,6 +532,49 @@ class StudentBookingDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _confirmCompleteOneToOne(BuildContext context, WidgetRef ref, List<BookingItem> bookings) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hoàn thành kỳ dạy 1-1'),
+        content: const Text(
+          'Xác nhận đã hoàn thành toàn bộ kỳ dạy 1-1 với học viên này?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hoàn thành'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final count = await ref.read(bookingProvider.notifier).completeOneToOne(student.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              count > 0
+                  ? 'Đã hoàn thành $count buổi 1-1.'
+                  : 'Kỳ dạy 1-1 đã ở trạng thái hoàn thành.',
+            ),
+            backgroundColor: _EduTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không hoàn thành được kỳ dạy: $e'), backgroundColor: _EduTheme.error),
+        );
+      }
+    }
+  }
+
   void _showUpdateOneToOneDialog(BuildContext context, WidgetRef ref, List<BookingItem> bookings) {
     final upcomingBookings = _getUpcomingBookings(bookings);
     if (upcomingBookings.isEmpty) {
@@ -539,7 +606,7 @@ class StudentBookingDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedMode,
+                  initialValue: selectedMode,
                   decoration: const InputDecoration(
                     labelText: 'Cách học',
                     border: OutlineInputBorder(),

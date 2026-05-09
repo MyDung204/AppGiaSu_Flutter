@@ -23,7 +23,17 @@ class BookingController extends Controller
             return null;
         }
 
-        return 'https://meet.jit.si/AppGiaSu-' . $booking->id . '-' . $booking->student_id . '-' . $booking->tutor_id;
+        $roomSeed = implode('-', [
+            $booking->id,
+            $booking->student_id,
+            $booking->tutor_id,
+            optional($booking->created_at)->timestamp ?? time(),
+        ]);
+        $roomHash = substr(hash('sha256', $roomSeed), 0, 12);
+
+        $baseUrl = rtrim(env('JITSI_SERVER_URL', 'https://meet.jit.si'), '/');
+
+        return $baseUrl . '/AppGiaSuV2-' . $booking->id . '-' . $roomHash;
     }
 
     private function walletForStudent(int $studentId)
@@ -49,6 +59,13 @@ class BookingController extends Controller
     {
         $user = $request->user();
         if (!$user) return response()->json([]);
+
+        if ($user->role !== 'tutor') {
+            return Booking::with(['student', 'tutor'])
+                ->where('student_id', $user->id)
+                ->latest()
+                ->get();
+        }
 
         // Get all possible IDs that could represent this tutor
         // 1. Correct Tutor ID from 'tutors' table
@@ -313,6 +330,12 @@ class BookingController extends Controller
     public function confirm($id)
     {
         $booking = Booking::findOrFail($id);
+        $authUserId = auth()->id();
+        $tutor = \App\Models\Tutor::where('user_id', $authUserId)->first();
+        $isTutorBooking = ($tutor && $booking->tutor_id == $tutor->id) || $booking->tutor_id == $authUserId;
+        if (!$isTutorBooking) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         
         // Use Transaction to ensure all child bookings are updated too
         DB::transaction(function() use ($booking) {
@@ -348,6 +371,12 @@ class BookingController extends Controller
     public function reject($id)
     {
         $booking = Booking::findOrFail($id);
+        $authUserId = auth()->id();
+        $tutor = \App\Models\Tutor::where('user_id', $authUserId)->first();
+        $isTutorBooking = ($tutor && $booking->tutor_id == $tutor->id) || $booking->tutor_id == $authUserId;
+        if (!$isTutorBooking) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         
         // Only Tutor should be able to reject from this endpoint (or check ownership)
         // For simplicity, we assume auth middleware handles tutor check
@@ -522,5 +551,45 @@ class BookingController extends Controller
         }
 
         return response()->json($booking);
+    }
+
+    public function completeOneToOne(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $authUserId = $request->user()->id;
+        $tutor = \App\Models\Tutor::where('user_id', $authUserId)->first();
+        $tutorIds = [];
+
+        if ($tutor) {
+            $tutorIds[] = $tutor->id;
+        }
+
+        $tutorIds[] = $authUserId;
+
+        $hasFutureBooking = Booking::whereIn('tutor_id', $tutorIds)
+            ->where('student_id', $request->student_id)
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->where('end_time', '>', now())
+            ->exists();
+
+        if ($hasFutureBooking) {
+            return response()->json([
+                'message' => 'Chỉ có thể hoàn thành kỳ dạy khi tất cả buổi 1-1 đã kết thúc.',
+            ], 422);
+        }
+
+        $completedCount = Booking::whereIn('tutor_id', $tutorIds)
+            ->where('student_id', $request->student_id)
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->where('end_time', '<=', now())
+            ->update(['status' => 'completed']);
+
+        return response()->json([
+            'success' => true,
+            'completed_count' => $completedCount,
+        ]);
     }
 }

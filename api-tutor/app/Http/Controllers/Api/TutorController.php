@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use App\Models\Review;
 use App\Models\Tutor;
 use App\Models\TutorMaterial;
 use Illuminate\Http\Request;
@@ -440,5 +442,97 @@ class TutorController extends Controller
             ->get();
 
         return response()->json($bookings);
+    }
+
+    public function myReviewStatus(Request $request, $id)
+    {
+        $user = $request->user();
+        Tutor::findOrFail($id);
+
+        $hasCompletedBooking = Booking::where('tutor_id', $id)
+            ->where('student_id', $user->id)
+            ->whereIn('status', ['completed', 'finished'])
+            ->where('end_time', '<=', now())
+            ->exists();
+
+        $review = Review::where('tutor_id', $id)
+            ->where('reviewer_id', $user->id)
+            ->first();
+
+        return response()->json([
+            'can_review' => $hasCompletedBooking,
+            'has_review' => $review !== null,
+            'review' => $review ? [
+                'id' => $review->id,
+                'booking_id' => $review->booking_id,
+                'tutor_id' => $review->tutor_id,
+                'rating' => (float) $review->rating,
+                'comment' => $review->comment ?? '',
+                'created_at' => optional($review->created_at)->toIso8601String(),
+            ] : null,
+        ]);
+    }
+
+    public function submitReview(Request $request, $id)
+    {
+        $user = $request->user();
+        $tutor = Tutor::findOrFail($id);
+
+        if ($tutor->user_id == $user->id) {
+            return response()->json(['message' => 'Không thể tự đánh giá hồ sơ gia sư của bạn.'], 403);
+        }
+
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        $booking = Booking::where('tutor_id', $id)
+            ->where('student_id', $user->id)
+            ->whereIn('status', ['completed', 'finished'])
+            ->where('end_time', '<=', now())
+            ->latest('end_time')
+            ->first();
+
+        if (!$booking) {
+            return response()->json(['message' => 'Bạn chưa có buổi học 1-1 đã hoàn thành với gia sư này.'], 422);
+        }
+
+        $review = Review::updateOrCreate(
+            [
+                'reviewer_id' => $user->id,
+                'tutor_id' => $tutor->id,
+            ],
+            [
+                'booking_id' => $booking->id,
+                'rating' => $validated['rating'],
+                'comment' => $validated['comment'] ?? null,
+            ]
+        );
+
+        $aggregate = Review::where('tutor_id', $tutor->id)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as total')
+            ->first();
+
+        $tutor->rating = round((float) ($aggregate->avg_rating ?? 0), 1);
+        $tutor->review_count = (int) ($aggregate->total ?? 0);
+        $tutor->save();
+
+        return response()->json([
+            'message' => 'Đã gửi đánh giá.',
+            'review' => [
+                'id' => $review->id,
+                'booking_id' => $review->booking_id,
+                'tutor_id' => $review->tutor_id,
+                'rating' => (float) $review->rating,
+                'comment' => $review->comment ?? '',
+                'created_at' => optional($review->created_at)->toIso8601String(),
+            ],
+            'tutor' => [
+                'id' => $tutor->id,
+                'rating' => $tutor->rating,
+                'review_count' => $tutor->review_count,
+            ],
+        ]);
     }
 }

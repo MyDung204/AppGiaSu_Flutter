@@ -1,5 +1,7 @@
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/chat/presentation/group_chat_screen.dart';
+import 'package:doantotnghiep/features/chat/presentation/class_chat_screen.dart';
+import 'package:doantotnghiep/features/group/domain/models/course.dart';
 import 'package:doantotnghiep/features/group/domain/models/group_request.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -74,6 +76,28 @@ class ChatListScreen extends ConsumerWidget {
                   ),
                   onTap: () {
                     if (conv.isGroup) {
+                      if (conv.partnerId.startsWith('course_')) {
+                        final courseId = conv.partnerId.replaceFirst('course_', '');
+                        final course = Course(
+                          id: courseId,
+                          tutorId: '',
+                          tutorName: '',
+                          title: conv.partnerName,
+                          description: '',
+                          price: 0,
+                          maxStudents: 0,
+                          startDate: DateTime.now(),
+                          schedule: '',
+                          status: 'open',
+                          subject: '',
+                          gradeLevel: '',
+                        );
+
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(builder: (_) => ClassChatScreen(course: course)),
+                        );
+                        return;
+                      }
                        // We need a GroupRequest object for GroupChatScreen.
                        // Ideally we passed full group object, but here we just have ID.
                        // Re-fetching or just creating partial object.

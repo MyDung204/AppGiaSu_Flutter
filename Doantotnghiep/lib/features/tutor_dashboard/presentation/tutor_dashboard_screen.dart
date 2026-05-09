@@ -1,4 +1,4 @@
-/// Tutor Dashboard Screen - Enhanced Version
+﻿/// Tutor Dashboard Screen - Enhanced Version
 /// 
 /// **Features:**
 /// - Rich Stats Grid (6 metrics)
@@ -196,10 +196,6 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                     _buildStatsGrid(rating, statsAsync),
                     const SizedBox(height: 24),
                     
-                    // Booking Requests (NEW)
-                    _buildBookingRequests(context, bookingsAsync),
-                    const SizedBox(height: 24),
-
                     // Quick Actions Grid (4x2)
                     _buildQuickActionsGrid(context),
                     const SizedBox(height: 28),
@@ -729,13 +725,6 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
             ),
             _buildQuickActionButton(
               context,
-              icon: Icons.notifications_active_rounded,
-              label: 'Yêu cầu',
-              gradient: [const Color(0xFFF59E0B), const Color(0xFFFBBF24)],
-              onTap: () => context.go('/tutor-dashboard/booking-requests'),
-            ),
-            _buildQuickActionButton(
-              context,
               icon: Icons.chat_bubble_rounded,
               label: 'Chat',
               gradient: [EduTheme.purple, const Color(0xFFC084FC)],
@@ -766,13 +755,8 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
               gradient: [const Color(0xFF0EA5E9), const Color(0xFF38BDF8)],
               onTap: () => context.go('/tutor-dashboard/find-students?tab=0'),
             ),
-            _buildQuickActionButton(
-              context,
-              icon: Icons.group_add_rounded,
-              label: 'Yêu cầu tuyển nhóm',
-              gradient: [const Color(0xFF06B6D4), const Color(0xFF22D3EE)],
-              onTap: () => context.go('/tutor-dashboard/find-students?tab=1'),
-            ),
+/*               label: 'Yêu cầu tuyển nhóm',
+            ), */
             _buildQuickActionButton(
               context,
               icon: Icons.auto_awesome_rounded,
@@ -888,6 +872,20 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
     return DateFormat('dd/MM').format(date);
   }
 
+  void _startOneToOneMeeting(BuildContext context, BookingItem booking) {
+    var meetingLink = booking.meetingLink ?? '';
+    if (meetingLink.isEmpty || !meetingLink.contains('AppGiaSuV2-')) {
+      final seed = '${booking.id}-${booking.userId}-${booking.tutor.id}';
+      final hash = seed.hashCode.abs().toRadixString(36);
+      meetingLink = 'AppGiaSuV2-${booking.id}-$hash';
+    }
+
+    context.push('/video-call', extra: {
+      'bookingId': booking.id,
+      'meetingLink': meetingLink,
+    });
+  }
+
   /// Upcoming Schedule - Merged 1-1 and Group Classes
   Widget _buildUpcomingSchedule(BuildContext context, TutorScheduleState scheduleState) {
     final now = DateTime.now();
@@ -955,7 +953,19 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
           Column(
             children: visibleItems.map<Widget>((item) {
               final isGroup = item.type == ScheduleType.group;
-              
+              final booking = item.originalItem is BookingItem
+                  ? item.originalItem as BookingItem
+                  : null;
+              final course = item.originalItem is Course
+                  ? item.originalItem as Course
+                  : null;
+              final isOnline = isGroup
+                  ? course?.mode.toLowerCase() == 'online'
+                  : booking?.learningMode.toLowerCase() == 'online';
+              final locationText = isGroup
+                  ? (course?.address ?? item.location ?? 'Chưa cập nhật địa điểm')
+                  : (booking?.address ?? item.location ?? 'Chưa cập nhật địa điểm');
+               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
@@ -1017,7 +1027,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                                       const SizedBox(width: 4),
                                       Flexible(
                                         child: Text(
-                                          '${_formatScheduleDate(item.startTime)} • ${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
+                                           '${_formatScheduleDate(item.startTime)} • ${DateFormat('HH:mm').format(item.startTime)} - ${DateFormat('HH:mm').format(item.endTime)}',
                                           style: TextStyle(color: EduTheme.textSecondary, fontSize: 13),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1032,7 +1042,7 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: const Text(
-                                            'Lớp học nhóm',
+                                             'Lớp học nhóm',
                                             style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
                                           ),
                                         ),
@@ -1058,40 +1068,61 @@ class _TutorDashboardScreenState extends ConsumerState<TutorDashboardScreen> {
                               const Icon(Icons.people_outline, size: 14, color: Colors.grey),
                               const SizedBox(width: 4),
                               Text(
-                                '${(item.originalItem as Course).students.length} học viên',
+                                 '${(item.originalItem as Course).students.length} học viên',
                                 style: TextStyle(color: EduTheme.textSecondary, fontSize: 12),
                               ),
                             ],
                             const Spacer(),
-                            // Action Buttons
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  // Video call logic
-                                  context.push('/video-call', extra: item.id);
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: isGroup 
-                                        ? [Colors.orange, Colors.orangeAccent]
-                                        : [EduTheme.success, const Color(0xFF34D399)]
+                            if (isOnline)
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (isGroup && course != null) {
+                                      context.push('/class-detail', extra: course);
+                                    } else if (booking != null) {
+                                      _startOneToOneMeeting(context, booking);
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: isGroup 
+                                          ? [Colors.orange, Colors.orangeAccent]
+                                          : [EduTheme.success, const Color(0xFF34D399)]
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
-                                      SizedBox(width: 4),
-                                      Text('Bắt đầu', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                                    ],
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                                        SizedBox(width: 4),
+                                         Text('Bắt đầu', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
                                   ),
                                 ),
+                              )
+                            else
+                              Flexible(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        locationText,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(color: EduTheme.textSecondary, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],

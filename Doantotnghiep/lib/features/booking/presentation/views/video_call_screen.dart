@@ -1,4 +1,5 @@
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/core/config/jitsi_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,14 +37,14 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     
     final user = ref.read(authRepositoryProvider).currentUser;
     final roomName = _roomNameFromMeetingLink(widget.meetingLink) ??
-        'Doantotnghiep_Booking_${widget.bookingId}';
+        'AppGiaSuV2-${widget.bookingId}-${widget.bookingId.hashCode.abs().toRadixString(36)}';
     final displayName = user?.name ?? "User";
     final email = user?.email ?? "";
     final avatar = user?.avatarUrl;
 
     var options = JitsiMeetConferenceOptions(
       room: roomName,
-      serverURL: "https://meet.jit.si", 
+      serverURL: JitsiConfig.serverUrl, 
       userInfo: JitsiMeetUserInfo(
         displayName: displayName,
         email: email,

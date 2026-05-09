@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:doantotnghiep/features/chat/presentation/widgets/attachment_image.dart';
 import 'package:doantotnghiep/features/chat/data/chat_provider.dart';
 import 'package:doantotnghiep/features/chat/domain/models/course_offer.dart';
@@ -7,17 +6,13 @@ import 'package:doantotnghiep/features/chat/presentation/widgets/offer_bubble.da
 import 'package:doantotnghiep/features/chat/presentation/widgets/booking_request_bubble.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
-import 'package:doantotnghiep/features/tutor_dashboard/domain/models/tutor_request.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
-import 'package:uuid/uuid.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:doantotnghiep/features/admin/data/admin_system_provider.dart';
 import 'package:doantotnghiep/features/chat/presentation/widgets/location_bubble.dart';
 
@@ -462,7 +457,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-    } catch (e, stack) {
+    } catch (e) {
       print("ChatScreen: Error building message ${msg.id}: $e");
       return const SizedBox.shrink(); // Prevent crash
     }

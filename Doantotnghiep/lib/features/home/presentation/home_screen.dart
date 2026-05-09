@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
-import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/group/data/group_request_provider.dart';
 import 'package:doantotnghiep/features/tutor/data/tutor_repository.dart';
 import 'package:doantotnghiep/features/tutor/domain/models/tutor.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +41,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         margin: EdgeInsets.only(bottom: isBottomNavVisible ? 100 : 20),
         child: FloatingActionButton(
           onPressed: () => context.push('/map'),
-          child: const Icon(Icons.map_outlined),
           tooltip: 'Bản đồ',
+          child: const Icon(Icons.map_outlined),
         ),
       ),
       body: CustomScrollView(
@@ -78,9 +78,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 20),
 
                   const _MyLearningOverviewSection(),
-                  const SizedBox(height: 20),
-
-                  const _MyGroupsSection(),
                   const SizedBox(height: 20),
 
                   const _MyClassesSection(),
@@ -124,7 +121,7 @@ class _LearningProgressDashboard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.3),
+              color: Colors.blue.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -144,7 +141,7 @@ class _LearningProgressDashboard extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Icon(Icons.trending_up, color: Colors.white.withOpacity(0.8)),
+                Icon(Icons.trending_up, color: Colors.white.withValues(alpha: 0.8)),
               ],
             ),
             const SizedBox(height: 16),
@@ -178,7 +175,7 @@ class _LearningProgressDashboard extends ConsumerWidget {
     return Container(
       height: 40,
       width: 1,
-      color: Colors.white.withOpacity(0.3),
+      color: Colors.white.withValues(alpha: 0.3),
     );
   }
 
@@ -190,7 +187,7 @@ class _LearningProgressDashboard extends ConsumerWidget {
   ) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.9), size: 24),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 24),
         const SizedBox(height: 8),
         Text(
           value,
@@ -203,7 +200,7 @@ class _LearningProgressDashboard extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
         ),
       ],
     );
@@ -287,7 +284,7 @@ class _HomeHeader extends ConsumerWidget {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Consumer(
@@ -332,7 +329,7 @@ class _HomeHeader extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -385,8 +382,8 @@ class _BannerSectionState extends State<_BannerSection> {
       'image':
           'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
       'gradient': [Color(0xFF11998e), Color(0xFF38ef7d)],
-      'action': '/my-study-groups',
-      'buttonText': 'Tham gia ngay',
+      'action': '/search?tab=classes',
+      'buttonText': 'Xem lớp học nhóm',
     },
     {
       'title': 'Đăng ký\nLớp học nhóm',
@@ -432,7 +429,7 @@ class _BannerSectionState extends State<_BannerSection> {
                       boxShadow: [
                         BoxShadow(
                           color: (banner['gradient'] as List<Color>)[0]
-                              .withOpacity(0.4),
+                              .withValues(alpha: 0.4),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -447,7 +444,7 @@ class _BannerSectionState extends State<_BannerSection> {
                           child: Icon(
                             Icons.school_rounded,
                             size: 150,
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         // Content
@@ -471,7 +468,7 @@ class _BannerSectionState extends State<_BannerSection> {
                               Text(
                                 banner['subtitle'] as String,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   fontSize: 11,
                                   height: 1.3,
                                 ),
@@ -595,7 +592,7 @@ class _CategorySection extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
-                  backgroundColor: (cat['color'] as Color).withOpacity(0.1),
+                  backgroundColor: (cat['color'] as Color).withValues(alpha: 0.1),
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -689,7 +686,7 @@ class _FeaturedTutorSection extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -743,7 +740,7 @@ class _FeaturedTutorSection extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
-                                        '${tutor.rating}',
+                                        '${tutor.rating} (${tutor.reviewCount})',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -805,7 +802,7 @@ class _FeaturedTutorSection extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ/h').format(tutor.hourlyRate)}',
+                                  NumberFormat.currency(locale: 'vi_VN', symbol: 'đ/h').format(tutor.hourlyRate),
                                   style: TextStyle(
                                     color: EduTheme.primary,
                                     fontWeight: FontWeight.w700,
@@ -826,7 +823,7 @@ class _FeaturedTutorSection extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: 3,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (_, __) => Container(
+              itemBuilder: (_, _) => Container(
                 width: 180,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
@@ -843,6 +840,7 @@ class _FeaturedTutorSection extends ConsumerWidget {
   }
 }
 
+// ignore: unused_element
 class _CommunityBanner extends StatelessWidget {
   const _CommunityBanner();
 
@@ -856,7 +854,7 @@ class _CommunityBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -867,7 +865,7 @@ class _CommunityBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -893,7 +891,7 @@ class _CommunityBanner extends StatelessWidget {
                 Text(
                   'Tham gia thảo luận & giải bài tập',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -908,7 +906,7 @@ class _CommunityBanner extends StatelessWidget {
               size: 16,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -923,8 +921,9 @@ class _MyRequestsSection extends ConsumerWidget {
   IconData _getSubjectIcon(String subject) {
     final s = subject.toLowerCase();
     if (s.contains('toán')) return Icons.calculate_rounded;
-    if (s.contains('anh') || s.contains('english'))
+    if (s.contains('anh') || s.contains('english')) {
       return Icons.language_rounded;
+    }
     if (s.contains('lý')) return Icons.bolt_rounded;
     if (s.contains('hóa')) return Icons.science_rounded;
     if (s.contains('sinh')) return Icons.biotech_rounded;
@@ -932,8 +931,9 @@ class _MyRequestsSection extends ConsumerWidget {
     if (s.contains('sử')) return Icons.history_edu_rounded;
     if (s.contains('địa')) return Icons.public_rounded;
     if (s.contains('tin')) return Icons.computer_rounded;
-    if (s.contains('nhạc') || s.contains('piano'))
+    if (s.contains('nhạc') || s.contains('piano')) {
       return Icons.music_note_rounded;
+    }
     return Icons.school_rounded;
   }
 
@@ -1006,10 +1006,10 @@ class _MyRequestsSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: color.withOpacity(0.2)),
+                      border: Border.all(color: color.withValues(alpha: 0.2)),
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(0.08),
+                          color: color.withValues(alpha: 0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -1031,7 +1031,7 @@ class _MyRequestsSection extends ConsumerWidget {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: color.withOpacity(0.1),
+                                      color: color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(icon, color: color, size: 22),
@@ -1069,8 +1069,8 @@ class _MyRequestsSection extends ConsumerWidget {
                                     ),
                                     decoration: BoxDecoration(
                                       color: req.status == 'open'
-                                          ? Colors.blue.withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1),
+                                          ? Colors.blue.withValues(alpha: 0.1)
+                                          : Colors.grey.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -1135,7 +1135,7 @@ class _MyRequestsSection extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -1195,10 +1195,10 @@ class _MyClassesSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.green.withOpacity(0.1)),
+                      border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.green.withOpacity(0.04),
+                          color: Colors.green.withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -1215,7 +1215,7 @@ class _MyClassesSection extends ConsumerWidget {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
+                                  color: Colors.green.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
@@ -1287,7 +1287,7 @@ class _MyClassesSection extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -1323,10 +1323,10 @@ class _MyLearningOverviewSection extends ConsumerWidget {
               Expanded(
                 child: _MyLearningOverviewCard(
                   title: 'Dạy kèm 1-1',
-                  subtitle: 'Xem lịch học 1-1',
+                  subtitle: 'Xem gia sư 1-1 đang học',
                   icon: Icons.person,
                   color: Colors.green,
-                  onTap: () => context.go('/schedule'),
+                  onTap: () => context.push('/my-learning'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1436,6 +1436,7 @@ class _MyLearningOverviewCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _MyGroupsSection extends ConsumerWidget {
   const _MyGroupsSection();
 
@@ -1491,10 +1492,10 @@ class _MyGroupsSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.blue.withOpacity(0.1)),
+                      border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.04),
+                          color: Colors.blue.withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -1524,7 +1525,7 @@ class _MyGroupsSection extends ConsumerWidget {
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
+                                    color: Colors.blue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Icon(
@@ -1596,7 +1597,7 @@ class _MyGroupsSection extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -1611,9 +1612,9 @@ class _QuickActionsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       {
-        'icon': Icons.person_search_rounded,
-        'label': 'Dạy kèm 1-1',
-        'route': '/search',
+        'icon': Icons.menu_book_rounded,
+        'label': 'Học của tôi',
+        'route': '/my-learning',
         'color': Colors.blue,
       },
       {
@@ -1652,7 +1653,7 @@ class _QuickActionsSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: (action['color'] as Color).withOpacity(0.15),
+                      color: (action['color'] as Color).withValues(alpha: 0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -1663,7 +1664,7 @@ class _QuickActionsSection extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: (action['color'] as Color).withOpacity(0.1),
+                        color: (action['color'] as Color).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1741,7 +1742,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
         return _buildDefaultBanner(context);
       },
       loading: () => _buildDefaultBanner(context),
-      error: (_, __) => _buildDefaultBanner(context),
+      error: (_, _) => _buildDefaultBanner(context),
     );
   }
 
@@ -1769,7 +1770,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.red.withOpacity(0.3),
+                color: Colors.red.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -1780,7 +1781,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.alarm, color: Colors.white, size: 28),
@@ -1802,14 +1803,14 @@ class _UpcomingScheduleSection extends ConsumerWidget {
                     Text(
                       'Gia sư: ${booking.tutor.name}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 13,
                       ),
                     ),
                     Text(
                       'Bấm vào để vào lớp ngay!!',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 11,
                         fontStyle: FontStyle.italic,
                       ),
@@ -1845,7 +1846,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.indigo.withOpacity(0.3),
+                color: Colors.indigo.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -1856,7 +1857,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -1882,7 +1883,7 @@ class _UpcomingScheduleSection extends ConsumerWidget {
                     Text(
                       'Xem lịch học và buổi học đã đặt',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 12,
                       ),
                     ),
@@ -1944,10 +1945,10 @@ class _StudyTipsSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: (tip['color'] as Color).withOpacity(0.2)),
+          border: Border.all(color: (tip['color'] as Color).withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-              color: (tip['color'] as Color).withOpacity(0.1),
+              color: (tip['color'] as Color).withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1958,7 +1959,7 @@ class _StudyTipsSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (tip['color'] as Color).withOpacity(0.1),
+                color: (tip['color'] as Color).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(

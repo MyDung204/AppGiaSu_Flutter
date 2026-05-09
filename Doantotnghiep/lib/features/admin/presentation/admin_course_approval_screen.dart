@@ -13,6 +13,7 @@ library;
 
 import 'package:doantotnghiep/features/admin/data/admin_repository.dart';
 import 'package:doantotnghiep/features/admin/data/admin_course_provider.dart';
+import 'package:doantotnghiep/features/chat/data/firebase_chat_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -103,7 +104,7 @@ class _AdminCourseApprovalScreenState extends ConsumerState<AdminCourseApprovalS
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -121,7 +122,7 @@ class _AdminCourseApprovalScreenState extends ConsumerState<AdminCourseApprovalS
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.class_outlined, color: Colors.blue, size: 30),
@@ -184,6 +185,7 @@ class _AdminCourseApprovalScreenState extends ConsumerState<AdminCourseApprovalS
      try {
        final success = await ref.read(adminRepositoryProvider).approveCourse(course['id']);
        if (success) {
+         await _syncApprovedCourseChat(course);
          if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
              const SnackBar(content: Text('Đã duyệt khóa học'), backgroundColor: Colors.green),
@@ -193,9 +195,24 @@ class _AdminCourseApprovalScreenState extends ConsumerState<AdminCourseApprovalS
          return true;
        }
      } catch (e) {
-        print(e);
+        debugPrint('Approve course failed: $e');
      }
      return false;
+  }
+
+  Future<void> _syncApprovedCourseChat(Map<String, dynamic> course) async {
+    final tutorUserId = course['tutor']?['user_id']?.toString();
+    if (tutorUserId == null || tutorUserId.isEmpty) return;
+
+    try {
+      await ref.read(firebaseChatRepositoryProvider).createOrUpdateCourseConversation(
+            courseId: course['id'].toString(),
+            courseName: course['title']?.toString() ?? 'Lớp học nhóm',
+            memberIds: [tutorUserId],
+          );
+    } catch (e) {
+      debugPrint('Sync approved course chat failed: $e');
+    }
   }
 
   Future<bool> _handleReject(Map<String, dynamic> course) async {
@@ -211,7 +228,7 @@ class _AdminCourseApprovalScreenState extends ConsumerState<AdminCourseApprovalS
          return true;
        }
      } catch (e) {
-        print(e);
+        debugPrint('Reject course failed: $e');
      }
      return false;
   }

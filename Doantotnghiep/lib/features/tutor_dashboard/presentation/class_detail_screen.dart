@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:doantotnghiep/core/config/jitsi_config.dart';
 import 'package:doantotnghiep/core/exceptions/app_exceptions.dart';
 import 'package:doantotnghiep/features/auth/data/auth_repository.dart';
+import 'package:doantotnghiep/features/chat/data/firebase_chat_repository.dart';
 import 'package:doantotnghiep/features/group/data/course_provider.dart';
 import 'package:doantotnghiep/features/group/data/shared_learning_repository.dart';
 import 'package:doantotnghiep/features/group/domain/models/course.dart';
@@ -16,7 +18,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 class _EduTheme {
   static const Color primary = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFF818CF8);
   static const Color secondary = Color(0xFFF59E0B);
   static const Color success = Color(0xFF10B981);
   static const Color background = Color(0xFFF1F5F9);
@@ -58,7 +59,7 @@ class ClassDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: _EduTheme.background,
       body: DefaultTabController(
-        length: 6,
+        length: 7,
         child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
@@ -104,6 +105,7 @@ class ClassDetailScreen extends ConsumerWidget {
                   labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   tabs: [
                     Tab(text: "Tổng quan"),
+                    Tab(text: "Lịch dạy"),
                     Tab(text: "Bảng tin"),
                     Tab(text: "Bài tập"),
                     Tab(text: "Tài liệu"),
@@ -154,7 +156,10 @@ class ClassDetailScreen extends ConsumerWidget {
                       ),
                     ),
 
-                    // 2. Announcements Tab
+                    // 2. Teaching Schedule Tab
+                    _buildTeachingScheduleTab(context, ref, isTutor),
+
+                    // 3. Announcements Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
                         : ClassAnnouncementsTab(
@@ -162,12 +167,12 @@ class ClassDetailScreen extends ConsumerWidget {
                             isTutor: isTutor,
                           ),
 
-                    // 3. Assignments Tab
+                    // 4. Assignments Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
                         : ClassAssignmentsTab(course: course, isTutor: isTutor),
 
-                    // 4. Materials Tab
+                    // 5. Materials Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
                         : ClassMaterialsTab(
@@ -175,7 +180,7 @@ class ClassDetailScreen extends ConsumerWidget {
                             isTutor: isTutor,
                           ),
 
-                    // 5. Quiz Tab
+                    // 6. Quiz Tab
                     shouldBlockAccess && !isTutor
                         ? _buildRestrictedAccessView()
                         : ClassQuizTab(
@@ -183,7 +188,7 @@ class ClassDetailScreen extends ConsumerWidget {
                             isTutor: isTutor,
                           ),
 
-                    // 5. People Tab
+                    // 7. People Tab
                     SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -422,6 +427,7 @@ class ClassDetailScreen extends ConsumerWidget {
       // Call API
       final repo = ref.read(sharedLearningRepositoryProvider);
       final result = await repo.refuseTuition(course.id);
+      if (!context.mounted) return;
       if (result != null) {
         ScaffoldMessenger.of(
           context,
@@ -530,7 +536,7 @@ class ClassDetailScreen extends ConsumerWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+          padding: const EdgeInsets.fromLTRB(16, 48, 16, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -555,9 +561,11 @@ class ClassDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           course.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -590,9 +598,9 @@ class ClassDetailScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
@@ -603,7 +611,8 @@ class ClassDetailScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
+                    Expanded(
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -614,23 +623,29 @@ class ClassDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          currencyFormat.format(course.price),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            currencyFormat.format(course.price),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           'Học viên',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 12,
                           ),
                         ),
@@ -713,7 +728,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -725,7 +740,7 @@ class ClassDetailScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -760,7 +775,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -810,6 +825,277 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildTeachingScheduleTab(
+    BuildContext context,
+    WidgetRef ref,
+    bool isTutor,
+  ) {
+    final monthSessions = _buildCourseSessionsForMonth(DateTime.now());
+
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _EduTheme.cardBg,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _EduTheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: _EduTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Lịch dạy lớp học nhóm',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _EduTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildModernInfoRow(
+                Icons.event_available_rounded,
+                'Ngày bắt đầu',
+                DateFormat('dd/MM/yyyy').format(course.startDate),
+                _EduTheme.primary,
+              ),
+              const Divider(height: 28),
+              _buildModernInfoRow(
+                Icons.schedule_rounded,
+                'Lịch học',
+                course.schedule.isNotEmpty ? course.schedule : 'Chưa cập nhật',
+                _EduTheme.secondary,
+              ),
+              const Divider(height: 28),
+              _buildModernInfoRow(
+                course.mode == 'Online'
+                    ? Icons.videocam_rounded
+                    : Icons.location_on_rounded,
+                'Hình thức',
+                course.mode,
+                course.mode == 'Online' ? _EduTheme.success : _EduTheme.rose,
+              ),
+              const Divider(height: 28),
+              _buildModernInfoRow(
+                course.mode == 'Online'
+                    ? Icons.link_rounded
+                    : Icons.map_rounded,
+                course.mode == 'Online' ? 'Phòng học' : 'Địa điểm',
+                course.mode == 'Online'
+                    ? ((course.meetingLink ?? '').isNotEmpty
+                          ? course.meetingLink!
+                          : 'Gia sư sẽ mở phòng khi đến giờ học')
+                    : (course.address ?? 'Chưa cập nhật'),
+                _EduTheme.purple,
+              ),
+              if (course.mode == 'Online') ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _handleMeetAction(context, ref, isTutor),
+                    icon: const Icon(Icons.video_camera_front_rounded),
+                    label: Text(isTutor ? 'Mở phòng học' : 'Vào lớp học'),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Danh sách buổi trong tháng',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _EduTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    DateFormat('MM/yyyy').format(DateTime.now()),
+                    style: const TextStyle(color: _EduTheme.textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (monthSessions.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _EduTheme.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Không có buổi học nào trong tháng này.',
+                    style: TextStyle(color: _EduTheme.textSecondary),
+                  ),
+                )
+              else
+                ...monthSessions.map(_buildCourseSessionTile),
+            ],
+          ),
+        ),
+        const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  List<({DateTime start, DateTime end, String status})> _buildCourseSessionsForMonth(
+    DateTime month,
+  ) {
+    final schedule = course.schedule.trim();
+    if (schedule.isEmpty) return [];
+
+    try {
+      final parts = schedule.split('(');
+      if (parts.length < 2) return [];
+
+      final daysText = parts[0].trim();
+      final timeText = parts[1].replaceAll(')', '').trim();
+      final times = timeText.split(' - ');
+      if (times.length < 2) return [];
+
+      final startParts = times[0].split(':');
+      final endParts = times[1].split(':');
+      if (startParts.length < 2 || endParts.length < 2) return [];
+
+      final weekDays = <int>[];
+      for (final day in daysText.split(',').map((value) => value.trim())) {
+        if (day.contains('T2')) weekDays.add(DateTime.monday);
+        if (day.contains('T3')) weekDays.add(DateTime.tuesday);
+        if (day.contains('T4')) weekDays.add(DateTime.wednesday);
+        if (day.contains('T5')) weekDays.add(DateTime.thursday);
+        if (day.contains('T6')) weekDays.add(DateTime.friday);
+        if (day.contains('T7')) weekDays.add(DateTime.saturday);
+        if (day.contains('CN') || day.contains('T8')) weekDays.add(DateTime.sunday);
+      }
+
+      if (weekDays.isEmpty) return [];
+
+      final firstDay = DateTime(month.year, month.month);
+      final nextMonth = DateTime(month.year, month.month + 1);
+      final result = <({DateTime start, DateTime end, String status})>[];
+
+      for (var date = firstDay;
+          date.isBefore(nextMonth);
+          date = date.add(const Duration(days: 1))) {
+        if (!weekDays.contains(date.weekday)) continue;
+        if (date.isBefore(DateTime(course.startDate.year, course.startDate.month, course.startDate.day))) {
+          continue;
+        }
+
+        final start = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          int.parse(startParts[0]),
+          int.parse(startParts[1]),
+        );
+        final end = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          int.parse(endParts[0]),
+          int.parse(endParts[1]),
+        );
+
+        result.add((start: start, end: end, status: _courseSessionStatus(start, end)));
+      }
+
+      return result;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  String _courseSessionStatus(DateTime start, DateTime end) {
+    final now = DateTime.now();
+    if (now.isBefore(start)) return 'Sắp tới';
+    if (now.isAfter(end)) return 'Đã học';
+    return 'Đang học';
+  }
+
+  Widget _buildCourseSessionTile(({DateTime start, DateTime end, String status}) session) {
+    final color = switch (session.status) {
+      'Đã học' => _EduTheme.success,
+      'Đang học' => _EduTheme.secondary,
+      _ => _EduTheme.primary,
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _EduTheme.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.event_note_rounded, color: _EduTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('EEEE, dd/MM', 'vi_VN').format(session.start),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${DateFormat('HH:mm').format(session.start)} - ${DateFormat('HH:mm').format(session.end)}',
+                  style: const TextStyle(color: _EduTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          _buildStatusChip(session.status, color),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
   Widget _buildCourseTuitionCard(
     BuildContext context,
     WidgetRef ref,
@@ -854,7 +1140,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -868,7 +1154,7 @@ class ClassDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _EduTheme.success.withOpacity(0.1),
+                  color: _EduTheme.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -969,7 +1255,7 @@ class ClassDetailScreen extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 20, color: color),
@@ -1010,7 +1296,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1024,7 +1310,7 @@ class ClassDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _EduTheme.primary.withOpacity(0.1),
+                  color: _EduTheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -1070,7 +1356,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1084,7 +1370,7 @@ class ClassDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.person, color: Colors.blue, size: 20),
@@ -1210,7 +1496,7 @@ class ClassDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1224,7 +1510,7 @@ class ClassDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _EduTheme.purple.withOpacity(0.1),
+                  color: _EduTheme.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -1249,7 +1535,7 @@ class ClassDetailScreen extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: course.students.length,
-            separatorBuilder: (_, __) => const Divider(height: 24),
+            separatorBuilder: (_, _) => const Divider(height: 24),
             itemBuilder: (context, index) {
               final s = course.students[index];
               return InkWell(
@@ -1264,7 +1550,7 @@ class ClassDetailScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: _EduTheme.primary.withOpacity(0.1),
+                        backgroundColor: _EduTheme.primary.withValues(alpha: 0.1),
                         child: Text(
                           (s['name'] ?? 'U')[0].toUpperCase(),
                           style: const TextStyle(
@@ -1309,7 +1595,7 @@ class ClassDetailScreen extends ConsumerWidget {
                           icon: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: _EduTheme.rose.withOpacity(0.1),
+                              color: _EduTheme.rose.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -1499,6 +1785,8 @@ class ClassDetailScreen extends ConsumerWidget {
         .joinCourse(course.id, paymentType: paymentType);
     if (context.mounted) {
       if (success) {
+        await _addCurrentUserToCourseChat(ref);
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đăng ký lớp học thành công!')),
         );
@@ -1514,6 +1802,39 @@ class ClassDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _addCurrentUserToCourseChat(WidgetRef ref) async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) return;
+
+    try {
+      await ref.read(firebaseChatRepositoryProvider).addMemberToCourseConversation(
+            courseId: course.id,
+            userId: user.id.toString(),
+            courseName: course.title,
+          );
+    } catch (e) {
+      debugPrint('Add course chat member failed: $e');
+    }
+  }
+
+  Future<void> _removeCurrentUserFromCourseChat(WidgetRef ref) async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) return;
+    await _removeStudentFromCourseChat(ref, user.id.toString());
+  }
+
+  Future<void> _removeStudentFromCourseChat(WidgetRef ref, String studentId) async {
+    try {
+      await ref.read(firebaseChatRepositoryProvider).removeMemberFromCourseConversation(
+            courseId: course.id,
+            userId: studentId,
+          );
+    } catch (e) {
+      debugPrint('Remove course chat member failed: $e');
+    }
+  }
+
+  // ignore: unused_element
   void _confirmLeave(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -1530,6 +1851,8 @@ class ClassDetailScreen extends ConsumerWidget {
                   .leaveCourse(course.id);
               if (context.mounted) {
                 if (success) {
+                  await _removeCurrentUserFromCourseChat(ref);
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Đã rời lớp học')),
                   );
@@ -1549,6 +1872,7 @@ class ClassDetailScreen extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   void _showSuccessDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -1590,9 +1914,8 @@ class ClassDetailScreen extends ConsumerWidget {
   ) async {
     String meetingUrl = course.meetingLink ?? '';
 
-    if (isTutor && meetingUrl.isEmpty) {
-      // Auto-create Jitsi link
-      meetingUrl = 'https://meet.jit.si/antigravity-course-${course.id}';
+    if (isTutor && (meetingUrl.isEmpty || !_isValidCourseJitsiUrl(meetingUrl))) {
+      meetingUrl = _buildCourseMeetingUrl();
 
       try {
         await ref.read(sharedLearningRepositoryProvider).updateCourse(
@@ -1628,6 +1951,16 @@ class ClassDetailScreen extends ConsumerWidget {
         'meetingLink': meetingUrl,
       },
     );
+  }
+
+  String _buildCourseMeetingUrl() {
+    final seed = 'course-${course.id}-${course.tutorId}-${course.startDate.millisecondsSinceEpoch}';
+    final hash = seed.hashCode.abs().toRadixString(36);
+    return JitsiConfig.buildMeetingUrl('AppGiaSuCourseV2-${course.id}-$hash');
+  }
+
+  bool _isValidCourseJitsiUrl(String url) {
+    return url.contains('AppGiaSuCourseV2-');
   }
 
   void _confirmKick(
@@ -1722,6 +2055,8 @@ class ClassDetailScreen extends ConsumerWidget {
                   );
 
               if (context.mounted) {
+                await _removeStudentFromCourseChat(ref, studentId);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 _showKickResultValues(
                   context,

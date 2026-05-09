@@ -1,4 +1,5 @@
 import 'package:doantotnghiep/core/theme/edu_theme.dart';
+import 'package:doantotnghiep/core/config/jitsi_config.dart';
 import 'package:doantotnghiep/features/booking/data/booking_provider.dart';
 import 'package:doantotnghiep/features/tutor_dashboard/presentation/session_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -505,9 +506,8 @@ class _BookingRequestListScreenState extends ConsumerState<BookingRequestListScr
        String meetingUrl = booking.meetingLink ?? '';
        
        // Force update if empty OR if it's an old Google Meet link
-       if (meetingUrl.isEmpty || !meetingUrl.contains('jit.si')) {
-          // Auto-create Jitsi link
-          meetingUrl = 'https://meet.jit.si/AppGiaSu-${booking.id}-${booking.userId}-${booking.tutor.id}';
+       if (meetingUrl.isEmpty || !_isValidAppJitsiUrl(meetingUrl)) {
+          meetingUrl = _buildOneToOneMeetingUrl(booking);
           
           try {
              await ref.read(bookingProvider.notifier).updateSessionInfo(
@@ -531,5 +531,15 @@ class _BookingRequestListScreenState extends ConsumerState<BookingRequestListScr
            'meetingLink': meetingUrl,
          },
        );
+  }
+
+  String _buildOneToOneMeetingUrl(BookingItem booking) {
+    final seed = '${booking.id}-${booking.userId}-${booking.tutor.id}';
+    final hash = seed.hashCode.abs().toRadixString(36);
+    return JitsiConfig.buildMeetingUrl('AppGiaSuV2-${booking.id}-$hash');
+  }
+
+  bool _isValidAppJitsiUrl(String url) {
+    return url.contains('AppGiaSuV2-');
   }
 }

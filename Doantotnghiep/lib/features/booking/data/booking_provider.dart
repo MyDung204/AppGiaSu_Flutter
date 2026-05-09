@@ -453,6 +453,27 @@ class BookingNotifier extends AsyncNotifier<List<BookingItem>> {
       rethrow;
     }
   }
+
+  Future<int> completeOneToOne(String studentId) async {
+    final apiClient = ref.read(apiClientProvider);
+    try {
+      final response = await apiClient.post(
+        '${ApiConstants.bookings}/complete-one-to-one',
+        data: {'student_id': int.tryParse(studentId) ?? studentId},
+      );
+      ref.invalidateSelf();
+      if (response is Map<String, dynamic>) {
+        return int.tryParse((response['completed_count'] ?? 0).toString()) ?? 0;
+      }
+      return 0;
+    } on ApiException catch (e) {
+      print('Complete One-To-One Error: ${e.userMessage}');
+      rethrow;
+    } catch (e) {
+      print('Unexpected Complete One-To-One Error: $e');
+      rethrow;
+    }
+  }
 }
 
 /// Provider for BookingNotifier
