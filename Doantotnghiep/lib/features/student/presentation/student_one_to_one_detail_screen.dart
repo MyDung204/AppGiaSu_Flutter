@@ -144,14 +144,7 @@ class _ReviewCard extends ConsumerStatefulWidget {
 
 class _ReviewCardState extends ConsumerState<_ReviewCard> {
   int _rating = 5;
-  final _commentController = TextEditingController();
   bool _submitting = false;
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,16 +195,6 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
                 }),
               ),
               const SizedBox(height: 10),
-              TextField(
-                controller: _commentController,
-                minLines: 2,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Nhận xét thêm (không bắt buộc)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -239,7 +222,6 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
       await ref.read(reviewRepositoryProvider).submitTutorReview(
             widget.tutorId,
             rating: _rating,
-            comment: _commentController.text,
           );
       ref.invalidate(studentTutorReviewStatusProvider(widget.tutorId));
       if (mounted) {

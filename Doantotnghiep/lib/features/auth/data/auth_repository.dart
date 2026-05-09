@@ -173,6 +173,9 @@ class AuthRepository {
       // TODO: Replace with ApiException for better error handling
       // Current implementation throws String for backward compatibility
       if (e is ApiException) {
+        if (e.statusCode == 401) {
+          throw e.responseMessage ?? 'Email hoặc mật khẩu không đúng.';
+        }
         throw e.userMessage;
       }
       throw 'Đăng nhập thất bại: ${e.toString()}';

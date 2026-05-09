@@ -44,7 +44,7 @@ class ApiException extends AppException {
           userMessage = responseMessage ?? 'Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.';
           break;
         case 401:
-          userMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+          userMessage = 'Phi\u00ean \u0111\u0103ng nh\u1eadp \u0111\u00e3 h\u1ebft h\u1ea1n. Vui l\u00f2ng \u0111\u0103ng nh\u1eadp l\u1ea1i.';
           break;
         case 403:
           userMessage = 'Bạn không có quyền thực hiện thao tác này.';

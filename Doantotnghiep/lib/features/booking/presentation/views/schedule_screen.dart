@@ -51,9 +51,9 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isCalendarView = false;
-  final Set<String> _reviewedTutorIds = {};
+  final Map<String, int> _reviewRatingsByTutorId = {};
   final Set<String> _reviewStatusLoadedTutorIds = {};
-  final Map<String, Future<bool>> _reviewStatusFutures = {};
+  final Map<String, Future<int?>> _reviewStatusFutures = {};
   final Set<String> _submittingReviewTutorIds = {};
   
   CalendarFormat _calendarFormat = CalendarFormat.month;
@@ -444,7 +444,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
   /// - Báo cáo sự cố: Navigate đến màn hình tạo report
   /// - Hủy lịch học: Xác nhận và gọi API để hủy booking
   void _ensureReviewStatusLoaded(String tutorId) {
-    if (_reviewedTutorIds.contains(tutorId) ||
+    if (_reviewRatingsByTutorId.containsKey(tutorId) ||
         _reviewStatusLoadedTutorIds.contains(tutorId) ||
         _reviewStatusFutures.containsKey(tutorId)) {
       return;
@@ -453,14 +453,14 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
     final future = ref
         .read(reviewRepositoryProvider)
         .getMyReviewStatus(tutorId)
-        .then((status) => status.hasReview);
+        .then((status) => status.hasReview ? status.review?.rating.round() : null);
     _reviewStatusFutures[tutorId] = future;
 
-    future.then((hasReview) {
+    future.then((rating) {
       if (!mounted) return;
       setState(() {
-        if (hasReview) {
-          _reviewedTutorIds.add(tutorId);
+        if (rating != null) {
+          _reviewRatingsByTutorId[tutorId] = rating;
         }
         _reviewStatusLoadedTutorIds.add(tutorId);
         _reviewStatusFutures.remove(tutorId);
@@ -472,7 +472,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
 
   Widget _buildReviewAction(BuildContext context, BookingItem booking) {
     final tutorId = booking.tutor.id;
-    final isReviewed = _reviewedTutorIds.contains(tutorId);
+    final reviewedRating = _reviewRatingsByTutorId[tutorId];
+    final isReviewed = reviewedRating != null;
     final isSubmitting = _submittingReviewTutorIds.contains(tutorId);
     final isCheckingStatus =
         _reviewStatusFutures.containsKey(tutorId) && !isReviewed;
@@ -490,7 +491,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : Icon(isReviewed ? Icons.check_circle_outline : Icons.star_border),
-        label: Text(isReviewed ? 'Đã đánh giá' : 'Đánh giá'),
+        label: Text(isReviewed ? 'Đã đánh giá $reviewedRating sao' : 'Đánh giá'),
       ),
     );
   }
@@ -507,19 +508,17 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> with SingleTick
 
     final tutorId = booking.tutor.id;
     final rating = (result['rating'] as num?)?.round() ?? 5;
-    final comment = result['comment']?.toString();
 
     setState(() => _submittingReviewTutorIds.add(tutorId));
     try {
       await ref.read(reviewRepositoryProvider).submitTutorReview(
             tutorId,
             rating: rating,
-            comment: comment,
           );
 
       if (!mounted) return;
       setState(() {
-        _reviewedTutorIds.add(tutorId);
+        _reviewRatingsByTutorId[tutorId] = rating;
         _reviewStatusLoadedTutorIds.add(tutorId);
         _reviewStatusFutures.remove(tutorId);
       });

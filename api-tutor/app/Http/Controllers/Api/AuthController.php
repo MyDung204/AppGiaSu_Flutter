@@ -37,7 +37,7 @@ class AuthController extends Controller
     public function login(Request $request, \App\Services\FirebaseNotificationService $notificationService)
     {
         if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Invalid'], 401);
+            return response()->json(['message' => 'Email hoặc mật khẩu không đúng.'], 401);
         }
 
         $user = User::where('email', $request->email)->first();
@@ -53,6 +53,7 @@ class AuthController extends Controller
 
         return response()->json(['token' => $token, 'user' => $user->load('tutorProfile')]);
     }
+
     public function me(Request $request)
     {
         return $request->user()->load('tutorProfile'); // Load tutor profile relation

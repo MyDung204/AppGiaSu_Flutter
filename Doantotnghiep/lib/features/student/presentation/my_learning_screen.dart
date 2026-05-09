@@ -276,13 +276,11 @@ class _OneToOneLearningTabState extends ConsumerState<_OneToOneLearningTab> {
     if (result == null) return false;
 
     final rating = (result['rating'] as num?)?.round() ?? 5;
-    final comment = result['comment']?.toString();
 
     try {
       await ref.read(reviewRepositoryProvider).submitTutorReview(
             group.tutor.id,
             rating: rating,
-            comment: comment,
           );
 
       if (mounted) {

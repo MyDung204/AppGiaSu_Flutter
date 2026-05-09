@@ -410,11 +410,6 @@ class AppRouter {
               ),
             ],
           ),
-          // Community
-          GoRoute(
-            path: '/community',
-            builder: (context, state) => const CommunityScreen(),
-          ),
           GoRoute(
             path: '/activity', // Existing
             builder: (context, state) => const AdminUserActivityScreen(
@@ -560,11 +555,6 @@ class AppRouter {
             ],
           ),
         ],
-      ),
-      GoRoute(
-        parentNavigatorKey: _rootNavigatorKey,
-        path: '/notifications',
-        builder: (context, state) => const NotificationScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
